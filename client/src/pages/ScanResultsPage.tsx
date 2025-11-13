@@ -48,7 +48,8 @@ export default function ScanResultsPage() {
   // Generate report mutation
   const generateReportMutation = useMutation({
     mutationFn: async (format: string) => {
-      return apiRequest("POST", `/api/scans/${scanId}/report`, { format });
+      const response = await apiRequest("POST", `/api/scans/${scanId}/report`, { format });
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
@@ -319,6 +320,26 @@ export default function ScanResultsPage() {
                     >
                       <Download className="ml-2 h-4 w-4" />
                       تصدير PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => generateReportMutation.mutate("html")}
+                      disabled={generateReportMutation.isPending}
+                      data-testid="button-export-html"
+                    >
+                      <Download className="ml-2 h-4 w-4" />
+                      تصدير HTML
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => generateReportMutation.mutate("json")}
+                      disabled={generateReportMutation.isPending}
+                      data-testid="button-export-json"
+                    >
+                      <Download className="ml-2 h-4 w-4" />
+                      تصدير JSON
                     </Button>
                   </div>
                 </div>

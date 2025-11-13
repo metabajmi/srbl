@@ -18,7 +18,8 @@ export default function HomePage() {
 
   const scanMutation = useMutation({
     mutationFn: async (data: { url: string }) => {
-      return apiRequest("POST", "/api/scans", data);
+      const response = await apiRequest("POST", "/api/scans", data);
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
