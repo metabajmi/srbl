@@ -61,14 +61,19 @@ Preferred communication style: Simple, everyday language.
 **ORM**: Drizzle ORM for type-safe database operations with PostgreSQL dialect support.
 
 **Database Schema**: Designed with four main tables:
-- `compliance_scans`: Stores scan metadata, status, scores, and analysis results
-- `compliance_issues`: Stores individual violations found during scans
-- `reports`: Stores generated compliance reports
+- `compliance_scans`: Stores scan metadata, status, scores, and analysis results (includes timestamps, error messages)
+- `compliance_issues`: Stores individual violations found during scans (cascade delete on scan removal)
+- `reports`: Stores generated compliance reports (cascade delete on scan removal)
 - `remediation_templates`: Stores reusable remediation guidance templates
 
-**Current Implementation**: Uses in-memory storage (MemStorage class) as a development/demonstration storage layer. The architecture is designed to support PostgreSQL through Drizzle ORM with connection string configuration.
+**Current Implementation**: Phase 2 completed - Fully migrated to persistent PostgreSQL storage using DatabaseStorage class with Drizzle ORM. Previous in-memory storage replaced with production-ready database implementation.
 
-**Session Management**: Configured to use connect-pg-simple for PostgreSQL-backed session storage when database is provisioned.
+**Database Relations**: Properly configured with foreign key constraints:
+- `compliance_issues` → `compliance_scans` (Many-to-One with cascade delete)
+- `reports` → `compliance_scans` (Many-to-One with cascade delete)
+- `compliance_issues` → `remediation_templates` (Many-to-One optional reference)
+
+**Session Management**: Configured to use connect-pg-simple for PostgreSQL-backed session storage.
 
 ### External Dependencies
 
