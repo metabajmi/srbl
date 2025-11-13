@@ -1,4 +1,4 @@
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -10,13 +10,12 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useToast } from "@/hooks/use-toast";
 import { Shield, AlertCircle, AlertTriangle, Info, FileText, Download, ArrowRight, CheckCircle, XCircle, Globe, Home, RefreshCw } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
-import { useNavigate } from "wouter";
 import { useState, useEffect } from "react";
 
 export default function ScanResultsPage() {
   const [, params] = useRoute("/scan/:id");
   const scanId = params?.id;
-  const [navigate] = useNavigate();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [autoRefresh, setAutoRefresh] = useState(true);
 
@@ -162,7 +161,7 @@ export default function ScanResultsPage() {
             <div className="flex flex-col items-center gap-4">
               <XCircle className="w-12 h-12 text-destructive" />
               <p className="text-lg font-medium">لم يتم العثور على الفحص</p>
-              <Button onClick={() => navigate("/")} data-testid="button-home">
+              <Button onClick={() => setLocation("/")} data-testid="button-home">
                 <Home className="ml-2 h-4 w-4" />
                 العودة للرئيسية
               </Button>
@@ -185,7 +184,7 @@ export default function ScanResultsPage() {
           <div className="flex items-center gap-2">
             <Button 
               variant="outline" 
-              onClick={() => navigate("/")}
+              onClick={() => setLocation("/")}
               data-testid="button-new-scan"
             >
               <Globe className="ml-2 h-4 w-4" />
