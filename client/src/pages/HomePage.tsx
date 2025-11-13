@@ -7,13 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertComplianceScanSchema } from "@shared/schema";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { Shield, FileSearch, AlertCircle, CheckCircle, FileText, Globe, Sparkles, BarChart } from "lucide-react";
 import { z } from "zod";
 
 export default function HomePage() {
   const [url, setUrl] = useState("");
-  const [navigate] = useNavigate();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const scanMutation = useMutation({
@@ -25,7 +25,7 @@ export default function HomePage() {
         title: "بدأ الفحص بنجاح",
         description: "جاري تحليل الموقع الإلكتروني...",
       });
-      navigate(`/scan/${data.id}`);
+      setLocation(`/scan/${data.id}`);
     },
     onError: (error: any) => {
       toast({

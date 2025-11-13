@@ -5,13 +5,44 @@ import { insertComplianceScanSchema } from "@shared/schema";
 import { analyzeWebsiteCompliance, generateComplianceReport } from "./openai";
 import { z } from "zod";
 
+// Helper function to validate URL for security
+function validateUrl(url: string): boolean {
+  try {
+    const parsedUrl = new URL(url);
+    
+    // Only allow http and https
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return false;
+    }
+    
+    // Block localhost and internal IPs
+    const hostname = parsedUrl.hostname.toLowerCase();
+    if (hostname === 'localhost' || 
+        hostname === '127.0.0.1' || 
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('172.')) {
+      return false;
+    }
+    
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Helper function to fetch website content
 async function fetchWebsiteContent(url: string): Promise<string> {
+  if (!validateUrl(url)) {
+    throw new Error("عنوان URL غير صالح أو محظور لأسباب أمنية");
+  }
+  
   try {
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+      },
+      signal: AbortSignal.timeout(30000) // 30 second timeout
     });
     
     if (!response.ok) {
@@ -95,8 +126,6 @@ async function processScan(scanId: string) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Enable JSON parsing
-  app.use(require("express").json());
 
   // Create a new compliance scan
   app.post("/api/scans", async (req, res) => {
@@ -180,22 +209,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         format as "pdf" | "html" | "json"
       );
       
-      // Store report
+      // Store report with content
       const report = await storage.createReport({
         scanId: req.params.id,
         format,
+        content,
+        fileName,
       });
       
-      await storage.updateScan(req.params.id, {
-        ...scan,
-        analysisResult: { ...scan.analysisResult, reportId: report.id } as any
-      });
-      
-      // For demo, return the content directly
-      // In production, you'd save to file and return download URL
+      // Return download URL
       res.json({
         reportId: report.id,
-        content,
+        downloadUrl: `/api/reports/${report.id}/download`,
         fileName,
         format,
       });
@@ -217,6 +242,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching templates:", error);
       res.status(500).json({ error: "فشل في جلب القوالب" });
+    }
+  });
+
+  // Download a report
+  app.get("/api/reports/:id/download", async (req, res) => {
+    try {
+      const report = await storage.getReport(req.params.id);
+      if (!report) {
+        return res.status(404).json({ error: "التقرير غير موجود" });
+      }
+      
+      // Set appropriate headers based on format
+      if (report.format === "pdf") {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${report.fileName || 'report.pdf'}"`);
+      } else if (report.format === "html") {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${report.fileName || 'report.html'}"`);
+      } else {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${report.fileName || 'report.json'}"`);
+      }
+      
+      // Send the content
+      res.send(report.content);
+      
+    } catch (error) {
+      console.error("Error downloading report:", error);
+      res.status(500).json({ error: "فشل في تحميل التقرير" });
     }
   });
 

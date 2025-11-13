@@ -23,7 +23,8 @@ export interface IStorage {
   deleteIssuesByScanId(scanId: string): Promise<void>;
   
   // Reports
-  createReport(report: InsertReport): Promise<Report>;
+  createReport(report: InsertReport & { content?: any; fileName?: string }): Promise<Report>;
+  getReport(id: string): Promise<Report | undefined>;
   getReportsByScanId(scanId: string): Promise<Report[]>;
   
   // Remediation Templates
@@ -114,17 +115,21 @@ export class MemStorage implements IStorage {
   }
 
   // Reports
-  async createReport(insertReport: InsertReport): Promise<Report> {
+  async createReport(insertReport: InsertReport & { content?: any; fileName?: string }): Promise<Report> {
     const id = randomUUID();
     const report: Report = {
       id,
       ...insertReport,
       generatedAt: new Date(),
-      content: null,
-      fileName: null,
+      content: insertReport.content || null,
+      fileName: insertReport.fileName || null,
     };
     this.reports.set(id, report);
     return report;
+  }
+  
+  async getReport(id: string): Promise<Report | undefined> {
+    return this.reports.get(id);
   }
 
   async getReportsByScanId(scanId: string): Promise<Report[]> {
