@@ -128,7 +128,7 @@ ${htmlContent.substring(0, 30000)}
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
@@ -216,7 +216,7 @@ ${JSON.stringify(issues, null, 2)}
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
@@ -224,7 +224,7 @@ ${JSON.stringify(issues, null, 2)}
         },
         { role: "user", content: reportPrompt }
       ],
-      max_tokens: 8192,
+      max_tokens: 4096,
     });
 
     const content = response.choices[0].message.content || "";
@@ -362,7 +362,7 @@ export async function extractRegulationReferences(
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-5",
+      model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
@@ -371,7 +371,7 @@ export async function extractRegulationReferences(
         { role: "user", content: prompt }
       ],
       response_format: { type: "json_object" },
-      max_completion_tokens: 1024,
+      max_tokens: 1024,
     });
 
     return JSON.parse(response.choices[0].message.content || '{"articles": [], "details": ""}');
