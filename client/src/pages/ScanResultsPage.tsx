@@ -28,14 +28,19 @@ export default function ScanResultsPage() {
       return response.json() as Promise<ComplianceScan>;
     },
     enabled: !!scanId,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
+      const scanData = query.state.data;
       if (!autoRefresh) return false;
-      return data?.status === "pending" || data?.status === "scanning" ? 2000 : false;
+      // Keep polling while scan is in progress
+      if (scanData?.status === "pending" || scanData?.status === "scanning") {
+        return 2000;
+      }
+      return false;
     },
   });
 
   // Fetch issues for this scan
-  const { data: issues = [], isLoading: issuesLoading } = useQuery({
+  const { data: issues = [], isLoading: issuesLoading, refetch: refetchIssues } = useQuery({
     queryKey: ["/api/scans", scanId, "issues"],
     queryFn: async () => {
       const response = await fetch(`/api/scans/${scanId}/issues`);
@@ -44,6 +49,13 @@ export default function ScanResultsPage() {
     },
     enabled: !!scanId && scan?.status === "completed",
   });
+
+  // Refetch issues when scan completes
+  useEffect(() => {
+    if (scan?.status === "completed") {
+      refetchIssues();
+    }
+  }, [scan?.status, refetchIssues]);
 
   // Generate report mutation
   const generateReportMutation = useMutation({
@@ -469,7 +481,7 @@ export default function ScanResultsPage() {
                 <p className="text-sm text-muted-foreground mb-4">
                   حدث خطأ أثناء محاولة فحص الموقع. يرجى التأكد من صحة الرابط والمحاولة مرة أخرى.
                 </p>
-                <Button onClick={() => navigate("/")} data-testid="button-try-again">
+                <Button onClick={() => setLocation("/")} data-testid="button-try-again">
                   <RefreshCw className="ml-2 h-4 w-4" />
                   محاولة مرة أخرى
                 </Button>
