@@ -69,6 +69,13 @@ const formSchema = z.object({
   rightsDeletionConditions: z.string().optional(),
   rightsResponseDays: z.string().optional(),
   rightsContactEntity: z.string().optional(),
+  storageLocationChoice: z.enum(["inside_ksa", "outside_ksa"], {
+    required_error: "يجب اختيار موقع التخزين",
+  }),
+  storageLocationDescription: z.string().optional(),
+  storedDataTypes: z.string().optional(),
+  retentionPeriodMonths: z.string().optional(),
+  deletionMethod: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -113,6 +120,11 @@ export default function PrivacyGeneratorPage() {
       rightsDeletionConditions: "",
       rightsResponseDays: "",
       rightsContactEntity: "",
+      storageLocationChoice: undefined,
+      storageLocationDescription: "",
+      storedDataTypes: "",
+      retentionPeriodMonths: "",
+      deletionMethod: "",
     },
   });
 
@@ -185,6 +197,13 @@ export default function PrivacyGeneratorPage() {
         deletionConditions: values.rightsDeletionConditions || null,
         responseDays: values.rightsResponseDays || null,
         contactEntity: values.rightsContactEntity || null,
+      }),
+      storageDetails: JSON.stringify({
+        locationChoice: values.storageLocationChoice,
+        locationDescription: values.storageLocationDescription || null,
+        storedDataTypes: values.storedDataTypes || null,
+        retentionPeriodMonths: values.retentionPeriodMonths || null,
+        deletionMethod: values.deletionMethod || null,
       }),
     };
     generateMutation.mutate(submitData);
@@ -709,23 +728,59 @@ export default function PrivacyGeneratorPage() {
               <CardHeader>
                 <CardTitle className="text-2xl text-primary">كيف نقوم بتخزين بياناتك الشخصية؟</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                    يتم تخزين بياناتك الشخصـــية بشكل آمن وذلك في مقر/ أو لدى مقدم خدمات الحوسبة السحابية أضف الموقع الذي يتم فيه تخزين أو استضافة البيانات الشخصية.
+              <CardContent className="space-y-5">
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    يتم تخزين بياناتك الشخصـــية بشكل آمن وذلك في مقر/ أو لدى مقدم خدمات الحوسبة السحابية:
                   </p>
+                  
                   <FormField
                     control={form.control}
-                    name="storageLocation"
+                    name="storageLocationChoice"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormControl>
+                          <div className="flex gap-6">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                value="inside_ksa"
+                                checked={field.value === "inside_ksa"}
+                                onChange={(e) => field.onChange(e.target.value)}
+                                className="w-4 h-4 text-primary"
+                                data-testid="radio-storage-inside-ksa"
+                              />
+                              <span className="text-sm">داخل المملكة العربية السعودية</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                value="outside_ksa"
+                                checked={field.value === "outside_ksa"}
+                                onChange={(e) => field.onChange(e.target.value)}
+                                className="w-4 h-4 text-primary"
+                                data-testid="radio-storage-outside-ksa"
+                              />
+                              <span className="text-sm">خارج المملكة العربية السعودية</span>
+                            </label>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="storageLocationDescription"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm text-muted-foreground">موقع التخزين:</FormLabel>
                         <FormControl>
-                          <Input
+                          <Textarea
                             {...field}
-                            className="bg-muted/40 min-h-10"
-                            placeholder="مثال: داخل المملكة العربية السعودية"
-                            data-testid="input-storage-location"
+                            className="min-h-20 bg-muted/40"
+                            placeholder="وصف الموقع الذي يتم فيه تخزين أو استضافة البيانات الشخصية"
+                            data-testid="input-storage-location-description"
                           />
                         </FormControl>
                         <FormMessage />
@@ -734,22 +789,63 @@ export default function PrivacyGeneratorPage() {
                   />
                 </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                    كما نحتفظ بـ تحديد نوع البيانات الشخصية لمدة الفترة الزمنية بالشهور. وستقوم بعد ذلك بالتخلص من هذه البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو اســــتعادتها مرة أخرى، وذلك عن طريق كيف ســــيتم إتلاف البيانات يتم تحديد فترة الاحتفاظ لكل نوع من البيانات على حدة.
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    كما نحتفظ بـ:
                   </p>
                   <FormField
                     control={form.control}
-                    name="retentionPeriod"
+                    name="storedDataTypes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm text-muted-foreground">مدة الاحتفاظ:</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             className="bg-muted/40 min-h-10"
-                            placeholder="مثال: سنتان من آخر نشاط"
-                            data-testid="input-retention"
+                            placeholder="تحديد نوع البيانات الشخصية"
+                            data-testid="input-stored-data-types"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    لمدة:
+                  </p>
+                  <FormField
+                    control={form.control}
+                    name="retentionPeriodMonths"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="bg-muted/40 min-h-10"
+                            placeholder="الفترة الزمنية بالأشهر"
+                            data-testid="input-retention-period-months"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    وستقوم بعد ذلك بالتخلص من هذه البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو اســــتعادتها مرة أخرى، وذلك عن طريق:
+                  </p>
+                  <FormField
+                    control={form.control}
+                    name="deletionMethod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            className="min-h-20 bg-muted/40"
+                            placeholder="كيف سيتم إتلاف البيانات (يتم تحديد فترة الاحتفاظ لكل نوع من البيانات على حدة)"
+                            data-testid="input-deletion-method"
                           />
                         </FormControl>
                         <FormMessage />
