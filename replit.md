@@ -147,3 +147,38 @@ Preferred communication style: Simple, everyday language.
 **Build & Runtime**:
 - esbuild for server-side bundling in production
 - ESM module system throughout the application
+
+## Recent Changes (November 14, 2025)
+
+### Privacy Policy Generator Enhancements
+
+**Problem Addressed**: The privacy policy generator needed to be fully compliant with the official SDAIA template and ensure all user-provided data is accurately reflected in generated policies.
+
+**Changes Implemented**:
+
+1. **Frontend UI Fixes** (client/src/pages/PrivacyGeneratorPage.tsx):
+   - Fixed policy sorting: Policies now display in descending order by creation date (newest first)
+   - Implemented automatic polling (every 2 seconds) for policies with "generating" or "pending" status
+   - Added defensive type checking for refetchInterval to prevent runtime errors
+   - Policies automatically update in the UI when generation completes
+
+2. **Backend Data Flow** (server/routes.ts, server/openai.ts):
+   - All 23 form fields now properly passed to the AI generation function
+   - Enhanced processPrivacyPolicyGeneration to include all optional fields (DPO info, storage location, security measures, etc.)
+   - Mock policy generator updated to follow the complete 12-section SDAIA template structure
+
+3. **Type Safety Improvements**:
+   - Added proper TypeScript type assertions in refetchInterval callback
+   - Implemented Array.isArray checks to prevent .some() errors on undefined data
+   - Query state data properly typed as PolicyDocument[] | undefined
+
+**Technical Details**:
+- The refetchInterval callback now safely accesses query.state.data with type guards
+- Sorting implemented using Array.sort() with date comparison on createdAt timestamps
+- All fields from the comprehensive form (basic info, data types, usage purposes, third-party sharing, retention, DPO details, etc.) flow correctly from frontend → backend → AI generation
+
+**User Experience Impact**:
+- Users now see their newest policies first in the list
+- UI automatically refreshes when generation completes (no manual refresh needed)
+- All input data appears accurately in the generated policy content
+- No more stale/incorrect data being displayed
