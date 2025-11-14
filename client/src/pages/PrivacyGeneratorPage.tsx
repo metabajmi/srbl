@@ -497,6 +497,44 @@ export default function PrivacyGeneratorPage() {
 
                     <FormField
                       control={form.control}
+                      name="dataUsageDetails"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>تفاصيل استخدام البيانات</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="مثال: نستخدم البيانات بشكل مباشر أو غير مباشر على النحو الآتي..."
+                              className="min-h-20"
+                              data-testid="input-usage-details"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="disclosureDetails"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>تفاصيل الإفصاح عن البيانات</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="مثال: سيتم الإفصاح عن البيانات الشخصية إليها مع ذكر الغرض لكل نوع من أنواع البيانات"
+                              className="min-h-20"
+                              data-testid="input-disclosure-details"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="thirdPartyCategories"
                       render={({ field }) => (
                         <FormItem>
