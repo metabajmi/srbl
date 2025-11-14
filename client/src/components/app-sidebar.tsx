@@ -1,6 +1,5 @@
 import { Link, useLocation } from "wouter";
 import { Shield, FileText, CheckSquare, ScrollText, ClipboardList, Home, FileSearch } from "lucide-react";
-import React from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,17 +11,6 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-
-const SidebarMenuLink = React.forwardRef<HTMLAnchorElement, React.ComponentProps<"a"> & { activeState?: boolean }>(
-  ({ activeState = false, children, ...props }, ref) => (
-    <SidebarMenuButton asChild isActive={activeState}>
-      <a ref={ref} {...props}>
-        {children}
-      </a>
-    </SidebarMenuButton>
-  )
-);
-SidebarMenuLink.displayName = "SidebarMenuLink";
 
 const menuItems = [
   {
@@ -80,15 +68,12 @@ export function AppSidebar() {
                 const isActive = location === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <Link
-                      href={item.url}
-                      component={SidebarMenuLink}
-                      activeState={isActive}
-                      data-testid={`link-${item.url.replace('/', '')}`}
-                    >
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link href={item.url} data-testid={`link-${item.url.replace('/', '') || 'home'}`}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}
@@ -104,15 +89,12 @@ export function AppSidebar() {
                 const isActive = location === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <Link
-                      href={item.url}
-                      component={SidebarMenuLink}
-                      activeState={isActive}
-                      data-testid={`link-${item.url.replace('/', '')}`}
-                    >
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link href={item.url} data-testid={`link-${item.url.replace('/', '')}`}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}
