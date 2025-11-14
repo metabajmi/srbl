@@ -139,6 +139,25 @@ export const policyDocuments = pgTable("policy_documents", {
   hasThirdPartySharing: text("has_third_party_sharing").notNull(),
   retentionPeriod: text("retention_period").notNull(),
   
+  // كيفية جمع البيانات
+  dataCollectionMethods: text("data_collection_methods"), // طرق جمع البيانات (مباشرة، غير مباشرة)
+  indirectDataSources: text("indirect_data_sources"), // مصادر البيانات غير المباشرة
+  
+  // كيفية الاستخدام والإفصاح
+  dataUsageDetails: text("data_usage_details"), // تفاصيل استخدام البيانات
+  disclosureDetails: text("disclosure_details"), // تفاصيل الإفصاح عن البيانات
+  thirdPartyCategories: text("third_party_categories"), // فئات الجهات الخارجية
+  
+  // التخزين والحماية
+  storageLocation: text("storage_location"), // موقع تخزين البيانات
+  securityMeasures: text("security_measures"), // إجراءات الحماية
+  
+  // مسؤول حماية البيانات
+  dpoName: text("dpo_name"), // اسم مسؤول حماية البيانات
+  dpoAddress: text("dpo_address"), // عنوان المسؤول
+  dpoPhone: text("dpo_phone"), // رقم هاتف المسؤول
+  dpoEmail: text("dpo_email"), // بريد المسؤول الإلكتروني
+  
   // تاريخ آخر تحديث
   lastUpdatedDate: timestamp("last_updated_date"),
   
@@ -161,6 +180,30 @@ export const insertPolicyDocumentSchema = createInsertSchema(policyDocuments).om
   businessType: z.string().min(2, "يجب إدخال نوع النشاط"),
   retentionPeriod: z.string().min(1, "يجب تحديد مدة الاحتفاظ بالبيانات"),
   hasThirdPartySharing: z.string().min(1, "يجب تحديد ما إذا كانت هناك مشاركة مع جهات خارجية"),
+  dataTypes: z.array(z.string()).min(1, "يجب إدخال نوع واحد على الأقل من البيانات"),
+  dataUsagePurposes: z.array(z.string()).min(1, "يجب إدخال غرض واحد على الأقل"),
+  
+  // جميع الحقول الاختيارية يمكن أن تكون string أو null
+  responsibleDepartment: z.string().nullish(),
+  address: z.string().nullish(),
+  contactPhone: z.string().nullish(),
+  licenseNumber: z.string().nullish(),
+  dataCollectionMethods: z.string().nullish(),
+  indirectDataSources: z.string().nullish(),
+  dataUsageDetails: z.string().nullish(),
+  disclosureDetails: z.string().nullish(),
+  thirdPartyCategories: z.string().nullish(),
+  storageLocation: z.string().nullish(),
+  securityMeasures: z.string().nullish(),
+  dpoName: z.string().nullish(),
+  dpoAddress: z.string().nullish(),
+  dpoPhone: z.string().nullish(),
+  dpoEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح").nullish().or(z.literal("")),
+  lastUpdatedDate: z.preprocess((val) => {
+    if (!val || val === '') return null;
+    const date = val instanceof Date ? val : new Date(val as string);
+    return isNaN(date.getTime()) ? null : date;
+  }, z.date().optional()).nullable(),
 });
 
 export type InsertPolicyDocument = z.infer<typeof insertPolicyDocumentSchema>;
