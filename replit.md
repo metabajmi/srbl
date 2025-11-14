@@ -57,7 +57,11 @@ Preferred communication style: Simple, everyday language.
 
 **AI Integration**: Uses OpenAI's GPT-3.5-turbo model for multiple intelligent features:
 - **Website Analysis**: Analyzes HTML content for PDPL compliance, identifies violations across categories, references specific articles from Saudi regulations, provides remediation guidance
-- **Privacy Policy Generation**: Creates customized, legally-sound privacy policies based on organization details (name, data types, purposes, retention, contact)
+- **Privacy Policy Generation**: Creates comprehensive, PDPL-compliant privacy policies with 12 detailed sections covering all regulatory requirements:
+  * **Data Collection**: Comprehensive data collection details with 11 optional fields including collection methods, indirect sources, disclosure details, third-party categories, storage location, security measures, and DPO contact information
+  * **12-Section Structure**: Includes Introduction, Data Collection Methods, Usage Details, Disclosure Practices, Legal Basis, Storage & Retention, Six User Rights (right to know, access, obtain, correct, delete, withdraw consent), DPO Information, Complaint Procedures, SDAIA Contact Details, Policy Updates, and Final Contact Information
+  * **Smart Validation**: Handles nullable fields gracefully with preprocessing to prevent invalid dates and fallback values ('غير محدد') for empty optional fields
+  * **Type Safety**: Fully typed PolicyDocumentData interface with proper validation using Zod schemas
 - **Terms & Conditions Generation**: Generates comprehensive terms documents tailored to service type and business requirements
 - **Compliance Analysis**: Evaluates internal compliance posture and provides improvement recommendations
 
