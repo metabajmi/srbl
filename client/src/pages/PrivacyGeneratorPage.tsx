@@ -169,10 +169,10 @@ export default function PrivacyGeneratorPage() {
           <h1 className="text-4xl font-bold mb-3 text-primary">نموذج تفصيلي لسياسة الخصوصية</h1>
           <div className="bg-muted/30 p-4 rounded-md border border-border">
             <p className="text-base text-foreground leading-relaxed">
-              [اسم الجهة]
+              اسم الجهة
             </p>
             <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-              [نبذة مختصـــرة عن مهام واختصاصــــات الجهة والخدمات المقدمة والفئة المستــــهدفة، ويمكنك التواصل معنا، عن طريق عدد من القنوات المتاحة، حسب بيانات التواصل الموضحة أدناه.]
+              نبذة مختصـــرة عن مهام واختصاصــــات الجهة والخدمات المقدمة والفئة المستــــهدفة، ويمكنك التواصل معنا، عن طريق عدد من القنوات المتاحة، حسب بيانات التواصل الموضحة أدناه.
             </p>
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function PrivacyGeneratorPage() {
                         <Input
                           {...field}
                           className="bg-muted/40 min-h-10"
-                          placeholder="[                                                                                              ]"
+                          placeholder="                                                                                              "
                           data-testid="input-department"
                         />
                       </FormControl>
@@ -214,7 +214,7 @@ export default function PrivacyGeneratorPage() {
                         <Input
                           {...field}
                           className="bg-muted/40 min-h-10"
-                          placeholder="[                                                                                              ]"
+                          placeholder="                                                                                              "
                           data-testid="input-address"
                         />
                       </FormControl>
@@ -233,7 +233,7 @@ export default function PrivacyGeneratorPage() {
                         <Input
                           {...field}
                           className="bg-muted/40 min-h-10"
-                          placeholder="[                                                                                              ]"
+                          placeholder="                                                                                              "
                           dir="ltr"
                           data-testid="input-phone"
                         />
@@ -254,7 +254,7 @@ export default function PrivacyGeneratorPage() {
                           {...field}
                           type="email"
                           className="bg-muted/40 min-h-10"
-                          placeholder="[                                                                                              ]"
+                          placeholder="                                                                                              "
                           dir="ltr"
                           data-testid="input-email"
                         />
@@ -274,7 +274,7 @@ export default function PrivacyGeneratorPage() {
                         <Input
                           {...field}
                           className="bg-muted/40 min-h-10"
-                          placeholder="[                                                                                              ]"
+                          placeholder="                                                                                              "
                           data-testid="input-license"
                         />
                       </FormControl>
@@ -292,7 +292,7 @@ export default function PrivacyGeneratorPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  تم إجراء آخر تحديث على سياسة الخصوصية بتاريخ [تاريخ آخر تحديث]. ويمكنك الاطلاع على ســـجل التحديثات عن طريق، [يمكن إضــــافة رابط أو أوراق جدول التحديثات في حال كانت السياسة وثيقة ورقية].
+                  تم إجراء آخر تحديث على سياسة الخصوصية بتاريخ تاريخ آخر تحديث . ويمكنك الاطلاع على ســـجل التحديثات عن طريق، يمكن إضــــافة رابط أو أوراق جدول التحديثات في حال كانت السياسة وثيقة ورقية .
                 </p>
                 <FormField
                   control={form.control}
@@ -354,7 +354,7 @@ export default function PrivacyGeneratorPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm text-muted-foreground">
-                        [أضــــف البيانات التي يتم جمعها، ويمكن تقســـــيمها إلى فئات، على سبـــيل المثال، البيانات الرئيسية، بيانات التواصل]
+                        أضــــف البيانات التي يتم جمعها، ويمكن تقســـــيمها إلى فئات، على سبـــيل المثال، البيانات الرئيسية، بيانات التواصل
                       </FormLabel>
                       <FormControl>
                         <Textarea
@@ -387,7 +387,7 @@ export default function PrivacyGeneratorPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm text-muted-foreground">
-                          [أضــــف الأغراض التي من أجلها يتم جمع البيانات الشخصـــية، ويمكن تقســــيمها إلى فئات حسب أنواع البيانات]
+                          أضــــف الأغراض التي من أجلها يتم جمع البيانات الشخصـــية، ويمكن تقســــيمها إلى فئات حسب أنواع البيانات
                         </FormLabel>
                         <FormControl>
                           <Textarea
@@ -413,7 +413,7 @@ export default function PrivacyGeneratorPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm text-muted-foreground">
-                          [أضـــف المصـــادر التي يتم من خلالها جمع البيانات الشخصـــية بصـــورة غير مباشـــرة، ووسيلة الجمع، مع ذكر الغرض من الجمع، كما يمكن تقسيمها إلى فئات حسب أنواع البيانات ومصادرها]
+                          أضـــف المصـــادر التي يتم من خلالها جمع البيانات الشخصـــية بصـــورة غير مباشـــرة، ووسيلة الجمع، مع ذكر الغرض من الجمع، كما يمكن تقسيمها إلى فئات حسب أنواع البيانات ومصادرها
                         </FormLabel>
                         <FormControl>
                           <Textarea
@@ -446,7 +446,7 @@ export default function PrivacyGeneratorPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm text-muted-foreground">
-                        [أضف كيفية استخدامك للبيانات الشخصية]
+                        أضف كيفية استخدامك للبيانات الشخصية
                       </FormLabel>
                       <FormControl>
                         <Textarea
@@ -470,7 +470,7 @@ export default function PrivacyGeneratorPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  [لن نفصح عن بياناتك الشخصية لأي طرف آخر لأغراض التسويق المباشر] أو [قد نفصح عن بياناتك الشخصية مع الجهات الآتية]:
+                  لن نفصح عن بياناتك الشخصية لأي طرف آخر لأغراض التسويق المباشر أو قد نفصح عن بياناتك الشخصية مع الجهات الآتية:
                 </p>
                 <FormField
                   control={form.control}
@@ -478,7 +478,7 @@ export default function PrivacyGeneratorPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm text-muted-foreground">
-                        [أضـــف الجهات التي سيتم الإفصاح عن البيانات الشخصـــية إليها مع ذكر الغرض لكل نوع من أنواع البيانات]
+                        أضـــف الجهات التي سيتم الإفصاح عن البيانات الشخصـــية إليها مع ذكر الغرض لكل نوع من أنواع البيانات
                       </FormLabel>
                       <FormControl>
                         <Textarea
@@ -502,43 +502,43 @@ export default function PrivacyGeneratorPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                  وفقاً لنظام حماية البيانات الشخصــــية، فإن المســــوغ النظامي الذي نعتمد عليه لمعالجة هذه البيانات: [يمكن اختيار مسوغ نظامي واحد أو أكثر من المسوغات الموضحة أدناه]
+                  وفقاً لنظام حماية البيانات الشخصــــية، فإن المســــوغ النظامي الذي نعتمد عليه لمعالجة هذه البيانات: يمكن اختيار مسوغ نظامي واحد أو أكثر من المسوغات الموضحة أدناه
                 </p>
                 <div className="space-y-3 bg-muted/20 p-4 rounded-md border">
                   <div className="flex gap-2">
                     <span className="text-sm">-</span>
                     <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      موافقتك الصــــريحة. ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناء على مســــوغات نظامية أخرى، وللقيام بذلك يمكنك التواصل مع [اسم الإدارة أو القسم المختص، أو مسؤول حماية البيانات الشخصية]
+                      موافقتك الصــــريحة. ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناء على مســــوغات نظامية أخرى، وللقيام بذلك يمكنك التواصل مع اسم الإدارة أو القسم المختص، أو مسؤول حماية البيانات الشخصية
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-sm">-</span>
                     <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      تنفيذاً للالتزام تعاقدي [يتم إيضـــاح هذا الالتزام وأهمية الوفاء به]
+                      تنفيذاً للالتزام تعاقدي يتم إيضـــاح هذا الالتزام وأهمية الوفاء به
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-sm">-</span>
                     <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      حماية المصـــالح الحيوية [يتم إيضـــاح كيفية حماية المصـــالح الحيوية عن طريق جمع ومعالجة البيانات الشخصية]
+                      حماية المصـــالح الحيوية يتم إيضـــاح كيفية حماية المصـــالح الحيوية عن طريق جمع ومعالجة البيانات الشخصية
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-sm">-</span>
                     <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      تحقيق مصـــلحة عامة [يتم إيضـــاح المصـــلحة العامة التي يتم تحقيقها عن طريق جمع ومعالجة البيانات الشخصية]
+                      تحقيق مصـــلحة عامة يتم إيضـــاح المصـــلحة العامة التي يتم تحقيقها عن طريق جمع ومعالجة البيانات الشخصية
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-sm">-</span>
                     <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      تحقيق مصالح أو أهداف مشروعة [يتم إيضاح الأهداف المشروعة التي لا تتعارض مع حقوق صاحب البيانات الشخصية]
+                      تحقيق مصالح أو أهداف مشروعة يتم إيضاح الأهداف المشروعة التي لا تتعارض مع حقوق صاحب البيانات الشخصية
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-sm">-</span>
                     <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      تنفيذاً للالتزام نظامي [يتم إيضاح اسم النظام والمادة التي تخول الجهة بجمع ومعالجة البيانات الشخصية]
+                      تنفيذاً للالتزام نظامي يتم إيضاح اسم النظام والمادة التي تخول الجهة بجمع ومعالجة البيانات الشخصية
                     </p>
                   </div>
                 </div>
@@ -553,7 +553,7 @@ export default function PrivacyGeneratorPage() {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                    يتم تخزين بياناتك الشخصـــية بشكل آمن وذلك في مقر/ أو لدى مقدم خدمات الحوسبة السحابية [أضف الموقع الذي يتم فيه تخزين أو استضافة البيانات الشخصية].
+                    يتم تخزين بياناتك الشخصـــية بشكل آمن وذلك في مقر/ أو لدى مقدم خدمات الحوسبة السحابية أضف الموقع الذي يتم فيه تخزين أو استضافة البيانات الشخصية.
                   </p>
                   <FormField
                     control={form.control}
@@ -577,7 +577,7 @@ export default function PrivacyGeneratorPage() {
 
                 <div>
                   <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                    كما نحتفظ بـ [تحديد نوع البيانات الشخصية] لمدة [الفترة الزمنية بالشهور]. وستقوم بعد ذلك بالتخلص من هذه البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو اســــتعادتها مرة أخرى، وذلك عن طريق [كيف ســــيتم إتلاف البيانات] [يتم تحديد فترة الاحتفاظ لكل نوع من البيانات على حدة].
+                    كما نحتفظ بـ تحديد نوع البيانات الشخصية لمدة الفترة الزمنية بالشهور. وستقوم بعد ذلك بالتخلص من هذه البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو اســــتعادتها مرة أخرى، وذلك عن طريق كيف ســــيتم إتلاف البيانات يتم تحديد فترة الاحتفاظ لكل نوع من البيانات على حدة.
                   </p>
                   <FormField
                     control={form.control}
@@ -635,31 +635,31 @@ export default function PrivacyGeneratorPage() {
                   <div>
                     <h4 className="text-base font-semibold mb-2">الحق في العلم:</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      يحق لك معرفة طرق جمعاً لبياناتك الشخصـــية والمسوغ النظامي لجمعها ومعالجتها، وكيفية معالجتها وحفظها وإتلافها ومن ســــيتم الإفصـــاح عنها، ويمكنك الاطلاع على كافة التفاصيل من خلال سياسة الخصوصية أو يمكنك التواصل معنا على البيانات الموضحة أدناه. [إيضاح القيود على الحق في العلم بلغة مبسطة].
+                      يحق لك معرفة طرق جمعاً لبياناتك الشخصـــية والمسوغ النظامي لجمعها ومعالجتها، وكيفية معالجتها وحفظها وإتلافها ومن ســــيتم الإفصـــاح عنها، ويمكنك الاطلاع على كافة التفاصيل من خلال سياسة الخصوصية أو يمكنك التواصل معنا على البيانات الموضحة أدناه. إيضاح القيود على الحق في العلم بلغة مبسطة .
                     </p>
                   </div>
                   <div>
                     <h4 className="text-base font-semibold mb-2">الحق في الوصــــول إلى بياناتك الشخصـــية:</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      يحق لك أن تطلب منا الاطلاع على بياناتك الشخصية، وذلك عن طريق [الوسيلة التي يتم من خلالها الاطلاع على البيانات الشخصية]. [إيضاح القيود على الحق في الوصول بلغة مبسطة].
+                      يحق لك أن تطلب منا الاطلاع على بياناتك الشخصية، وذلك عن طريق الوسيلة التي يتم من خلالها الاطلاع على البيانات الشخصية . إيضاح القيود على الحق في الوصول بلغة مبسطة .
                     </p>
                   </div>
                   <div>
                     <h4 className="text-base font-semibold mb-2">الحق في طلب الحصـــول على بياناتك الشخصـــية:</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      يحق لك طلب الحصـــول على بياناتك الشخصـــية المتوفرة لدى جهة التحكم بصــــيغة مقروءة وواضحـــة متى ما كان ذلك ممكناً من الناحية التقنية، وذلك عن طريق [الوســـيلة التي يتم من خلالها تزويد صاحب البيانات الشخصــــية ببياناته]. [إيضـــاح القيود على الحق في الحصـــول بلغة مبسطة والتي تســـري على الحصـــول، وفيما من القيود والاستثنائات، إن وجدت].
+                      يحق لك طلب الحصـــول على بياناتك الشخصـــية المتوفرة لدى جهة التحكم بصــــيغة مقروءة وواضحـــة متى ما كان ذلك ممكناً من الناحية التقنية، وذلك عن طريق الوســـيلة التي يتم من خلالها تزويد صاحب البيانات الشخصــــية ببياناته . إيضـــاح القيود على الحق في الحصـــول بلغة مبسطة والتي تســـري على الحصـــول، وفيما من القيود والاستثنائات، إن وجدت .
                     </p>
                   </div>
                   <div>
                     <h4 className="text-base font-semibold mb-2">الحق في تصـــحيح بياناتك الشخصـــية:</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      يحق لك أن تطلب منا تصـــحيح بياناتك الشخصـــية التي ترى أنها غير دقيقة أو غير صـــحيحة أو غير مكتملة، وذلك عن طريق [الوسيلة التي من خلالها يمكن طلب التصحيح]. وسيتم مراجعتها وتحديثها خلال [عدد الأيام]. وســــيتم إشعارك بذلك عن طريق [الوســــيلة التي يتم من خلالها تمكين صاحب البيانات الشخصية من الاطلاع على بياناته].
+                      يحق لك أن تطلب منا تصـــحيح بياناتك الشخصـــية التي ترى أنها غير دقيقة أو غير صـــحيحة أو غير مكتملة، وذلك عن طريق الوسيلة التي من خلالها يمكن طلب التصحيح . وسيتم مراجعتها وتحديثها خلال عدد الأيام . وســــيتم إشعارك بذلك عن طريق الوســــيلة التي يتم من خلالها تمكين صاحب البيانات الشخصية من الاطلاع على بياناته .
                     </p>
                   </div>
                   <div>
                     <h4 className="text-base font-semibold mb-2">الحق في إتلاف بياناتك الشخصية:</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      يحق لك أن تطلب منا [إتلاف بياناتك الشخصــــية في ظروف معينة [يتم إيضـــاح الحالات الممكنة بما لا يتعارض مع المســـوغات النظامية، والقيود الواردة على الحق في الإتلاف].
+                      يحق لك أن تطلب منا إتلاف بياناتك الشخصــــية في ظروف معينة يتم إيضـــاح الحالات الممكنة بما لا يتعارض مع المســـوغات النظامية، والقيود الواردة على الحق في الإتلاف .
                     </p>
                   </div>
                   <div>
@@ -670,10 +670,10 @@ export default function PrivacyGeneratorPage() {
                   </div>
                   <div className="bg-muted/20 p-4 rounded-md border mt-4">
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      ما عدا ما هو منصوص عليه نظاماً، لن تكون مطالباً بدفع أي رسوم مقابل ممارسة هذه الحقوق. وفي حال تم تقديم طلب لممارسة أحد هذه الحقوق، سيتم الرد عليك خلال [عدد الأيام] من تاريخ استلام الطلب كاملاً.
+                      ما عدا ما هو منصوص عليه نظاماً، لن تكون مطالباً بدفع أي رسوم مقابل ممارسة هذه الحقوق. وفي حال تم تقديم طلب لممارسة أحد هذه الحقوق، سيتم الرد عليك خلال عدد الأيام من تاريخ استلام الطلب كاملاً.
                     </p>
                     <p className="text-sm text-muted-foreground leading-relaxed mt-3">
-                      ولمزيد من التفاصــــيل عن معالجة بياناتك الشخصــــية، وكيفية ممارســــة حقوقك، يمكنك التواصل مع مسؤول حماية البيانات الشخصية بـ [الجهة]، حسب بيانات التواصل الموضحة أدناه.
+                      ولمزيد من التفاصــــيل عن معالجة بياناتك الشخصــــية، وكيفية ممارســــة حقوقك، يمكنك التواصل مع مسؤول حماية البيانات الشخصية بـ الجهة ، حسب بيانات التواصل الموضحة أدناه.
                     </p>
                   </div>
                 </div>
@@ -696,7 +696,7 @@ export default function PrivacyGeneratorPage() {
                         <Input
                           {...field}
                           className="bg-muted/40 min-h-10"
-                          placeholder="[                                                                                              ]"
+                          placeholder="                                                                                              "
                           data-testid="input-dpo-name"
                         />
                       </FormControl>
@@ -715,7 +715,7 @@ export default function PrivacyGeneratorPage() {
                         <Input
                           {...field}
                           className="bg-muted/40 min-h-10"
-                          placeholder="[                                                                                              ]"
+                          placeholder="                                                                                              "
                           data-testid="input-dpo-address"
                         />
                       </FormControl>
@@ -734,7 +734,7 @@ export default function PrivacyGeneratorPage() {
                         <Input
                           {...field}
                           className="bg-muted/40 min-h-10"
-                          placeholder="[                                                                                              ]"
+                          placeholder="                                                                                              "
                           dir="ltr"
                           data-testid="input-dpo-phone"
                         />
@@ -755,7 +755,7 @@ export default function PrivacyGeneratorPage() {
                           {...field}
                           type="email"
                           className="bg-muted/40 min-h-10"
-                          placeholder="[                                                                                              ]"
+                          placeholder="                                                                                              "
                           dir="ltr"
                           data-testid="input-dpo-email"
                         />
@@ -775,34 +775,15 @@ export default function PrivacyGeneratorPage() {
               <CardContent>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    في حال وجود بعض المخاوف أو عدم التزامنا بنظام حماية البيانات الشخصــــية، يمكنك تقديم شكـــوى إلى [أضــــف اســــم الإدارة أو القســــم المختص بمعالجة الشكاوى] وذلك باســــتخدام إحدى القنوات التالية [أضــــف وســــيلة وبيانات التواصـــل الخاصة باستقبال الشكاوى والاستفسارات].
+                    في حال وجود بعض المخاوف أو عدم التزامنا بنظام حماية البيانات الشخصــــية، يمكنك تقديم شكـــوى إلى أضــــف اســــم الإدارة أو القســــم المختص بمعالجة الشكاوى وذلك باســــتخدام إحدى القنوات التالية أضــــف وســــيلة وبيانات التواصـــل الخاصة باستقبال الشكاوى والاستفسارات.
                   </p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    إذا لم تكن راضــــياً عن معالجتنا للشكـــوى أو في حال عدم ردنا خلال [عدد الأيام]، يمكنك تقديم شكــــوى إلى الجهة المختصـــة [أضـــف اســــم الهيئة الســـعودية للبيانات والذكاء الاصطناعي].
+                    إذا لم تكن راضــــياً عن معالجتنا للشكـــوى أو في حال عدم ردنا خلال عدد الأيام، يمكنك تقديم شكــــوى إلى الجهة المختصـــة أضـــف اســــم الهيئة الســـعودية للبيانات والذكاء الاصطناعي.
                   </p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* عنوان الهيئة السعودية */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl text-primary">عنوان الهيئة السعودية للبيانات والذكاء الاصطناعي</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-center">
-                  <p className="text-base font-semibold">المملكة العربية السعودية</p>
-                  <p className="text-base font-semibold">الرياض</p>
-                  <p className="text-sm text-muted-foreground">الموقع الإلكتروني:</p>
-                  <p className="text-base font-semibold" dir="ltr">
-                    الهيئة السعودية للبيانات والذكاء الاصطناعي (sdaia.gov.sa)
-                  </p>
-                  <p className="text-base font-semibold" dir="ltr">
-                    منصة حوكمة البيانات الوطنية (dgp.sdaia.gov.sa)
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* معلومات إضافية - مخفية لكن مطلوبة */}
             <div className="hidden">
