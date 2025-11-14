@@ -405,6 +405,7 @@ export interface PolicyDocumentData {
   dpoAddress?: string | null;
   dpoPhone?: string | null;
   dpoEmail?: string | null;
+  lastUpdatedDate?: Date | null;
 }
 
 export async function generatePrivacyPolicy(data: PolicyDocumentData): Promise<string> {
@@ -412,6 +413,10 @@ export async function generatePrivacyPolicy(data: PolicyDocumentData): Promise<s
     console.warn("OpenAI API key not configured, using mock privacy policy");
     return generateMockPrivacyPolicy(data);
   }
+
+  const formattedDate = data.lastUpdatedDate 
+    ? new Date(data.lastUpdatedDate).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
+    : new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
 
   const prompt = `أنشئ سياسة خصوصية شاملة ومتوافقة بنسبة 100% مع نظام حماية البيانات الشخصية السعودي للشركة التالية:
 
@@ -449,6 +454,8 @@ export async function generatePrivacyPolicy(data: PolicyDocumentData): Promise<s
 - العنوان: ${data.dpoAddress || 'غير محدد'}
 - الهاتف: ${data.dpoPhone || 'غير محدد'}
 - البريد الإلكتروني: ${data.dpoEmail || data.contactEmail}
+
+تاريخ آخر تحديث للسياسة: ${formattedDate}
 
 يجب أن تتضمن السياسة الأقسام التالية بالترتيب وبشكل مفصل:
 
@@ -531,42 +538,107 @@ export async function generatePrivacyPolicy(data: PolicyDocumentData): Promise<s
 }
 
 function generateMockPrivacyPolicy(data: PolicyDocumentData): string {
+  const formattedDate = data.lastUpdatedDate 
+    ? new Date(data.lastUpdatedDate).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
+    : new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+    
   return `سياسة الخصوصية
 
-آخر تحديث: ${new Date().toLocaleDateString('ar-SA')}
+آخر تحديث: ${formattedDate}
 
-1. مقدمة
+1. مقدمة والتزام بالخصوصية
 نحن في ${data.companyName} (${data.websiteUrl}) نلتزم بحماية خصوصيتك وبياناتك الشخصية وفقاً لنظام حماية البيانات الشخصية السعودي.
 
-2. البيانات التي نجمعها
+نوع النشاط: ${data.businessType}
+${data.licenseNumber ? `السجل التجاري: ${data.licenseNumber}` : ''}
+${data.responsibleDepartment ? `القسم المختص: ${data.responsibleDepartment}` : ''}
+
+2. كيف يتم جمع بياناتك الشخصية وما هو الغرض من جمعها؟
+
+2.1 البيانات التي يتم جمعها
 نقوم بجمع الأنواع التالية من البيانات:
 ${data.dataTypes.map(type => `- ${type}`).join('\n')}
 
-3. كيفية استخدام البيانات
+2.2 طرق الجمع
+${data.dataCollectionMethods || 'يتم جمع البيانات بشكل مباشر من خلال تفاعلك مع خدماتنا وبشكل غير مباشر من مصادر معتمدة.'}
+
+${data.indirectDataSources ? `2.3 مصادر البيانات غير المباشرة
+${data.indirectDataSources}` : ''}
+
+3. كيف نستخدم بياناتك الشخصية؟
 نستخدم بياناتك للأغراض التالية:
 ${data.dataUsagePurposes.map(purpose => `- ${purpose}`).join('\n')}
 
-4. مشاركة البيانات
+${data.dataUsageDetails ? `\nتفاصيل الاستخدام:
+${data.dataUsageDetails}` : ''}
+
+4. كيف نفصح عن بياناتك الشخصية؟
+مشاركة مع جهات خارجية: ${data.hasThirdPartySharing === 'yes' ? 'نعم' : 'لا'}
 ${data.hasThirdPartySharing === 'yes' ? 'قد نشارك بياناتك مع أطراف ثالثة موثوقة لتحسين خدماتنا.' : 'لا نشارك بياناتك مع أطراف ثالثة إلا بموافقتك الصريحة.'}
 
-5. حقوقك
-لديك الحق في:
-- الوصول إلى بياناتك الشخصية
-- تصحيح بياناتك غير الصحيحة
-- حذف بياناتك في ظروف معينة
-- الاعتراض على معالجة بياناتك
-- نقل بياناتك إلى جهة أخرى
+${data.thirdPartyCategories && data.hasThirdPartySharing === 'yes' ? `فئات الجهات الخارجية:
+${data.thirdPartyCategories}` : ''}
 
-6. أمن البيانات
-نتخذ إجراءات أمنية مناسبة لحماية بياناتك من الوصول غير المصرح به أو الإفصاح أو التغيير.
+${data.disclosureDetails ? `تفاصيل الإفصاح:
+${data.disclosureDetails}` : ''}
 
-7. الاحتفاظ بالبيانات
-نحتفظ ببياناتك لمدة ${data.retentionPeriod}.
+5. المسوغات النظامية لجمع ومعالجة بياناتك الشخصية
+نقوم بجمع ومعالجة بياناتك الشخصية بناءً على المسوغات النظامية التالية:
+- موافقتك الصريحة
+- تنفيذ العقد المبرم معك
+- الالتزام بالتزام قانوني
+- المصلحة المشروعة لنا أو لطرف ثالث
+- حماية المصالح الحيوية
 
-8. الاتصال بنا
-للاستفسارات حول سياسة الخصوصية:
-البريد الإلكتروني: ${data.contactEmail}
-${data.contactPhone ? `الهاتف: ${data.contactPhone}` : ''}`;
+6. كيف نقوم بتخزين بياناتك الشخصية؟
+${data.storageLocation ? `موقع التخزين: ${data.storageLocation}` : 'يتم تخزين بياناتك في خوادم آمنة.'}
+
+مدة الاحتفاظ: ${data.retentionPeriod}
+
+${data.securityMeasures ? `إجراءات الحماية: ${data.securityMeasures}` : 'نطبق إجراءات أمنية متقدمة بما في ذلك التشفير والمراقبة المستمرة.'}
+
+7. حقوقك فيما يتعلق بمعالجة بياناتك الشخصية
+بموجب نظام حماية البيانات الشخصية السعودي، لديك الحقوق التالية:
+
+- الحق في العلم: معرفة طرق جمع بياناتك ومعالجتها وحفظها والإفصاح عنها
+- الحق في الوصول إلى بياناتك الشخصية: طلب الاطلاع على بياناتك وكيفية استخدامها
+- الحق في طلب الحصول على بياناتك الشخصية: الحصول على نسخة من بياناتك بصيغة مقروءة
+- الحق في تصحيح بياناتك الشخصية: طلب تصحيح البيانات غير الدقيقة أو غير الصحيحة
+- الحق في إتلاف بياناتك الشخصية: طلب حذف بياناتك في ظروف معينة
+- الحق في الرجوع عن موافقتك على معالجة بياناتك الشخصية: سحب الموافقة في أي وقت
+
+${data.dpoName || data.dpoEmail ? `8. مسؤول حماية البيانات الشخصية
+${data.dpoName ? `الاسم: ${data.dpoName}` : ''}
+${data.dpoEmail ? `البريد الإلكتروني: ${data.dpoEmail}` : ''}
+${data.dpoPhone ? `الهاتف: ${data.dpoPhone}` : ''}
+${data.dpoAddress ? `العنوان: ${data.dpoAddress}` : ''}
+
+يمكنك التواصل مع مسؤول حماية البيانات لأي استفسارات أو طلبات تتعلق ببياناتك الشخصية.` : ''}
+
+9. كيف تقدم شكوى أو اعتراض؟
+إذا كانت لديك أي شكاوى أو اعتراضات بخصوص معالجة بياناتك الشخصية، يمكنك التواصل معنا عبر:
+- البريد الإلكتروني: ${data.contactEmail}
+${data.contactPhone ? `- الهاتف: ${data.contactPhone}` : ''}
+${data.address ? `- العنوان: ${data.address}` : ''}
+
+سنقوم بالرد على شكواك في أقرب وقت ممكن وبما لا يتجاوز 30 يوماً.
+
+10. عنوان الهيئة السعودية للبيانات والذكاء الاصطناعي
+يمكنك تقديم شكوى إلى الهيئة السعودية للبيانات والذكاء الاصطناعي:
+- العنوان: المملكة العربية السعودية، الرياض
+- الموقع الإلكتروني: sdaia.gov.sa
+- منصة حوكمة البيانات الوطنية: dgp.sdaia.gov.sa
+
+11. تحديثات السياسة
+قد نقوم بتحديث هذه السياسة من وقت لآخر. سيتم إشعارك بأي تغييرات جوهرية عبر البريد الإلكتروني أو من خلال إشعار على موقعنا.
+
+12. معلومات الاتصال النهائية
+للاستفسارات حول سياسة الخصوصية، يرجى التواصل معنا:
+- الجهة: ${data.companyName}
+- البريد الإلكتروني: ${data.contactEmail}
+${data.contactPhone ? `- الهاتف: ${data.contactPhone}` : ''}
+${data.address ? `- العنوان: ${data.address}` : ''}
+${data.websiteUrl ? `- الموقع الإلكتروني: ${data.websiteUrl}` : ''}`;
 }
 
 export interface TermsDocumentData {
