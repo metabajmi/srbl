@@ -60,6 +60,15 @@ const formSchema = z.object({
   dpoPhone: z.string().optional(),
   dpoEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح").optional().or(z.literal("")),
   lastUpdatedDate: z.date().optional(),
+  rightsAccessMethod: z.string().optional(),
+  rightsObtainMethod: z.string().optional(),
+  rightsObtainLimitations: z.string().optional(),
+  rightsCorrectionMethod: z.string().optional(),
+  rightsCorrectionDays: z.string().optional(),
+  rightsCorrectionNotificationMethod: z.string().optional(),
+  rightsDeletionConditions: z.string().optional(),
+  rightsResponseDays: z.string().optional(),
+  rightsContactEntity: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -95,6 +104,15 @@ export default function PrivacyGeneratorPage() {
       dpoPhone: "",
       dpoEmail: "",
       lastUpdatedDate: undefined,
+      rightsAccessMethod: "",
+      rightsObtainMethod: "",
+      rightsObtainLimitations: "",
+      rightsCorrectionMethod: "",
+      rightsCorrectionDays: "",
+      rightsCorrectionNotificationMethod: "",
+      rightsDeletionConditions: "",
+      rightsResponseDays: "",
+      rightsContactEntity: "",
     },
   });
 
@@ -157,6 +175,17 @@ export default function PrivacyGeneratorPage() {
       dpoPhone: values.dpoPhone || null,
       dpoEmail: values.dpoEmail || null,
       lastUpdatedDate: values.lastUpdatedDate ? new Date(values.lastUpdatedDate) : null,
+      rightsProcedures: JSON.stringify({
+        accessMethod: values.rightsAccessMethod || null,
+        obtainMethod: values.rightsObtainMethod || null,
+        obtainLimitations: values.rightsObtainLimitations || null,
+        correctionMethod: values.rightsCorrectionMethod || null,
+        correctionDays: values.rightsCorrectionDays || null,
+        correctionNotificationMethod: values.rightsCorrectionNotificationMethod || null,
+        deletionConditions: values.rightsDeletionConditions || null,
+        responseDays: values.rightsResponseDays || null,
+        contactEntity: values.rightsContactEntity || null,
+      }),
     };
     generateMutation.mutate(submitData);
   };
@@ -770,27 +799,154 @@ export default function PrivacyGeneratorPage() {
                   </div>
                   <div>
                     <h4 className="text-base font-semibold mb-2">الحق في الوصــــول إلى بياناتك الشخصـــية:</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      يحق لك أن تطلب منا الاطلاع على بياناتك الشخصية، وذلك عن طريق الوسيلة التي يتم من خلالها الاطلاع على البيانات الشخصية . إيضاح القيود على الحق في الوصول بلغة مبسطة .
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                      يحق لك أن تطلب منا الاطلاع على بياناتك الشخصية، وذلك عن طريق:
                     </p>
+                    <FormField
+                      control={form.control}
+                      name="rightsAccessMethod"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              className="bg-muted/40 min-h-10"
+                              placeholder="الوسيلة التي يتم من خلالها الاطلاع على البيانات الشخصية"
+                              data-testid="input-rights-access-method"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                   <div>
                     <h4 className="text-base font-semibold mb-2">الحق في طلب الحصـــول على بياناتك الشخصـــية:</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      يحق لك طلب الحصـــول على بياناتك الشخصـــية المتوفرة لدى جهة التحكم بصــــيغة مقروءة وواضحـــة متى ما كان ذلك ممكناً من الناحية التقنية، وذلك عن طريق الوســـيلة التي يتم من خلالها تزويد صاحب البيانات الشخصــــية ببياناته . إيضـــاح القيود على الحق في الحصـــول بلغة مبسطة والتي تســـري على الحصـــول، وفيما من القيود والاستثنائات، إن وجدت .
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                      يحق لك طلب الحصـــول على بياناتك الشخصـــية المتوفرة لدى جهة التحكم بصــــيغة مقروءة وواضحـــة متى ما كان ذلك ممكناً من الناحية التقنية، وذلك عن طريق:
                     </p>
+                    <FormField
+                      control={form.control}
+                      name="rightsObtainMethod"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              className="bg-muted/40 min-h-10 mb-3"
+                              placeholder="الوسيلة التي يتم من خلالها تزويد صاحب البيانات الشخصية ببياناته"
+                              data-testid="input-rights-obtain-method"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="rightsObtainLimitations"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              className="min-h-20 bg-muted/40"
+                              placeholder="إيضاح القيود على الحق في الحصول بلغة مبسطة والتي تسري على الحصول، وفيما من القيود والاستثناءات، إن وجدت"
+                              data-testid="input-rights-obtain-limitations"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                   <div>
                     <h4 className="text-base font-semibold mb-2">الحق في تصـــحيح بياناتك الشخصـــية:</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      يحق لك أن تطلب منا تصـــحيح بياناتك الشخصـــية التي ترى أنها غير دقيقة أو غير صـــحيحة أو غير مكتملة، وذلك عن طريق الوسيلة التي من خلالها يمكن طلب التصحيح . وسيتم مراجعتها وتحديثها خلال عدد الأيام . وســــيتم إشعارك بذلك عن طريق الوســــيلة التي يتم من خلالها تمكين صاحب البيانات الشخصية من الاطلاع على بياناته .
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                      يحق لك أن تطلب منا تصـــحيح بياناتك الشخصـــية التي ترى أنها غير دقيقة أو غير صـــحيحة أو غير مكتملة، وذلك عن طريق:
                     </p>
+                    <div className="space-y-3">
+                      <FormField
+                        control={form.control}
+                        name="rightsCorrectionMethod"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                className="bg-muted/40 min-h-10"
+                                placeholder="الوسيلة التي من خلالها يمكن طلب التصحيح"
+                                data-testid="input-rights-correction-method"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        وسيتم مراجعتها وتحديثها خلال:
+                      </p>
+                      <FormField
+                        control={form.control}
+                        name="rightsCorrectionDays"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                className="bg-muted/40 min-h-10"
+                                placeholder="عدد الأيام"
+                                data-testid="input-rights-correction-days"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        وســــيتم إشعارك بذلك عن طريق:
+                      </p>
+                      <FormField
+                        control={form.control}
+                        name="rightsCorrectionNotificationMethod"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                className="bg-muted/40 min-h-10"
+                                placeholder="الوسيلة التي يتم من خلالها تمكين صاحب البيانات الشخصية من الاطلاع على بياناته"
+                                data-testid="input-rights-correction-notification"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
                   <div>
                     <h4 className="text-base font-semibold mb-2">الحق في إتلاف بياناتك الشخصية:</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      يحق لك أن تطلب منا إتلاف بياناتك الشخصــــية في ظروف معينة يتم إيضـــاح الحالات الممكنة بما لا يتعارض مع المســـوغات النظامية، والقيود الواردة على الحق في الإتلاف .
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                      يحق لك أن تطلب منا إتلاف بياناتك الشخصــــية في ظروف معينة:
                     </p>
+                    <FormField
+                      control={form.control}
+                      name="rightsDeletionConditions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              className="min-h-20 bg-muted/40"
+                              placeholder="يتم إيضاح الحالات الممكنة بما لا يتعارض مع المسوغات النظامية، والقيود الواردة على الحق في الإتلاف"
+                              data-testid="input-rights-deletion-conditions"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                   <div>
                     <h4 className="text-base font-semibold mb-2">الحق في الرجوع عن موافقتك على معالجة بياناتك الشخصية:</h4>
@@ -798,12 +954,52 @@ export default function PrivacyGeneratorPage() {
                       يحق لك الرجوع عن موافقتك على معالجة بياناتك الشخصـــية -في أي وقت- ما لم تكن هناك مســـوغات نظامية تتطلب عكس ذلك.
                     </p>
                   </div>
-                  <div className="bg-muted/20 p-4 rounded-md border mt-4">
+                  <div className="bg-muted/20 p-4 rounded-md border mt-4 space-y-3">
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      ما عدا ما هو منصوص عليه نظاماً، لن تكون مطالباً بدفع أي رسوم مقابل ممارسة هذه الحقوق. وفي حال تم تقديم طلب لممارسة أحد هذه الحقوق، سيتم الرد عليك خلال عدد الأيام من تاريخ استلام الطلب كاملاً.
+                      ما عدا ما هو منصوص عليه نظاماً، لن تكون مطالباً بدفع أي رسوم مقابل ممارسة هذه الحقوق. وفي حال تم تقديم طلب لممارسة أحد هذه الحقوق، سيتم الرد عليك خلال:
                     </p>
-                    <p className="text-sm text-muted-foreground leading-relaxed mt-3">
-                      ولمزيد من التفاصــــيل عن معالجة بياناتك الشخصــــية، وكيفية ممارســــة حقوقك، يمكنك التواصل مع مسؤول حماية البيانات الشخصية بـ الجهة ، حسب بيانات التواصل الموضحة أدناه.
+                    <FormField
+                      control={form.control}
+                      name="rightsResponseDays"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              className="bg-background min-h-10"
+                              placeholder="عدد الأيام"
+                              data-testid="input-rights-response-days"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      من تاريخ استلام الطلب كاملاً.
+                    </p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      ولمزيد من التفاصــــيل عن معالجة بياناتك الشخصــــية، وكيفية ممارســــة حقوقك، يمكنك التواصل مع مسؤول حماية البيانات الشخصية بـ:
+                    </p>
+                    <FormField
+                      control={form.control}
+                      name="rightsContactEntity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              className="bg-background min-h-10"
+                              placeholder="الجهة"
+                              data-testid="input-rights-contact-entity"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      حسب بيانات التواصل الموضحة أدناه.
                     </p>
                   </div>
                 </div>
