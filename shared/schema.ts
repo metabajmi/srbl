@@ -125,12 +125,23 @@ export const policyDocuments = pgTable("policy_documents", {
   companyName: text("company_name").notNull(),
   websiteUrl: text("website_url").notNull(),
   businessType: text("business_type").notNull(),
+  
+  // بيانات التواصل من النموذج
+  responsibleDepartment: text("responsible_department"), // القسم/الفريق المختص
+  address: text("address"), // العنوان
+  contactPhone: text("contact_phone"), // رقم الهاتف
+  contactEmail: text("contact_email").notNull(), // البريد الإلكتروني
+  licenseNumber: text("license_number"), // الترخيص أو السجل التجاري
+  
+  // البيانات الشخصية
   dataTypes: jsonb("data_types").notNull(), // Array of data types collected
   dataUsagePurposes: jsonb("data_usage_purposes").notNull(),
   hasThirdPartySharing: text("has_third_party_sharing").notNull(),
   retentionPeriod: text("retention_period").notNull(),
-  contactEmail: text("contact_email").notNull(),
-  contactPhone: text("contact_phone"),
+  
+  // تاريخ آخر تحديث
+  lastUpdatedDate: timestamp("last_updated_date"),
+  
   generatedContent: text("generated_content"),
   status: text("status").notNull().default("pending"), // pending, generating, completed, failed
   createdAt: timestamp("created_at").defaultNow(),
@@ -146,6 +157,10 @@ export const insertPolicyDocumentSchema = createInsertSchema(policyDocuments).om
 }).extend({
   websiteUrl: z.string().url("يجب إدخال رابط صحيح"),
   contactEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
+  companyName: z.string().min(2, "يجب إدخال اسم الجهة"),
+  businessType: z.string().min(2, "يجب إدخال نوع النشاط"),
+  retentionPeriod: z.string().min(1, "يجب تحديد مدة الاحتفاظ بالبيانات"),
+  hasThirdPartySharing: z.string().min(1, "يجب تحديد ما إذا كانت هناك مشاركة مع جهات خارجية"),
 });
 
 export type InsertPolicyDocument = z.infer<typeof insertPolicyDocumentSchema>;
