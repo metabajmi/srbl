@@ -165,6 +165,7 @@ export const policyDocuments = pgTable("policy_documents", {
   legalBasis: text("legal_basis"), // الأساس القانوني للمعالجة
   consentWithdrawalProcess: text("consent_withdrawal_process"), // عملية سحب الموافقة
   rightsProcedures: text("rights_procedures"), // إجراءات ممارسة حقوق أصحاب البيانات
+  storageDetails: text("storage_details"), // تفاصيل التخزين (موقع التخزين، نوع البيانات، فترة الحفظ، طريقة الإتلاف)
   breachNotificationProcess: text("breach_notification_process"), // عملية الإبلاغ عن الانتهاكات
   thirdPartyAgreements: text("third_party_agreements"), // اتفاقيات الجهات الخارجية
   trainingPrograms: text("training_programs"), // برامج تدريب الموظفين
