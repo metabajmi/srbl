@@ -161,6 +161,14 @@ export const policyDocuments = pgTable("policy_documents", {
   // تاريخ آخر تحديث
   lastUpdatedDate: timestamp("last_updated_date"),
   
+  // الحقول المطلوبة من القالب الرسمي SDAIA
+  legalBasis: text("legal_basis"), // الأساس القانوني للمعالجة
+  consentWithdrawalProcess: text("consent_withdrawal_process"), // عملية سحب الموافقة
+  rightsProcedures: text("rights_procedures"), // إجراءات ممارسة حقوق أصحاب البيانات
+  breachNotificationProcess: text("breach_notification_process"), // عملية الإبلاغ عن الانتهاكات
+  thirdPartyAgreements: text("third_party_agreements"), // اتفاقيات الجهات الخارجية
+  trainingPrograms: text("training_programs"), // برامج تدريب الموظفين
+  
   generatedContent: text("generated_content"),
   status: text("status").notNull().default("pending"), // pending, generating, completed, failed
   createdAt: timestamp("created_at").defaultNow(),
