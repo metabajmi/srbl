@@ -94,6 +94,11 @@ export default function PrivacyGeneratorPage() {
 
   const { data: policies } = useQuery({
     queryKey: ["/api/policies"],
+    refetchInterval: (data) => {
+      // إذا كان هناك سياسات قيد التوليد، قم بالتحديث كل 2 ثانية
+      const hasGenerating = data?.some((p: any) => p.status === "generating" || p.status === "pending");
+      return hasGenerating ? 2000 : false;
+    },
   });
 
   const generateMutation = useMutation({
@@ -748,7 +753,9 @@ export default function PrivacyGeneratorPage() {
         <div className="space-y-4">
           <h2 className="text-2xl font-bold">سياسات الخصوصية المولّدة</h2>
           {policies && Array.isArray(policies) && policies.length > 0 ? (
-            policies.map((policy: PolicyDocument) => (
+            [...policies]
+              .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
+              .map((policy: PolicyDocument) => (
               <Card key={policy.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">
