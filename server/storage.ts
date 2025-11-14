@@ -7,10 +7,22 @@ import {
   type InsertReport,
   type RemediationTemplate,
   type InsertRemediationTemplate,
+  type PolicyDocument,
+  type InsertPolicyDocument,
+  type ConsentRecord,
+  type InsertConsentRecord,
+  type TermsDocument,
+  type InsertTermsDocument,
+  type ComplianceTask,
+  type InsertComplianceTask,
   complianceScans,
   complianceIssues,
   reports,
-  remediationTemplates
+  remediationTemplates,
+  policyDocuments,
+  consentRecords,
+  termsDocuments,
+  complianceTasks
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -36,6 +48,32 @@ export interface IStorage {
   createTemplate(template: InsertRemediationTemplate): Promise<RemediationTemplate>;
   getTemplates(): Promise<RemediationTemplate[]>;
   getTemplatesByCategory(category: string): Promise<RemediationTemplate[]>;
+  
+  // Policy Documents
+  createPolicyDocument(policy: InsertPolicyDocument): Promise<PolicyDocument>;
+  getPolicyDocument(id: string): Promise<PolicyDocument | undefined>;
+  updatePolicyDocument(id: string, updates: Partial<PolicyDocument>): Promise<PolicyDocument | undefined>;
+  getAllPolicyDocuments(): Promise<PolicyDocument[]>;
+  
+  // Consent Records
+  createConsentRecord(consent: InsertConsentRecord): Promise<ConsentRecord>;
+  getConsentRecord(id: string): Promise<ConsentRecord | undefined>;
+  getConsentRecordsByUserId(userId: string): Promise<ConsentRecord[]>;
+  getAllConsentRecords(): Promise<ConsentRecord[]>;
+  updateConsentRecord(id: string, updates: Partial<ConsentRecord>): Promise<ConsentRecord | undefined>;
+  
+  // Terms Documents
+  createTermsDocument(terms: InsertTermsDocument): Promise<TermsDocument>;
+  getTermsDocument(id: string): Promise<TermsDocument | undefined>;
+  updateTermsDocument(id: string, updates: Partial<TermsDocument>): Promise<TermsDocument | undefined>;
+  getAllTermsDocuments(): Promise<TermsDocument[]>;
+  
+  // Compliance Tasks
+  createComplianceTask(task: InsertComplianceTask): Promise<ComplianceTask>;
+  getComplianceTask(id: string): Promise<ComplianceTask | undefined>;
+  updateComplianceTask(id: string, updates: Partial<ComplianceTask>): Promise<ComplianceTask | undefined>;
+  getAllComplianceTasks(): Promise<ComplianceTask[]>;
+  deleteComplianceTask(id: string): Promise<void>;
 }
 
 // Database storage implementation using Drizzle ORM
@@ -168,6 +206,170 @@ export class DatabaseStorage implements IStorage {
       .from(remediationTemplates)
       .where(eq(remediationTemplates.category, category));
     return templates;
+  }
+
+  // Policy Documents
+  async createPolicyDocument(insertPolicy: InsertPolicyDocument): Promise<PolicyDocument> {
+    const [policy] = await db
+      .insert(policyDocuments)
+      .values(insertPolicy)
+      .returning();
+    return policy;
+  }
+
+  async getPolicyDocument(id: string): Promise<PolicyDocument | undefined> {
+    const [policy] = await db
+      .select()
+      .from(policyDocuments)
+      .where(eq(policyDocuments.id, id));
+    return policy || undefined;
+  }
+
+  async updatePolicyDocument(id: string, updates: Partial<PolicyDocument>): Promise<PolicyDocument | undefined> {
+    const { id: _, ...updateData } = updates;
+    const [updatedPolicy] = await db
+      .update(policyDocuments)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(eq(policyDocuments.id, id))
+      .returning();
+    return updatedPolicy || undefined;
+  }
+
+  async getAllPolicyDocuments(): Promise<PolicyDocument[]> {
+    const policies = await db
+      .select()
+      .from(policyDocuments)
+      .orderBy(desc(policyDocuments.createdAt));
+    return policies;
+  }
+
+  // Consent Records
+  async createConsentRecord(insertConsent: InsertConsentRecord): Promise<ConsentRecord> {
+    const [consent] = await db
+      .insert(consentRecords)
+      .values(insertConsent)
+      .returning();
+    return consent;
+  }
+
+  async getConsentRecord(id: string): Promise<ConsentRecord | undefined> {
+    const [consent] = await db
+      .select()
+      .from(consentRecords)
+      .where(eq(consentRecords.id, id));
+    return consent || undefined;
+  }
+
+  async getConsentRecordsByUserId(userId: string): Promise<ConsentRecord[]> {
+    const consents = await db
+      .select()
+      .from(consentRecords)
+      .where(eq(consentRecords.userId, userId))
+      .orderBy(desc(consentRecords.consentDate));
+    return consents;
+  }
+
+  async getAllConsentRecords(): Promise<ConsentRecord[]> {
+    const consents = await db
+      .select()
+      .from(consentRecords)
+      .orderBy(desc(consentRecords.consentDate));
+    return consents;
+  }
+
+  async updateConsentRecord(id: string, updates: Partial<ConsentRecord>): Promise<ConsentRecord | undefined> {
+    const { id: _, ...updateData } = updates;
+    const [updatedConsent] = await db
+      .update(consentRecords)
+      .set(updateData)
+      .where(eq(consentRecords.id, id))
+      .returning();
+    return updatedConsent || undefined;
+  }
+
+  // Terms Documents
+  async createTermsDocument(insertTerms: InsertTermsDocument): Promise<TermsDocument> {
+    const [terms] = await db
+      .insert(termsDocuments)
+      .values(insertTerms)
+      .returning();
+    return terms;
+  }
+
+  async getTermsDocument(id: string): Promise<TermsDocument | undefined> {
+    const [terms] = await db
+      .select()
+      .from(termsDocuments)
+      .where(eq(termsDocuments.id, id));
+    return terms || undefined;
+  }
+
+  async updateTermsDocument(id: string, updates: Partial<TermsDocument>): Promise<TermsDocument | undefined> {
+    const { id: _, ...updateData } = updates;
+    const [updatedTerms] = await db
+      .update(termsDocuments)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(eq(termsDocuments.id, id))
+      .returning();
+    return updatedTerms || undefined;
+  }
+
+  async getAllTermsDocuments(): Promise<TermsDocument[]> {
+    const termsList = await db
+      .select()
+      .from(termsDocuments)
+      .orderBy(desc(termsDocuments.createdAt));
+    return termsList;
+  }
+
+  // Compliance Tasks
+  async createComplianceTask(insertTask: InsertComplianceTask): Promise<ComplianceTask> {
+    const [task] = await db
+      .insert(complianceTasks)
+      .values(insertTask)
+      .returning();
+    return task;
+  }
+
+  async getComplianceTask(id: string): Promise<ComplianceTask | undefined> {
+    const [task] = await db
+      .select()
+      .from(complianceTasks)
+      .where(eq(complianceTasks.id, id));
+    return task || undefined;
+  }
+
+  async updateComplianceTask(id: string, updates: Partial<ComplianceTask>): Promise<ComplianceTask | undefined> {
+    const { id: _, ...updateData } = updates;
+    const [updatedTask] = await db
+      .update(complianceTasks)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(eq(complianceTasks.id, id))
+      .returning();
+    return updatedTask || undefined;
+  }
+
+  async getAllComplianceTasks(): Promise<ComplianceTask[]> {
+    const tasks = await db
+      .select()
+      .from(complianceTasks)
+      .orderBy(desc(complianceTasks.createdAt));
+    return tasks;
+  }
+
+  async deleteComplianceTask(id: string): Promise<void> {
+    await db
+      .delete(complianceTasks)
+      .where(eq(complianceTasks.id, id));
   }
 
   // Initialize default remediation templates if they don't exist

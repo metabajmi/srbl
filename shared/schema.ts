@@ -118,3 +118,124 @@ export const reportsRelations = relations(reports, ({ one }) => ({
 export const remediationTemplatesRelations = relations(remediationTemplates, ({ many }) => ({
   issues: many(complianceIssues),
 }));
+
+// Policy Documents - وثائق سياسة الخصوصية
+export const policyDocuments = pgTable("policy_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyName: text("company_name").notNull(),
+  websiteUrl: text("website_url").notNull(),
+  businessType: text("business_type").notNull(),
+  dataTypes: jsonb("data_types").notNull(), // Array of data types collected
+  dataUsagePurposes: jsonb("data_usage_purposes").notNull(),
+  hasThirdPartySharing: text("has_third_party_sharing").notNull(),
+  retentionPeriod: text("retention_period").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  contactPhone: text("contact_phone"),
+  generatedContent: text("generated_content"),
+  status: text("status").notNull().default("pending"), // pending, generating, completed, failed
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPolicyDocumentSchema = createInsertSchema(policyDocuments).omit({
+  id: true,
+  generatedContent: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  websiteUrl: z.string().url("يجب إدخال رابط صحيح"),
+  contactEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
+});
+
+export type InsertPolicyDocument = z.infer<typeof insertPolicyDocumentSchema>;
+export type PolicyDocument = typeof policyDocuments.$inferSelect;
+
+// Consent Records - سجلات الموافقة
+export const consentRecords = pgTable("consent_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  userName: text("user_name"),
+  userEmail: text("user_email"),
+  consentType: text("consent_type").notNull(), // marketing, analytics, cookies, data_sharing
+  consentGiven: text("consent_given").notNull(), // yes, no
+  consentDate: timestamp("consent_date").defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  consentMethod: text("consent_method"), // checkbox, button, form
+  expiryDate: timestamp("expiry_date"),
+  withdrawnAt: timestamp("withdrawn_at"),
+  notes: text("notes"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertConsentRecordSchema = createInsertSchema(consentRecords).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertConsentRecord = z.infer<typeof insertConsentRecordSchema>;
+export type ConsentRecord = typeof consentRecords.$inferSelect;
+
+// Terms Documents - وثائق الشروط والأحكام
+export const termsDocuments = pgTable("terms_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyName: text("company_name").notNull(),
+  websiteUrl: text("website_url").notNull(),
+  businessType: text("business_type").notNull(),
+  serviceDescription: text("service_description").notNull(),
+  hasUserAccounts: text("has_user_accounts").notNull(),
+  hasSubscriptions: text("has_subscriptions").notNull(),
+  paymentMethods: jsonb("payment_methods"),
+  refundPolicy: text("refund_policy"),
+  liabilityLimits: text("liability_limits"),
+  governingLaw: text("governing_law").notNull().default("Saudi Arabia"),
+  disputeResolution: text("dispute_resolution"),
+  contactEmail: text("contact_email").notNull(),
+  generatedContent: text("generated_content"),
+  status: text("status").notNull().default("pending"), // pending, generating, completed, failed
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTermsDocumentSchema = createInsertSchema(termsDocuments).omit({
+  id: true,
+  generatedContent: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  websiteUrl: z.string().url("يجب إدخال رابط صحيح"),
+  contactEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
+});
+
+export type InsertTermsDocument = z.infer<typeof insertTermsDocumentSchema>;
+export type TermsDocument = typeof termsDocuments.$inferSelect;
+
+// Compliance Tasks - مهام الامتثال الداخلي
+export const complianceTasks = pgTable("compliance_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // data_mapping, risk_assessment, policy_review, training, audit
+  priority: text("priority").notNull(), // low, medium, high, critical
+  status: text("status").notNull().default("pending"), // pending, in_progress, completed, overdue
+  assignedTo: text("assigned_to"),
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  attachments: jsonb("attachments"),
+  checklistItems: jsonb("checklist_items"), // Array of subtasks
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertComplianceTaskSchema = createInsertSchema(complianceTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertComplianceTask = z.infer<typeof insertComplianceTaskSchema>;
+export type ComplianceTask = typeof complianceTasks.$inferSelect;

@@ -2,9 +2,15 @@
 
 ## Overview
 
-This is a web application that analyzes websites for compliance with Saudi Arabia's Personal Data Protection Law (PDPL). The tool uses AI-powered analysis to scan websites, identify compliance violations, and generate detailed reports with remediation guidance.
+This is a comprehensive web application that helps organizations achieve compliance with Saudi Arabia's Personal Data Protection Law (PDPL). The platform combines AI-powered website scanning with four additional compliance tools:
 
-The application is designed with an Arabic-first approach, featuring RTL (right-to-left) support and professional legal/compliance interface styling. It provides automated scanning capabilities that check for privacy policy completeness, consent mechanisms, data transparency, user rights implementation, data security measures, third-party data sharing practices, data retention policies, and cookie/tracking compliance.
+1. **Website Compliance Scanner**: AI-powered analysis that scans websites, identifies compliance violations, and generates detailed reports with remediation guidance
+2. **Privacy Policy Generator**: AI-powered tool to create PDPL-compliant privacy policies tailored to your organization
+3. **Terms & Conditions Generator**: Create comprehensive, legally-sound terms and conditions for websites and services
+4. **Consent Management Platform**: Track, manage, and audit user consent records with full compliance documentation
+5. **Internal Compliance Management**: Organize and track internal compliance tasks, audits, and reviews
+
+The application is designed with an Arabic-first approach, featuring RTL (right-to-left) support and professional legal/compliance interface styling. All features integrate seamlessly with OpenAI's GPT models for intelligent document generation and compliance analysis.
 
 ## User Preferences
 
@@ -28,9 +34,15 @@ Preferred communication style: Simple, everyday language.
 
 **State Management**: Uses TanStack Query (React Query) for server state management, providing efficient data fetching, caching, and synchronization.
 
-**Routing**: Implements wouter for lightweight client-side routing with two main routes:
-- Home page for initiating scans
-- Scan results page for viewing analysis
+**Routing**: Implements wouter for lightweight client-side routing with the following pages:
+- Home page showcasing all available tools and initiating scans
+- Scan results page for viewing detailed compliance analysis
+- Privacy Policy Generator page for creating AI-powered privacy policies
+- Terms & Conditions Generator page for generating terms documents
+- Consent Management page for tracking and managing user consents
+- Internal Compliance page for organizing compliance tasks and audits
+
+**Navigation**: Uses shadcn Sidebar component with collapsible navigation structure, organized into "Main Navigation" (scans) and "Tools" (generators, consent, compliance) sections.
 
 **Form Handling**: Uses react-hook-form with Zod for validation and @hookform/resolvers for integration.
 
@@ -43,12 +55,11 @@ Preferred communication style: Simple, everyday language.
 - Retrieving scan results and issues
 - Generating compliance reports
 
-**AI Integration**: Uses OpenAI's GPT-5 model for intelligent website content analysis. The AI system:
-- Analyzes HTML content for PDPL compliance
-- Identifies violations across multiple categories (privacy policies, consent, transparency, user rights, data security)
-- References specific articles from Saudi data protection regulations
-- Provides actionable remediation guidance
-- Generates comprehensive compliance reports
+**AI Integration**: Uses OpenAI's GPT-3.5-turbo model for multiple intelligent features:
+- **Website Analysis**: Analyzes HTML content for PDPL compliance, identifies violations across categories, references specific articles from Saudi regulations, provides remediation guidance
+- **Privacy Policy Generation**: Creates customized, legally-sound privacy policies based on organization details (name, data types, purposes, retention, contact)
+- **Terms & Conditions Generation**: Generates comprehensive terms documents tailored to service type and business requirements
+- **Compliance Analysis**: Evaluates internal compliance posture and provides improvement recommendations
 
 **Content Fetching**: Implements secure website content retrieval with:
 - URL validation to prevent SSRF attacks
@@ -60,11 +71,15 @@ Preferred communication style: Simple, everyday language.
 
 **ORM**: Drizzle ORM for type-safe database operations with PostgreSQL dialect support.
 
-**Database Schema**: Designed with four main tables:
+**Database Schema**: Designed with eight main tables:
 - `compliance_scans`: Stores scan metadata, status, scores, and analysis results (includes timestamps, error messages)
 - `compliance_issues`: Stores individual violations found during scans (cascade delete on scan removal)
 - `reports`: Stores generated compliance reports (cascade delete on scan removal)
 - `remediation_templates`: Stores reusable remediation guidance templates
+- `policy_documents`: Stores AI-generated privacy policies with full content and metadata (version tracking, status)
+- `terms_documents`: Stores AI-generated terms & conditions documents with versioning support
+- `consent_records`: Tracks user consent records with timestamps, IP addresses, and consent scope details
+- `compliance_tasks`: Manages internal compliance tasks with status tracking, assignments, and due dates
 
 **Current Implementation**: Phase 2 completed - Fully migrated to persistent PostgreSQL storage using DatabaseStorage class with Drizzle ORM. Previous in-memory storage replaced with production-ready database implementation.
 

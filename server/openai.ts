@@ -380,3 +380,222 @@ export async function extractRegulationReferences(
     return { articles: [], details: "" };
   }
 }
+
+export interface PolicyDocumentData {
+  companyName: string;
+  websiteUrl: string;
+  businessType: string;
+  dataTypes: string[];
+  dataUsagePurposes: string[];
+  hasThirdPartySharing: string;
+  retentionPeriod: string;
+  contactEmail: string;
+  contactPhone?: string;
+}
+
+export async function generatePrivacyPolicy(data: PolicyDocumentData): Promise<string> {
+  if (!apiKey || apiKey === "missing-key") {
+    console.warn("OpenAI API key not configured, using mock privacy policy");
+    return generateMockPrivacyPolicy(data);
+  }
+
+  const prompt = `أنشئ سياسة خصوصية شاملة ومتوافقة مع نظام حماية البيانات الشخصية السعودي للشركة التالية:
+
+معلومات الشركة:
+- اسم الشركة: ${data.companyName}
+- الموقع الإلكتروني: ${data.websiteUrl}
+- نوع النشاط: ${data.businessType}
+- أنواع البيانات المجمعة: ${data.dataTypes.join(', ')}
+- أغراض استخدام البيانات: ${data.dataUsagePurposes.join(', ')}
+- مشاركة مع أطراف ثالثة: ${data.hasThirdPartySharing}
+- مدة الاحتفاظ بالبيانات: ${data.retentionPeriod}
+- البريد الإلكتروني: ${data.contactEmail}
+${data.contactPhone ? `- الهاتف: ${data.contactPhone}` : ''}
+
+يجب أن تتضمن السياسة الأقسام التالية:
+1. مقدمة والتزام بالخصوصية
+2. أنواع البيانات المجمعة
+3. كيفية جمع البيانات
+4. أغراض استخدام البيانات
+5. أساس معالجة البيانات القانوني
+6. مشاركة البيانات مع أطراف ثالثة (إن وجد)
+7. حقوق أصحاب البيانات (الوصول، التصحيح، الحذف، الاعتراض، نقل البيانات)
+8. أمن البيانات وحمايتها
+9. الاحتفاظ بالبيانات ومدته
+10. ملفات تعريف الارتباط (Cookies)
+11. تحديثات السياسة
+12. معلومات الاتصال
+
+استخدم لغة قانونية واضحة ومفهومة باللغة العربية، وتأكد من التوافق الكامل مع نظام حماية البيانات الشخصية السعودي.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "أنت خبير قانوني متخصص في صياغة سياسات الخصوصية المتوافقة مع القوانين السعودية."
+        },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 4096,
+    });
+
+    return response.choices[0].message.content || "";
+  } catch (error: any) {
+    console.error("Error generating privacy policy:", error.message);
+    return generateMockPrivacyPolicy(data);
+  }
+}
+
+function generateMockPrivacyPolicy(data: PolicyDocumentData): string {
+  return `سياسة الخصوصية
+
+آخر تحديث: ${new Date().toLocaleDateString('ar-SA')}
+
+1. مقدمة
+نحن في ${data.companyName} (${data.websiteUrl}) نلتزم بحماية خصوصيتك وبياناتك الشخصية وفقاً لنظام حماية البيانات الشخصية السعودي.
+
+2. البيانات التي نجمعها
+نقوم بجمع الأنواع التالية من البيانات:
+${data.dataTypes.map(type => `- ${type}`).join('\n')}
+
+3. كيفية استخدام البيانات
+نستخدم بياناتك للأغراض التالية:
+${data.dataUsagePurposes.map(purpose => `- ${purpose}`).join('\n')}
+
+4. مشاركة البيانات
+${data.hasThirdPartySharing === 'yes' ? 'قد نشارك بياناتك مع أطراف ثالثة موثوقة لتحسين خدماتنا.' : 'لا نشارك بياناتك مع أطراف ثالثة إلا بموافقتك الصريحة.'}
+
+5. حقوقك
+لديك الحق في:
+- الوصول إلى بياناتك الشخصية
+- تصحيح بياناتك غير الصحيحة
+- حذف بياناتك في ظروف معينة
+- الاعتراض على معالجة بياناتك
+- نقل بياناتك إلى جهة أخرى
+
+6. أمن البيانات
+نتخذ إجراءات أمنية مناسبة لحماية بياناتك من الوصول غير المصرح به أو الإفصاح أو التغيير.
+
+7. الاحتفاظ بالبيانات
+نحتفظ ببياناتك لمدة ${data.retentionPeriod}.
+
+8. الاتصال بنا
+للاستفسارات حول سياسة الخصوصية:
+البريد الإلكتروني: ${data.contactEmail}
+${data.contactPhone ? `الهاتف: ${data.contactPhone}` : ''}`;
+}
+
+export interface TermsDocumentData {
+  companyName: string;
+  websiteUrl: string;
+  businessType: string;
+  serviceDescription: string;
+  hasUserAccounts: string;
+  hasSubscriptions: string;
+  paymentMethods?: string[];
+  refundPolicy?: string;
+  liabilityLimits?: string;
+  governingLaw: string;
+  disputeResolution?: string;
+  contactEmail: string;
+}
+
+export async function generateTermsAndConditions(data: TermsDocumentData): Promise<string> {
+  if (!apiKey || apiKey === "missing-key") {
+    console.warn("OpenAI API key not configured, using mock terms and conditions");
+    return generateMockTermsAndConditions(data);
+  }
+
+  const prompt = `أنشئ شروطاً وأحكاماً شاملة للاستخدام للشركة التالية:
+
+معلومات الشركة:
+- اسم الشركة: ${data.companyName}
+- الموقع الإلكتروني: ${data.websiteUrl}
+- نوع النشاط: ${data.businessType}
+- وصف الخدمة: ${data.serviceDescription}
+- يوجد حسابات مستخدمين: ${data.hasUserAccounts}
+- يوجد اشتراكات: ${data.hasSubscriptions}
+${data.paymentMethods && data.paymentMethods.length > 0 ? `- طرق الدفع: ${data.paymentMethods.join(', ')}` : ''}
+${data.refundPolicy ? `- سياسة الاسترداد: ${data.refundPolicy}` : ''}
+${data.liabilityLimits ? `- حدود المسؤولية: ${data.liabilityLimits}` : ''}
+- القانون الحاكم: ${data.governingLaw}
+${data.disputeResolution ? `- حل النزاعات: ${data.disputeResolution}` : ''}
+- البريد الإلكتروني: ${data.contactEmail}
+
+يجب أن تتضمن الشروط الأقسام التالية:
+1. القبول بالشروط
+2. وصف الخدمة
+3. حسابات المستخدمين (إن وجدت)
+4. حقوق الملكية الفكرية
+5. قواعد الاستخدام المقبول
+6. الاشتراكات والمدفوعات (إن وجدت)
+7. الإلغاء والاسترداد
+8. إخلاء المسؤولية
+9. حدود المسؤولية
+10. التعويض
+11. التعديلات على الشروط
+12. القانون الحاكم وحل النزاعات
+13. معلومات الاتصال
+
+استخدم لغة قانونية واضحة باللغة العربية متوافقة مع الأنظمة السعودية.`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "أنت خبير قانوني متخصص في صياغة الشروط والأحكام المتوافقة مع القوانين السعودية."
+        },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 4096,
+    });
+
+    return response.choices[0].message.content || "";
+  } catch (error: any) {
+    console.error("Error generating terms and conditions:", error.message);
+    return generateMockTermsAndConditions(data);
+  }
+}
+
+function generateMockTermsAndConditions(data: TermsDocumentData): string {
+  return `الشروط والأحكام
+
+آخر تحديث: ${new Date().toLocaleDateString('ar-SA')}
+
+1. القبول بالشروط
+باستخدامك لموقع ${data.companyName} (${data.websiteUrl})، فإنك توافق على الالتزام بهذه الشروط والأحكام.
+
+2. وصف الخدمة
+نحن نقدم: ${data.serviceDescription}
+
+3. ${data.hasUserAccounts === 'yes' ? 'حسابات المستخدمين' : 'استخدام الموقع'}
+${data.hasUserAccounts === 'yes' ? 
+  'يجب عليك إنشاء حساب للوصول إلى بعض ميزات الموقع. أنت مسؤول عن الحفاظ على سرية بيانات حسابك.' :
+  'يمكنك استخدام الموقع دون الحاجة إلى إنشاء حساب.'}
+
+4. حقوق الملكية الفكرية
+جميع المحتويات على هذا الموقع هي ملك لـ ${data.companyName} ومحمية بموجب قوانين حقوق النشر.
+
+5. ${data.hasSubscriptions === 'yes' ? 'الاشتراكات والمدفوعات' : 'الاستخدام المقبول'}
+${data.hasSubscriptions === 'yes' ?
+  `طرق الدفع المتاحة: ${data.paymentMethods?.join(', ') || 'سيتم تحديدها عند الاشتراك'}.
+${data.refundPolicy || 'سياسة الاسترداد: وفقاً للضوابط المعلنة.'}` :
+  'يجب استخدام الموقع بطريقة قانونية ومناسبة فقط.'}
+
+6. حدود المسؤولية
+${data.liabilityLimits || 'نقدم الخدمة كما هي دون ضمانات صريحة أو ضمنية.'}
+
+7. القانون الحاكم
+تخضع هذه الشروط لقوانين ${data.governingLaw}.
+
+8. حل النزاعات
+${data.disputeResolution || 'يتم حل أي نزاعات وفقاً للإجراءات القانونية المعمول بها في المملكة العربية السعودية.'}
+
+9. الاتصال بنا
+للاستفسارات:
+البريد الإلكتروني: ${data.contactEmail}`;
+}
