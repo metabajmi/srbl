@@ -38,6 +38,22 @@ const formSchema = z.object({
   ),
   hasThirdPartySharing: z.string().min(1, "يجب تحديد ما إذا كانت هناك مشاركة مع جهات خارجية"),
   retentionPeriod: z.string().min(1, "يجب تحديد مدة الاحتفاظ بالبيانات"),
+  
+  // حقول إضافية من الصور
+  dataCollectionMethods: z.string().optional(),
+  indirectDataSources: z.string().optional(),
+  dataUsageDetails: z.string().optional(),
+  disclosureDetails: z.string().optional(),
+  thirdPartyCategories: z.string().optional(),
+  storageLocation: z.string().optional(),
+  securityMeasures: z.string().optional(),
+  
+  // مسؤول حماية البيانات
+  dpoName: z.string().optional(),
+  dpoAddress: z.string().optional(),
+  dpoPhone: z.string().optional(),
+  dpoEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح").optional().or(z.literal("")),
+  
   lastUpdatedDate: z.date().optional(),
 });
 
@@ -61,6 +77,17 @@ export default function PrivacyGeneratorPage() {
       dataUsagePurposes: "",
       hasThirdPartySharing: "no",
       retentionPeriod: "",
+      dataCollectionMethods: "",
+      indirectDataSources: "",
+      dataUsageDetails: "",
+      disclosureDetails: "",
+      thirdPartyCategories: "",
+      storageLocation: "",
+      securityMeasures: "",
+      dpoName: "",
+      dpoAddress: "",
+      dpoPhone: "",
+      dpoEmail: "",
       lastUpdatedDate: new Date(),
     },
   });
@@ -93,6 +120,17 @@ export default function PrivacyGeneratorPage() {
         dataUsagePurposes: "",
         hasThirdPartySharing: "no",
         retentionPeriod: "",
+        dataCollectionMethods: "",
+        indirectDataSources: "",
+        dataUsageDetails: "",
+        disclosureDetails: "",
+        thirdPartyCategories: "",
+        storageLocation: "",
+        securityMeasures: "",
+        dpoName: "",
+        dpoAddress: "",
+        dpoPhone: "",
+        dpoEmail: "",
         lastUpdatedDate: new Date(),
       });
     },
@@ -119,7 +157,18 @@ export default function PrivacyGeneratorPage() {
       address: values.address || null,
       contactPhone: values.contactPhone || null,
       licenseNumber: values.licenseNumber || null,
-      lastUpdatedDate: values.lastUpdatedDate || null,
+      dataCollectionMethods: values.dataCollectionMethods || null,
+      indirectDataSources: values.indirectDataSources || null,
+      dataUsageDetails: values.dataUsageDetails || null,
+      disclosureDetails: values.disclosureDetails || null,
+      thirdPartyCategories: values.thirdPartyCategories || null,
+      storageLocation: values.storageLocation || null,
+      securityMeasures: values.securityMeasures || null,
+      dpoName: values.dpoName || null,
+      dpoAddress: values.dpoAddress || null,
+      dpoPhone: values.dpoPhone || null,
+      dpoEmail: values.dpoEmail || null,
+      lastUpdatedDate: values.lastUpdatedDate ? new Date(values.lastUpdatedDate) : null,
     };
     generateMutation.mutate(submitData);
   };
@@ -402,6 +451,189 @@ export default function PrivacyGeneratorPage() {
                         )}
                       />
                     </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-primary">كيفية الجمع والمعالجة (اختياري)</h3>
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="dataCollectionMethods"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>طرق جمع البيانات</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="مثال: بشكل مباشر عند التسجيل، بطريقة غير مباشرة من خلال شركاء"
+                              className="min-h-20"
+                              data-testid="input-collection-methods"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="indirectDataSources"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>مصادر البيانات غير المباشرة</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="مثال: شركات التسويق، وسائل التواصل الاجتماعي، شركاء العمل"
+                              className="min-h-20"
+                              data-testid="input-indirect-sources"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="thirdPartyCategories"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>فئات الجهات الخارجية (إذا كانت الإجابة نعم)</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="مثال: مزودي الخدمات التقنية، شركات التسويق، الجهات الحكومية"
+                              className="min-h-20"
+                              data-testid="input-third-party-categories"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-primary">التخزين والحماية (اختياري)</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="storageLocation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>موقع التخزين</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="مثال: خوادم آمنة في المملكة العربية السعودية"
+                              data-testid="input-storage-location"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="securityMeasures"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>إجراءات الحماية</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="مثال: تشفير SSL، جدران حماية، مراقبة دائمة"
+                              data-testid="input-security-measures"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 text-primary">مسؤول حماية البيانات (اختياري)</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="dpoName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>الاسم</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="اسم مسؤول حماية البيانات"
+                              data-testid="input-dpo-name"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="dpoEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>البريد الإلكتروني</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="email"
+                              placeholder="dpo@example.com"
+                              dir="ltr"
+                              data-testid="input-dpo-email"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="dpoPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>رقم الهاتف</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="+966xxxxxxxxx"
+                              dir="ltr"
+                              data-testid="input-dpo-phone"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="dpoAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>العنوان</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="عنوان مسؤول حماية البيانات"
+                              data-testid="input-dpo-address"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </div>
 
