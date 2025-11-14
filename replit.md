@@ -57,9 +57,27 @@ Preferred communication style: Simple, everyday language.
 
 **AI Integration**: Uses OpenAI's GPT-3.5-turbo model for multiple intelligent features:
 - **Website Analysis**: Analyzes HTML content for PDPL compliance, identifies violations across categories, references specific articles from Saudi regulations, provides remediation guidance
-- **Privacy Policy Generation**: Creates comprehensive, PDPL-compliant privacy policies with 12 detailed sections covering all regulatory requirements:
-  * **Data Collection**: Comprehensive data collection details with 11 optional fields including collection methods, indirect sources, disclosure details, third-party categories, storage location, security measures, and DPO contact information
-  * **12-Section Structure**: Includes Introduction, Data Collection Methods, Usage Details, Disclosure Practices, Legal Basis, Storage & Retention, Six User Rights (right to know, access, obtain, correct, delete, withdraw consent), DPO Information, Complaint Procedures, SDAIA Contact Details, Policy Updates, and Final Contact Information
+- **Privacy Policy Generation**: Creates comprehensive, PDPL-compliant privacy policies following the official SDAIA template with 12 detailed sections covering all regulatory requirements:
+  * **Complete Form Fields**: All fields from the official SDAIA template including company info, contact details, data types, collection methods, usage details, disclosure details, third-party categories, storage location, security measures, DPO information, and last updated date
+  * **12-Section Structure (Official SDAIA Template)**: 
+    1. Introduction & Privacy Commitment
+    2. How is your personal data collected and what is the purpose? (Direct & indirect collection with specific purposes)
+    3. How do we use your personal data? (Detailed usage explanation with legal basis)
+    4. How do we disclose your personal data? (Third parties, purpose, and safeguards)
+    5. Legal grounds for collecting and processing your personal data (Consent, contract, legal obligation, legitimate interest, etc.)
+    6. How do we store your personal data? (Location, duration, security measures)
+    7. Your rights regarding personal data processing (6 specific rights):
+       - Right to know (awareness of collection, processing, storage, and disclosure methods)
+       - Right to access your personal data (request to view and understand usage)
+       - Right to obtain your personal data (get a readable copy)
+       - Right to correct your personal data (fix inaccurate or incomplete data)
+       - Right to delete your personal data (request deletion in certain circumstances)
+       - Right to withdraw consent (revoke consent at any time)
+    8. Data Protection Officer information (Full contact details and role)
+    9. How to file a complaint or objection? (Steps, channels, response time)
+    10. SDAIA contact details (Address in Riyadh, sdaia.gov.sa, dgp.sdaia.gov.sa)
+    11. Policy updates (How users are notified, last update date)
+    12. Final contact information
   * **Smart Validation**: Handles nullable fields gracefully with preprocessing to prevent invalid dates and fallback values ('غير محدد') for empty optional fields
   * **Type Safety**: Fully typed PolicyDocumentData interface with proper validation using Zod schemas
 - **Terms & Conditions Generation**: Generates comprehensive terms documents tailored to service type and business requirements

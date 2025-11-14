@@ -530,6 +530,21 @@ async function processPrivacyPolicyGeneration(policyId: string) {
       retentionPeriod: policy.retentionPeriod,
       contactEmail: policy.contactEmail,
       contactPhone: policy.contactPhone || undefined,
+      responsibleDepartment: policy.responsibleDepartment || undefined,
+      address: policy.address || undefined,
+      licenseNumber: policy.licenseNumber || undefined,
+      dataCollectionMethods: policy.dataCollectionMethods || undefined,
+      indirectDataSources: policy.indirectDataSources || undefined,
+      dataUsageDetails: policy.dataUsageDetails || undefined,
+      disclosureDetails: policy.disclosureDetails || undefined,
+      thirdPartyCategories: policy.thirdPartyCategories || undefined,
+      storageLocation: policy.storageLocation || undefined,
+      securityMeasures: policy.securityMeasures || undefined,
+      dpoName: policy.dpoName || undefined,
+      dpoAddress: policy.dpoAddress || undefined,
+      dpoPhone: policy.dpoPhone || undefined,
+      dpoEmail: policy.dpoEmail || undefined,
+      lastUpdatedDate: policy.lastUpdatedDate || undefined,
     });
     
     await storage.updatePolicyDocument(policyId, {
