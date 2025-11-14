@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -17,6 +18,15 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+
+const legalJustifications = [
+  "explicit_consent",
+  "contractual_obligation",
+  "vital_interests",
+  "public_interest",
+  "legitimate_interests",
+  "legal_obligation",
+] as const;
 
 const formSchema = z.object({
   companyName: z.string().min(2, "يجب إدخال اسم الجهة"),
@@ -37,6 +47,7 @@ const formSchema = z.object({
   ),
   hasThirdPartySharing: z.string().min(1, "يجب تحديد ما إذا كانت هناك مشاركة مع جهات خارجية"),
   retentionPeriod: z.string().min(1, "يجب تحديد مدة الاحتفاظ بالبيانات"),
+  legalJustifications: z.array(z.string()).min(1, "يجب اختيار مسوغ نظامي واحد على الأقل"),
   dataCollectionMethods: z.string().optional(),
   indirectDataSources: z.string().optional(),
   dataUsageDetails: z.string().optional(),
@@ -71,6 +82,7 @@ export default function PrivacyGeneratorPage() {
       dataUsagePurposes: "",
       hasThirdPartySharing: "no",
       retentionPeriod: "",
+      legalJustifications: [],
       dataCollectionMethods: "",
       indirectDataSources: "",
       dataUsageDetails: "",
@@ -128,6 +140,7 @@ export default function PrivacyGeneratorPage() {
       dataUsagePurposes: values.dataUsagePurposes.split(',').map(s => s.trim()).filter(Boolean),
       hasThirdPartySharing: values.hasThirdPartySharing,
       retentionPeriod: values.retentionPeriod,
+      legalBasis: values.legalJustifications.join(', '),
       responsibleDepartment: values.responsibleDepartment || null,
       address: values.address || null,
       contactPhone: values.contactPhone || null,
@@ -504,44 +517,161 @@ export default function PrivacyGeneratorPage() {
                 <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
                   وفقاً لنظام حماية البيانات الشخصــــية، فإن المســــوغ النظامي الذي نعتمد عليه لمعالجة هذه البيانات: يمكن اختيار مسوغ نظامي واحد أو أكثر من المسوغات الموضحة أدناه
                 </p>
-                <div className="space-y-3 bg-muted/20 p-4 rounded-md border">
-                  <div className="flex gap-2">
-                    <span className="text-sm">-</span>
-                    <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      موافقتك الصــــريحة. ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناء على مســــوغات نظامية أخرى، وللقيام بذلك يمكنك التواصل مع اسم الإدارة أو القسم المختص، أو مسؤول حماية البيانات الشخصية
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-sm">-</span>
-                    <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      تنفيذاً للالتزام تعاقدي يتم إيضـــاح هذا الالتزام وأهمية الوفاء به
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-sm">-</span>
-                    <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      حماية المصـــالح الحيوية يتم إيضـــاح كيفية حماية المصـــالح الحيوية عن طريق جمع ومعالجة البيانات الشخصية
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-sm">-</span>
-                    <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      تحقيق مصـــلحة عامة يتم إيضـــاح المصـــلحة العامة التي يتم تحقيقها عن طريق جمع ومعالجة البيانات الشخصية
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-sm">-</span>
-                    <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      تحقيق مصالح أو أهداف مشروعة يتم إيضاح الأهداف المشروعة التي لا تتعارض مع حقوق صاحب البيانات الشخصية
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-sm">-</span>
-                    <p className="text-sm text-muted-foreground flex-1 leading-relaxed">
-                      تنفيذاً للالتزام نظامي يتم إيضاح اسم النظام والمادة التي تخول الجهة بجمع ومعالجة البيانات الشخصية
-                    </p>
-                  </div>
-                </div>
+                <FormField
+                  control={form.control}
+                  name="legalJustifications"
+                  render={() => (
+                    <FormItem>
+                      <div className="space-y-3">
+                        <FormField
+                          control={form.control}
+                          name="legalJustifications"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 bg-muted/20 p-4 rounded-md border">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes("explicit_consent")}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, "explicit_consent"])
+                                      : field.onChange(field.value?.filter((value) => value !== "explicit_consent"))
+                                  }}
+                                  data-testid="checkbox-explicit-consent"
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none flex-1">
+                                <FormLabel className="text-sm font-normal cursor-pointer">
+                                  موافقتك الصــــريحة. ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناء على مســــوغات نظامية أخرى، وللقيام بذلك يمكنك التواصل مع اسم الإدارة أو القسم المختص، أو مسؤول حماية البيانات الشخصية
+                                </FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="legalJustifications"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 bg-muted/20 p-4 rounded-md border">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes("contractual_obligation")}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, "contractual_obligation"])
+                                      : field.onChange(field.value?.filter((value) => value !== "contractual_obligation"))
+                                  }}
+                                  data-testid="checkbox-contractual-obligation"
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none flex-1">
+                                <FormLabel className="text-sm font-normal cursor-pointer">
+                                  تنفيذاً للالتزام تعاقدي يتم إيضـــاح هذا الالتزام وأهمية الوفاء به
+                                </FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="legalJustifications"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 bg-muted/20 p-4 rounded-md border">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes("vital_interests")}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, "vital_interests"])
+                                      : field.onChange(field.value?.filter((value) => value !== "vital_interests"))
+                                  }}
+                                  data-testid="checkbox-vital-interests"
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none flex-1">
+                                <FormLabel className="text-sm font-normal cursor-pointer">
+                                  حماية المصـــالح الحيوية يتم إيضـــاح كيفية حماية المصـــالح الحيوية عن طريق جمع ومعالجة البيانات الشخصية
+                                </FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="legalJustifications"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 bg-muted/20 p-4 rounded-md border">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes("public_interest")}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, "public_interest"])
+                                      : field.onChange(field.value?.filter((value) => value !== "public_interest"))
+                                  }}
+                                  data-testid="checkbox-public-interest"
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none flex-1">
+                                <FormLabel className="text-sm font-normal cursor-pointer">
+                                  تحقيق مصـــلحة عامة يتم إيضـــاح المصـــلحة العامة التي يتم تحقيقها عن طريق جمع ومعالجة البيانات الشخصية
+                                </FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="legalJustifications"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 bg-muted/20 p-4 rounded-md border">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes("legitimate_interests")}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, "legitimate_interests"])
+                                      : field.onChange(field.value?.filter((value) => value !== "legitimate_interests"))
+                                  }}
+                                  data-testid="checkbox-legitimate-interests"
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none flex-1">
+                                <FormLabel className="text-sm font-normal cursor-pointer">
+                                  تحقيق مصالح أو أهداف مشروعة يتم إيضاح الأهداف المشروعة التي لا تتعارض مع حقوق صاحب البيانات الشخصية
+                                </FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="legalJustifications"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 bg-muted/20 p-4 rounded-md border">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes("legal_obligation")}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, "legal_obligation"])
+                                      : field.onChange(field.value?.filter((value) => value !== "legal_obligation"))
+                                  }}
+                                  data-testid="checkbox-legal-obligation"
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none flex-1">
+                                <FormLabel className="text-sm font-normal cursor-pointer">
+                                  تنفيذاً للالتزام نظامي يتم إيضاح اسم النظام والمادة التي تخول الجهة بجمع ومعالجة البيانات الشخصية
+                                </FormLabel>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 
