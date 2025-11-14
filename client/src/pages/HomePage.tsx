@@ -7,8 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertComplianceScanSchema } from "@shared/schema";
-import { useLocation } from "wouter";
-import { Shield, FileSearch, AlertCircle, CheckCircle, FileText, Globe, Sparkles, BarChart } from "lucide-react";
+import { useLocation, Link } from "wouter";
+import { Shield, FileSearch, AlertCircle, CheckCircle, FileText, Globe, Sparkles, BarChart, ScrollText, ClipboardList } from "lucide-react";
 import { z } from "zod";
 
 export default function HomePage() {
@@ -77,16 +77,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center">
-          <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-bold">أداة فحص الامتثال لحماية البيانات</h1>
-          </div>
-        </div>
-      </header>
-
       {/* Hero Section */}
       <section className="container py-12 md:py-20">
         <div className="mx-auto max-w-3xl text-center">
@@ -261,6 +251,76 @@ export default function HomePage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </div>
+
+        {/* Additional Tools */}
+        <div className="mx-auto max-w-4xl mt-16">
+          <h3 className="text-2xl font-bold text-center mb-8">أدوات إضافية</h3>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Link href="/privacy-generator">
+              <Card className="hover-elevate active-elevate-2 cursor-pointer h-full">
+                <CardContent className="flex items-start gap-4 pt-6">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">مُولّد سياسة الخصوصية</h4>
+                    <p className="text-sm text-muted-foreground">
+                      أنشئ سياسة خصوصية متوافقة مع القوانين السعودية
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/terms-generator">
+              <Card className="hover-elevate active-elevate-2 cursor-pointer h-full">
+                <CardContent className="flex items-start gap-4 pt-6">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <ScrollText className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">مُولّد الشروط والأحكام</h4>
+                    <p className="text-sm text-muted-foreground">
+                      أنشئ شروطاً وأحكاماً واضحة لموقعك الإلكتروني
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/consent-management">
+              <Card className="hover-elevate active-elevate-2 cursor-pointer h-full">
+                <CardContent className="flex items-start gap-4 pt-6">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <CheckCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">منصة إدارة الموافقة</h4>
+                    <p className="text-sm text-muted-foreground">
+                      إدارة وتتبع موافقات المستخدمين بشكل متوافق
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/internal-compliance">
+              <Card className="hover-elevate active-elevate-2 cursor-pointer h-full">
+                <CardContent className="flex items-start gap-4 pt-6">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <ClipboardList className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-1">حلول الامتثال الداخلي</h4>
+                    <p className="text-sm text-muted-foreground">
+                      إدارة مهام ومراجعات الامتثال الداخلية
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </div>
       </section>
