@@ -289,6 +289,20 @@ export default function RopaManagementPage() {
 
                     <FormField
                       control={form.control}
+                      name="dataTypes.0.name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>نوع البيانات المعالجة</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="مثل: بيانات شخصية، بيانات مالية، بيانات صحية" data-testid="input-data-type" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="processingPurpose"
                       render={({ field }) => (
                         <FormItem>
