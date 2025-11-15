@@ -1001,26 +1001,30 @@ async function processTermsGeneration(termsId: string) {
     }
     
     // ====================================
-    // Step 2: Get template sections
+    // Step 2: Get template sections with legal sources (using junction tables)
     // ====================================
     let sections: any[] = [];
     let usedSections: any[] = [];
     let legalReferences: any[] = [];
     
     if (template) {
-      sections = await storage.getTemplateSectionsByTemplateId(template.id);
+      const templateWithData = await storage.getTemplateWithSectionsAndSources(template.id);
       
-      // Track used sections and legal references
-      usedSections = sections.map(s => ({
-        sectionId: s.id,
-        slug: s.slug,
-        heading: s.heading
-      }));
-      
-      // Collect all legal references
-      for (const section of sections) {
-        if (section.legalBasis && Array.isArray(section.legalBasis)) {
-          legalReferences.push(...section.legalBasis);
+      if (templateWithData && templateWithData.sections) {
+        sections = templateWithData.sections;
+        
+        // Track used sections and legal references
+        usedSections = sections.map(s => ({
+          sectionId: s.id,
+          slug: s.slug,
+          heading: s.heading
+        }));
+        
+        // Collect all legal references from junction table data
+        for (const section of sections) {
+          if (section.legalBasis && Array.isArray(section.legalBasis)) {
+            legalReferences.push(...section.legalBasis);
+          }
         }
       }
     }

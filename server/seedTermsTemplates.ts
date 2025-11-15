@@ -6,7 +6,9 @@
 import type { 
   InsertLegalSource, 
   InsertTermsTemplate, 
-  InsertTemplateSection 
+  InsertTemplateSection,
+  InsertTermsTemplateSection,
+  InsertSectionLegalSource
 } from "@shared/schema";
 
 // ====================================

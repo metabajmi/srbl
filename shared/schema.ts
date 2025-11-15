@@ -534,13 +534,10 @@ export type TermsTemplate = typeof termsTemplates.$inferSelect;
 // Template Sections - أقسام القوالب
 export const templateSections = pgTable("template_sections", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  templateId: varchar("template_id").notNull().references(() => termsTemplates.id, { onDelete: "cascade" }),
-  slug: text("slug").notNull(), // e.g., "intro", "services", "payment", "liability", "dispute_resolution"
+  slug: text("slug").notNull().unique(), // e.g., "intro", "services", "payment", "liability", "dispute_resolution"
   heading: text("heading").notNull(), // Arabic title
-  ordering: integer("ordering").notNull(), // Display order
   clauseText: text("clause_text").notNull(), // Template text with {{placeholders}}
   placeholders: jsonb("placeholders"), // [{key: "companyName", description: "اسم الشركة"}]
-  legalBasis: jsonb("legal_basis"), // [{sourceCode: "ECOMMERCE_LAW", articles: ["3", "4"]}]
   riskLevel: text("risk_level").notNull().default("medium"), // low, medium, high, critical
   isRequired: boolean("is_required").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -555,6 +552,46 @@ export const insertTemplateSectionSchema = createInsertSchema(templateSections).
 
 export type InsertTemplateSection = z.infer<typeof insertTemplateSectionSchema>;
 export type TemplateSection = typeof templateSections.$inferSelect;
+
+// ====================================
+// Junction Tables for Many-to-Many Relationships
+// ====================================
+
+// Terms Template Sections - ربط القوالب بالأقسام
+export const termsTemplateSections = pgTable("terms_template_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull().references(() => termsTemplates.id, { onDelete: "cascade" }),
+  sectionId: varchar("section_id").notNull().references(() => templateSections.id, { onDelete: "cascade" }),
+  ordering: integer("ordering").notNull(), // Display order within template
+  isRequired: boolean("is_required").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTermsTemplateSectionSchema = createInsertSchema(termsTemplateSections).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTermsTemplateSection = z.infer<typeof insertTermsTemplateSectionSchema>;
+export type TermsTemplateSection = typeof termsTemplateSections.$inferSelect;
+
+// Section Legal Sources - ربط الأقسام بالمصادر القانونية
+export const sectionLegalSources = pgTable("section_legal_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sectionId: varchar("section_id").notNull().references(() => templateSections.id, { onDelete: "cascade" }),
+  sourceId: varchar("source_id").notNull().references(() => legalSources.id, { onDelete: "cascade" }),
+  articles: jsonb("articles").notNull(), // Array of article numbers: ["5", "6", "7"]
+  relevanceNotes: text("relevance_notes"), // Optional notes about why this source applies
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSectionLegalSourceSchema = createInsertSchema(sectionLegalSources).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSectionLegalSource = z.infer<typeof insertSectionLegalSourceSchema>;
+export type SectionLegalSource = typeof sectionLegalSources.$inferSelect;
 
 // Terms Documents - وثائق الشروط والأحكام (Enhanced)
 export const termsDocuments = pgTable("terms_documents", {
