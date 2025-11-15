@@ -25,6 +25,12 @@ import {
   type InsertDsarRequest,
   type DpiaAssessment,
   type InsertDpiaAssessment,
+  type LegalSource,
+  type InsertLegalSource,
+  type TermsTemplate,
+  type InsertTermsTemplate,
+  type TemplateSection,
+  type InsertTemplateSection,
   complianceScans,
   complianceIssues,
   reports,
@@ -37,7 +43,10 @@ import {
   cmpScripts,
   ropaEntries,
   dsarRequests,
-  dpiaAssessments
+  dpiaAssessments,
+  legalSources,
+  termsTemplates,
+  templateSections
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -129,6 +138,27 @@ export interface IStorage {
   getAllDpiaAssessments(): Promise<DpiaAssessment[]>;
   deleteDpiaAssessment(id: string): Promise<void>;
   getDpiaAssessmentsByStatus(status: string): Promise<DpiaAssessment[]>;
+  
+  // Legal Sources - المصادر القانونية
+  createLegalSource(source: InsertLegalSource): Promise<LegalSource>;
+  getLegalSource(id: string): Promise<LegalSource | undefined>;
+  getLegalSourceByCode(code: string): Promise<LegalSource | undefined>;
+  getAllLegalSources(): Promise<LegalSource[]>;
+  updateLegalSource(id: string, updates: Partial<LegalSource>): Promise<LegalSource | undefined>;
+  
+  // Terms Templates - قوالب الشروط والأحكام
+  createTermsTemplate(template: InsertTermsTemplate): Promise<TermsTemplate>;
+  getTermsTemplate(id: string): Promise<TermsTemplate | undefined>;
+  getAllTermsTemplates(): Promise<TermsTemplate[]>;
+  getTermsTemplatesByBusinessType(businessType: string, activityScale?: string): Promise<TermsTemplate[]>;
+  updateTermsTemplate(id: string, updates: Partial<TermsTemplate>): Promise<TermsTemplate | undefined>;
+  
+  // Template Sections - أقسام القوالب
+  createTemplateSection(section: InsertTemplateSection): Promise<TemplateSection>;
+  getTemplateSection(id: string): Promise<TemplateSection | undefined>;
+  getTemplateSectionsByTemplateId(templateId: string): Promise<TemplateSection[]>;
+  updateTemplateSection(id: string, updates: Partial<TemplateSection>): Promise<TemplateSection | undefined>;
+  deleteTemplateSection(id: string): Promise<void>;
 }
 
 // Database storage implementation using Drizzle ORM
@@ -686,6 +716,156 @@ export class DatabaseStorage implements IStorage {
       .where(eq(dpiaAssessments.status, status))
       .orderBy(desc(dpiaAssessments.createdAt));
     return assessments;
+  }
+
+  // ====================================
+  // Legal Sources - المصادر القانونية
+  // ====================================
+
+  async createLegalSource(insertSource: InsertLegalSource): Promise<LegalSource> {
+    const [source] = await db
+      .insert(legalSources)
+      .values(insertSource)
+      .returning();
+    return source;
+  }
+
+  async getLegalSource(id: string): Promise<LegalSource | undefined> {
+    const [source] = await db
+      .select()
+      .from(legalSources)
+      .where(eq(legalSources.id, id));
+    return source || undefined;
+  }
+
+  async getLegalSourceByCode(code: string): Promise<LegalSource | undefined> {
+    const [source] = await db
+      .select()
+      .from(legalSources)
+      .where(eq(legalSources.code, code));
+    return source || undefined;
+  }
+
+  async getAllLegalSources(): Promise<LegalSource[]> {
+    const sources = await db
+      .select()
+      .from(legalSources)
+      .orderBy(desc(legalSources.createdAt));
+    return sources;
+  }
+
+  async updateLegalSource(id: string, updates: Partial<LegalSource>): Promise<LegalSource | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updatedSource] = await db
+      .update(legalSources)
+      .set({
+        ...updateFields,
+        updatedAt: new Date(),
+      })
+      .where(eq(legalSources.id, id))
+      .returning();
+    return updatedSource || undefined;
+  }
+
+  // ====================================
+  // Terms Templates - قوالب الشروط والأحكام
+  // ====================================
+
+  async createTermsTemplate(insertTemplate: InsertTermsTemplate): Promise<TermsTemplate> {
+    const [template] = await db
+      .insert(termsTemplates)
+      .values(insertTemplate)
+      .returning();
+    return template;
+  }
+
+  async getTermsTemplate(id: string): Promise<TermsTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(termsTemplates)
+      .where(eq(termsTemplates.id, id));
+    return template || undefined;
+  }
+
+  async getAllTermsTemplates(): Promise<TermsTemplate[]> {
+    const templates = await db
+      .select()
+      .from(termsTemplates)
+      .orderBy(desc(termsTemplates.createdAt));
+    return templates;
+  }
+
+  async getTermsTemplatesByBusinessType(businessType: string, activityScale?: string): Promise<TermsTemplate[]> {
+    let query = db
+      .select()
+      .from(termsTemplates)
+      .where(eq(termsTemplates.businessType, businessType));
+    
+    if (activityScale) {
+      query = query.where(eq(termsTemplates.activityScale, activityScale));
+    }
+    
+    const templates = await query.orderBy(desc(termsTemplates.createdAt));
+    return templates;
+  }
+
+  async updateTermsTemplate(id: string, updates: Partial<TermsTemplate>): Promise<TermsTemplate | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updatedTemplate] = await db
+      .update(termsTemplates)
+      .set({
+        ...updateFields,
+        updatedAt: new Date(),
+      })
+      .where(eq(termsTemplates.id, id))
+      .returning();
+    return updatedTemplate || undefined;
+  }
+
+  // ====================================
+  // Template Sections - أقسام القوالب
+  // ====================================
+
+  async createTemplateSection(insertSection: InsertTemplateSection): Promise<TemplateSection> {
+    const [section] = await db
+      .insert(templateSections)
+      .values(insertSection)
+      .returning();
+    return section;
+  }
+
+  async getTemplateSection(id: string): Promise<TemplateSection | undefined> {
+    const [section] = await db
+      .select()
+      .from(templateSections)
+      .where(eq(templateSections.id, id));
+    return section || undefined;
+  }
+
+  async getTemplateSectionsByTemplateId(templateId: string): Promise<TemplateSection[]> {
+    const sections = await db
+      .select()
+      .from(templateSections)
+      .where(eq(templateSections.templateId, templateId))
+      .orderBy(templateSections.ordering);
+    return sections;
+  }
+
+  async updateTemplateSection(id: string, updates: Partial<TemplateSection>): Promise<TemplateSection | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updatedSection] = await db
+      .update(templateSections)
+      .set({
+        ...updateFields,
+        updatedAt: new Date(),
+      })
+      .where(eq(templateSections.id, id))
+      .returning();
+    return updatedSection || undefined;
+  }
+
+  async deleteTemplateSection(id: string): Promise<void> {
+    await db.delete(templateSections).where(eq(templateSections.id, id));
   }
 
   // Initialize default remediation templates if they don't exist
