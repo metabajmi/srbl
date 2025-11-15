@@ -381,34 +381,9 @@ export async function extractRegulationReferences(
   }
 }
 
-export interface PolicyDocumentData {
-  companyName: string;
-  websiteUrl: string;
-  businessType: string;
-  dataTypes: string[];
-  dataUsagePurposes: string[];
-  hasThirdPartySharing: string;
-  retentionPeriod: string;
-  contactEmail: string;
-  contactPhone?: string | null;
-  responsibleDepartment?: string | null;
-  address?: string | null;
-  licenseNumber?: string | null;
-  dataCollectionMethods?: string | null;
-  indirectDataSources?: string | null;
-  dataUsageDetails?: string | null;
-  disclosureDetails?: string | null;
-  thirdPartyCategories?: string | null;
-  storageLocation?: string | null;
-  securityMeasures?: string | null;
-  dpoName?: string | null;
-  dpoAddress?: string | null;
-  dpoPhone?: string | null;
-  dpoEmail?: string | null;
-  lastUpdatedDate?: Date | null;
-}
+import type { PolicyDocument } from "@shared/schema";
 
-export async function generatePrivacyPolicy(data: PolicyDocumentData): Promise<string> {
+export async function generatePrivacyPolicy(data: Partial<PolicyDocument>): Promise<string> {
   if (!apiKey || apiKey === "missing-key") {
     console.warn("OpenAI API key not configured, using mock privacy policy");
     return generateMockPrivacyPolicy(data);
@@ -418,116 +393,232 @@ export async function generatePrivacyPolicy(data: PolicyDocumentData): Promise<s
     ? new Date(data.lastUpdatedDate).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
     : new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  const prompt = `أنشئ سياسة خصوصية شاملة ومتوافقة بنسبة 100% مع نظام حماية البيانات الشخصية السعودي للشركة التالية:
+  // تنسيق فئات البيانات
+  const dataCategoriesText = data.dataCategories?.map((cat: any, index: number) => 
+    `${index + 1}. ${cat.name} (${cat.required ? 'إلزامي' : 'اختياري'})
+   - الغرض: ${cat.purpose}
+   - المسوغ النظامي: ${cat.legalBasis === 'consent' ? 'موافقة العميل الصريحة' : 
+      cat.legalBasis === 'contract' ? 'االلتزام بـ عقد خدمة' : 
+      cat.legalBasis === 'legal_obligation' ? 'االلتزام بنظام/قانون' : 
+      'مصلحة مشروعة'}`
+  ).join('\n\n') || 'غير محدد';
 
-معلومات الشركة:
+  // تنسيق الأطراف الخارجية
+  const thirdPartyText = data.thirdPartyDetails?.map((party: any, index: number) =>
+    `${index + 1}. ${party.party}
+   - الغرض: ${party.purpose}
+   ${party.safeguards ? `- الضمانات: ${party.safeguards}` : ''}`
+  ).join('\n\n') || '';
+
+  // تنسيق الإجراءات الأمنية
+  const securityMeasuresText = data.securityMeasures?.map((measure: any, index: number) =>
+    `${index + 1}. ${measure.description} (${measure.type === 'technical' ? 'تقني' : measure.type === 'organizational' ? 'تنظيمي' : 'مادي'})`
+  ).join('\n') || '';
+
+  // تنسيق الكوكيز
+  const cookieTypesText = data.cookieTypes?.map((cookie: any, index: number) =>
+    `${index + 1}. ${cookie.type}
+   - الغرض: ${cookie.purpose}
+   - المدة: ${cookie.duration}`
+  ).join('\n\n') || '';
+
+  const prompt = `أنشئ سياسة خصوصية شاملة ومتوافقة بنسبة 100% مع نظام حماية البيانات الشخصية السعودي (PDPL) للجهة التالية:
+
+===== القسم الأول: هوية الجهة والمسؤولية =====
+
+معلومات الجهة الأساسية:
 - اسم الشركة/الجهة: ${data.companyName}
-- الموقع الإلكتروني: ${data.websiteUrl}
 - نوع النشاط: ${data.businessType}
-- القسم/الفريق المختص: ${data.responsibleDepartment || 'غير محدد'}
-- العنوان: ${data.address || 'غير محدد'}
-- الترخيص/السجل التجاري: ${data.licenseNumber || 'غير محدد'}
+- صفة الجهة: ${data.entityType === 'government' ? 'جهة حكومية' : data.entityType === 'private' ? 'شركة/مؤسسة خاصة' : 'فرد يمارس نشاطاً تجارياً'}
 
-بيانات الاتصال:
+بيانات الاتصال الرئيسية:
 - البريد الإلكتروني: ${data.contactEmail}
-- الهاتف: ${data.contactPhone || 'غير محدد'}
+- رقم الهاتف: ${data.contactPhone || 'غير محدد'}
+- العنوان البريدي: ${data.contactAddress || 'غير محدد'}
 
-البيانات الشخصية:
-- أنواع البيانات المجمعة: ${data.dataTypes ? data.dataTypes.join(', ') : 'غير محدد'}
-- أغراض استخدام البيانات: ${data.dataUsagePurposes ? data.dataUsagePurposes.join(', ') : 'غير محدد'}
-- مشاركة مع جهات خارجية: ${data.hasThirdPartySharing === 'yes' ? 'نعم' : 'لا'}
-- فئات الجهات الخارجية: ${data.thirdPartyCategories || 'غير محدد'}
-- مدة الاحتفاظ بالبيانات: ${data.retentionPeriod}
-
-كيفية الجمع والمعالجة:
-- طرق جمع البيانات: ${data.dataCollectionMethods || 'مباشرة وغير مباشرة'}
-- مصادر البيانات غير المباشرة: ${data.indirectDataSources || 'غير محدد'}
-- تفاصيل استخدام البيانات: ${data.dataUsageDetails || 'حسب الأغراض المذكورة'}
-- تفاصيل الإفصاح: ${data.disclosureDetails || 'حسب الحاجة القانونية'}
-
-التخزين والحماية:
-- موقع التخزين: ${data.storageLocation || 'خوادم آمنة'}
-- إجراءات الحماية: ${data.securityMeasures || 'تشفير وحماية متقدمة'}
-
-مسؤول حماية البيانات:
-- الاسم: ${data.dpoName || 'غير محدد'}
-- العنوان: ${data.dpoAddress || 'غير محدد'}
-- الهاتف: ${data.dpoPhone || 'غير محدد'}
+معالجة البيانات الحساسة:
+- هل يتطلب النشاط معالجة بيانات حساسة أو مراقبة مستمرة: ${data.processesSensitiveData === 'yes' ? 'نعم' : 'لا'}
+${data.processesSensitiveData === 'yes' && data.dpoName ? `
+مسؤول حماية البيانات الشخصية (DPO):
+- الاسم: ${data.dpoName}
 - البريد الإلكتروني: ${data.dpoEmail || data.contactEmail}
+- رقم الهاتف: ${data.dpoPhone || 'غير محدد'}
+- العنوان: ${data.dpoAddress || 'غير محدد'}` : ''}
+
+===== القسم الثاني: جمع البيانات والأغراض النظامية =====
+
+فئات البيانات الشخصية المجمعة:
+${dataCategoriesText}
+
+طريقة جمع البيانات: ${data.collectionMethod === 'direct' ? 'مباشرة من العميل فقط' : 
+  data.collectionMethod === 'indirect' ? 'بشكل غير مباشر فقط' : 
+  'بشكل مباشر وغير مباشر معاً'}
+
+${data.collectionMethod === 'direct' || data.collectionMethod === 'both' ? `
+تفاصيل الجمع المباشر:
+${data.directCollectionDetails || 'غير محدد'}` : ''}
+
+${data.collectionMethod === 'indirect' || data.collectionMethod === 'both' ? `
+تفاصيل الجمع غير المباشر:
+${data.indirectCollectionDetails || 'غير محدد'}
+
+مصادر البيانات غير المباشرة:
+${data.indirectDataSources || 'غير محدد'}` : ''}
+
+===== القسم الثالث: معالجة البيانات ومشاركتها وأمنها =====
+
+آليات معالجة البيانات:
+${data.processingMethods || 'غير محدد'}
+
+مشاركة البيانات مع أطراف خارجية: ${data.sharesWithThirdParties === 'yes' ? 'نعم' : 'لا'}
+${data.sharesWithThirdParties === 'yes' && thirdPartyText ? `
+تفاصيل الأطراف الخارجية:
+${thirdPartyText}` : ''}
+
+نقل البيانات خارج المملكة: ${data.transfersDataAbroad === 'yes' ? 'نعم' : 'لا'}
+${data.transfersDataAbroad === 'yes' ? `
+الدول/المناطق المستهدفة: ${data.transferDestinations || 'غير محدد'}
+الضمانات المتبعة: ${data.transferSafeguards || 'غير محدد'}
+الآلية المستخدمة: ${data.transferMechanism || 'غير محدد'}` : ''}
+
+حقوق صاحب البيانات:
+- طريقة ممارسة الحقوق: ${data.rightsExerciseMethod || 'غير محدد'}
+- مدة الرد: ${data.rightsResponseTime || '30'} يوم
+- قناة التواصل: ${data.rightsContactChannel || data.contactEmail}
+
+تفاصيل الحقوق الفردية:
+- حق الوصول: ${data.accessRightDetails || 'يمكن طلب الوصول للبيانات'}
+- الحصول على نسخة: ${data.obtainCopyDetails || 'يمكن طلب نسخة'} (صيغة: ${data.obtainCopyFormat || 'PDF'})
+  ${data.obtainCopyLimitations ? `القيود: ${data.obtainCopyLimitations}` : ''}
+- التصحيح: ${data.correctionRightDetails || 'يمكن طلب تصحيح البيانات'} (مدة الرد: ${data.correctionResponseTime || '15'} يوم)
+  إشعار: ${data.correctionNotificationMethod || 'بريد إلكتروني'}
+- الحذف: شروط: ${data.deletionRightConditions || 'حسب القانون'} | استثناءات: ${data.deletionExceptions || 'التزامات قانونية'}
+- الاعتراض: ${data.objectionRightDetails || 'يمكن الاعتراض على المعالجة'} (مدة التقييم: ${data.objectionEvaluationTime || '30'} يوم)
+- سحب الموافقة: ${data.withdrawalConsentDetails || 'يمكن سحب الموافقة في أي وقت'}
+  الطريقة: ${data.withdrawalConsentMethod || 'إعدادات الحساب'} | الأثر: ${data.withdrawalConsentImpact || 'قد تتوقف بعض الخدمات'}
+
+التخزين والاحتفاظ:
+- موقع التخزين: ${data.storageLocation || 'غير محدد'} (${data.storageLocationDetails || ''})
+- مدة الاحتفاظ: ${data.retentionPeriod || 'حسب الحاجة'}
+- المعايير المستخدمة: ${data.retentionCriteria || 'حسب القانون'}
+- طريقة الإتلاف: ${data.deletionMethod || 'حذف آمن'}
+
+الإجراءات الأمنية:
+${securityMeasuresText}
+${data.technicalMeasures ? `
+إجراءات تقنية إضافية: ${data.technicalMeasures}` : ''}
+${data.organizationalMeasures ? `
+إجراءات تنظيمية إضافية: ${data.organizationalMeasures}` : ''}
+
+الإخطار بانتهاك البيانات:
+- العملية: ${data.breachNotificationProcess || 'إخطار فوري'}
+- المدة الزمنية: ${data.breachNotificationTime || '72 ساعة'}
+
+${data.usesCookies === 'yes' ? `
+ملفات الارتباط (الكوكيز):
+${cookieTypesText}
+طريقة الإدارة: ${data.cookieManagementMethod || 'إعدادات المتصفح'}` : ''}
+
+التحديثات:
+طريقة الإشعار: ${data.updateNotificationMethod || 'بريد إلكتروني'}
+
+الشكاوى:
+- إجراءات تقديم الشكاوى: ${data.complaintProcedure || 'التواصل معنا'}
+- مدة الرد: ${data.complaintResponseTime || '30'} يوم
 
 تاريخ آخر تحديث للسياسة: ${formattedDate}
 
-يجب أن تتضمن السياسة الأقسام التالية بالترتيب وبشكل مفصل:
+====================================
+
+المطلوب:
+أنشئ سياسة خصوصية شاملة واحترافية متوافقة 100% مع نظام حماية البيانات الشخصية السعودي (PDPL) واللائحة التنفيذية. يجب أن تتضمن السياسة الأقسام التالية بالترتيب:
 
 1. **مقدمة والتزام بالخصوصية**
    - بيان التزام الجهة بحماية البيانات وفقاً للنظام السعودي
    - نطاق السياسة وتطبيقها
 
-2. **كيف يتم جمع بياناتك الشخصية وما هو الغرض من جمعها؟**
-   - البيانات التي يتم الحصول عليها بشكل مباشر (من المستخدم نفسه)
-   - البيانات التي يتم الحصول عليها بطريقة غير مباشرة (من مصادر أخرى)
-   - الأغراض المحددة لكل نوع من البيانات
+2. **معلومات عن جهة التحكم**
+   - الاسم، النوع، البيانات الأساسية
+   - بيانات التواصل الكاملة
+   - مسؤول حماية البيانات (إذا كان موجوداً)
 
-3. **كيف نستخدم بياناتك الشخصية؟**
-   - تفاصيل دقيقة عن كيفية استخدام كل نوع من البيانات
-   - الأساس القانوني لكل استخدام
+3. **جمع البيانات الشخصية**
+   - فئات البيانات المجمعة مع الأغراض المحددة لكل فئة
+   - طريقة الجمع (مباشرة/غير مباشرة)
+   - المسوغات النظامية لكل فئة بيانات
 
-4. **كيف نفصح عن بياناتك الشخصية؟**
-   - الجهات التي قد يتم الإفصاح لها عن البيانات
-   - الغرض من كل إفصاح
-   - الضمانات المطبقة عند الإفصاح
+4. **استخدام ومعالجة البيانات**
+   - كيفية معالجة البيانات خلال دورة حياتها
+   - الأغراض التفصيلية
+   - الأساس القانوني
 
-5. **المسوغات النظامية لجمع ومعالجة بياناتك الشخصية**
-   - الأسس القانونية (الموافقة، تنفيذ العقد، الالتزام القانوني، المصلحة المشروعة، إلخ)
-   - تفصيل كل مسوغ نظامي
+5. **مشاركة البيانات ونقلها**
+   - الإفصاح للأطراف الخارجية (إن وجد)
+   - نقل البيانات خارج المملكة (إن وجد)
+   - الضمانات والآليات
 
-6. **كيف نقوم بتخزين بياناتك الشخصية؟**
-   - موقع التخزين وطريقته
-   - مدة التخزين والاحتفاظ
-   - إجراءات الأمان والحماية
+6. **التخزين والاحتفاظ**
+   - موقع التخزين
+   - مدة الاحتفاظ والمعايير
+   - طريقة الإتلاف
 
-7. **حقوقك فيما يتعلق بمعالجة بياناتك الشخصية**
-   يجب تفصيل الحقوق التالية بشكل كامل:
-   - **الحق في العلم**: معرفة طرق جمع بياناتك ومعالجتها وحفظها والإفصاح عنها
-   - **الحق في الوصول إلى بياناتك الشخصية**: طلب الاطلاع على بياناتك وكيفية استخدامها
-   - **الحق في طلب الحصول على بياناتك الشخصية**: الحصول على نسخة من بياناتك بصيغة مقروءة
-   - **الحق في تصحيح بياناتك الشخصية**: طلب تصحيح البيانات غير الدقيقة أو غير الصحيحة
-   - **الحق في إتلاف بياناتك الشخصية**: طلب حذف بياناتك في ظروف معينة
-   - **الحق في الرجوع عن موافقتك على معالجة بياناتك الشخصية**: سحب الموافقة في أي وقت
+7. **أمن البيانات**
+   - الإجراءات الأمنية التقنية
+   - الإجراءات الأمنية التنظيمية
+   - الإجراءات الأمنية المادية
+   - الإخطار بانتهاك البيانات
 
-8. **مسؤول حماية البيانات الشخصية**
-   - معلومات الاتصال الكاملة بمسؤول حماية البيانات
-   - دور ومسؤوليات المسؤول
+8. **حقوق أصحاب البيانات**
+   يجب تفصيل جميع الحقوق التالية:
+   - الحق في العلم
+   - الحق في الوصول إلى البيانات
+   - الحق في الحصول على نسخة من البيانات
+   - الحق في التصحيح
+   - الحق في الإتلاف/الحذف
+   - الحق في الاعتراض
+   - الحق في سحب الموافقة
+   - كيفية ممارسة كل حق
 
-9. **كيف تقدم شكوى أو اعتراض؟**
-   - الخطوات اللازمة لتقديم شكوى
-   - القنوات المتاحة للتواصل
-   - المدة الزمنية للرد
+9. **ملفات تعريف الارتباط (إذا كانت مستخدمة)**
+   - أنواع الكوكيز
+   - الأغراض والمدة
+   - كيفية الإدارة
 
-10. **عنوان الهيئة السعودية للبيانات والذكاء الاصطناعي**
-    - العنوان الكامل: المملكة العربية السعودية، الرياض
-    - الموقع الإلكتروني: الهيئة السعودية للبيانات والذكاء الاصطناعي (sdaia.gov.sa)
-    - منصة حوكمة البيانات الوطنية: (dgp.sdaia.gov.sa)
-
-11. **تحديثات السياسة**
-    - كيفية إشعار المستخدمين بالتحديثات
+10. **التحديثات على السياسة**
+    - كيفية إشعار المستخدمين
     - تاريخ آخر تحديث
 
-12. **معلومات الاتصال النهائية**
+11. **الشكاوى والاعتراضات**
+    - كيفية تقديم شكوى
+    - مدة الرد
+    - معلومات التواصل
 
-استخدم لغة قانونية واضحة وبسيطة باللغة العربية، مع التأكد من التوافق الكامل مع نظام حماية البيانات الشخصية السعودي. يجب أن تكون السياسة شاملة واحترافية ومفصلة.`;
+12. **معلومات الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا)**
+    - العنوان: المملكة العربية السعودية، الرياض
+    - الموقع الإلكتروني: sdaia.gov.sa
+    - منصة حوكمة البيانات الوطنية: dgp.sdaia.gov.sa
+    - حق التقدم بشكوى للهيئة
+
+13. **معلومات الاتصال النهائية**
+
+مواصفات السياسة:
+- استخدم لغة قانونية واضحة وبسيطة باللغة العربية
+- اذكر المواد ذات الصلة من نظام حماية البيانات الشخصية السعودي
+- كن شاملاً ومحدداً قدر الإمكان
+- تأكد من التوافق الكامل مع PDPL واللائحة التنفيذية
+- استخدم التنسيق المناسب مع عناوين واضحة وترقيم منظم`;
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "أنت خبير قانوني متخصص في صياغة سياسات الخصوصية المتوافقة مع القوانين السعودية."
+          content: "أنت خبير قانوني متخصص في صياغة سياسات الخصوصية المتوافقة مع نظام حماية البيانات الشخصية السعودي (PDPL) واللائحة التنفيذية. تتميز بقدرتك على إنشاء سياسات شاملة ودقيقة ومهنية."
         },
         { role: "user", content: prompt }
       ],
-      max_tokens: 4096,
+      max_tokens: 16000,
     });
 
     return response.choices[0].message.content || "";
@@ -537,37 +628,36 @@ export async function generatePrivacyPolicy(data: PolicyDocumentData): Promise<s
   }
 }
 
-function generateMockPrivacyPolicy(data: PolicyDocumentData): string {
+function generateMockPrivacyPolicy(data: Partial<PolicyDocument>): string {
   const formattedDate = data.lastUpdatedDate 
     ? new Date(data.lastUpdatedDate).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
     : new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+  const dataCategoriesText = data.dataCategories?.map((cat: any) => `- ${cat.name}: ${cat.purpose}`).join('\n') || 'غير محدد';
     
   return `سياسة الخصوصية
 
 آخر تحديث: ${formattedDate}
 
 1. مقدمة والتزام بالخصوصية
-نحن في ${data.companyName} (${data.websiteUrl}) نلتزم بحماية خصوصيتك وبياناتك الشخصية وفقاً لنظام حماية البيانات الشخصية السعودي.
+نحن في ${data.companyName} نلتزم بحماية خصوصيتك وبياناتك الشخصية وفقاً لنظام حماية البيانات الشخصية السعودي.
 
 نوع النشاط: ${data.businessType}
-${data.licenseNumber ? `السجل التجاري: ${data.licenseNumber}` : ''}
-${data.responsibleDepartment ? `القسم المختص: ${data.responsibleDepartment}` : ''}
+صفة الجهة: ${data.entityType === 'government' ? 'جهة حكومية' : data.entityType === 'private' ? 'شركة/مؤسسة خاصة' : 'فرد'}
 
 2. كيف يتم جمع بياناتك الشخصية وما هو الغرض من جمعها؟
 
 2.1 البيانات التي يتم جمعها
-نقوم بجمع الأنواع التالية من البيانات:
-${data.dataTypes.map(type => `- ${type}`).join('\n')}
+${dataCategoriesText}
 
 2.2 طرق الجمع
-${data.dataCollectionMethods || 'يتم جمع البيانات بشكل مباشر من خلال تفاعلك مع خدماتنا وبشكل غير مباشر من مصادر معتمدة.'}
+${data.collectionMethod === 'direct' ? 'مباشرة من العميل' : data.collectionMethod === 'indirect' ? 'بشكل غير مباشر' : 'مباشرة وغير مباشرة'}
 
 ${data.indirectDataSources ? `2.3 مصادر البيانات غير المباشرة
 ${data.indirectDataSources}` : ''}
 
 3. كيف نستخدم بياناتك الشخصية؟
-نستخدم بياناتك للأغراض التالية:
-${data.dataUsagePurposes.map(purpose => `- ${purpose}`).join('\n')}
+نستخدم بياناتك للأغراض المحددة في كل فئة من فئات البيانات أعلاه.
 
 ${data.dataUsageDetails ? `\nتفاصيل الاستخدام:
 ${data.dataUsageDetails}` : ''}

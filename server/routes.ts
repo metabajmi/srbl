@@ -520,32 +520,7 @@ async function processPrivacyPolicyGeneration(policyId: string) {
     const policy = await storage.getPolicyDocument(policyId);
     if (!policy) return;
     
-    const generatedContent = await generatePrivacyPolicy({
-      companyName: policy.companyName,
-      websiteUrl: policy.websiteUrl,
-      businessType: policy.businessType,
-      dataTypes: policy.dataTypes as string[],
-      dataUsagePurposes: policy.dataUsagePurposes as string[],
-      hasThirdPartySharing: policy.hasThirdPartySharing,
-      retentionPeriod: policy.retentionPeriod,
-      contactEmail: policy.contactEmail,
-      contactPhone: policy.contactPhone || undefined,
-      responsibleDepartment: policy.responsibleDepartment || undefined,
-      address: policy.address || undefined,
-      licenseNumber: policy.licenseNumber || undefined,
-      dataCollectionMethods: policy.dataCollectionMethods || undefined,
-      indirectDataSources: policy.indirectDataSources || undefined,
-      dataUsageDetails: policy.dataUsageDetails || undefined,
-      disclosureDetails: policy.disclosureDetails || undefined,
-      thirdPartyCategories: policy.thirdPartyCategories || undefined,
-      storageLocation: policy.storageLocation || undefined,
-      securityMeasures: policy.securityMeasures || undefined,
-      dpoName: policy.dpoName || undefined,
-      dpoAddress: policy.dpoAddress || undefined,
-      dpoPhone: policy.dpoPhone || undefined,
-      dpoEmail: policy.dpoEmail || undefined,
-      lastUpdatedDate: policy.lastUpdatedDate || undefined,
-    });
+    const generatedContent = await generatePrivacyPolicy(policy);
     
     await storage.updatePolicyDocument(policyId, {
       status: "completed",
