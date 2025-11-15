@@ -333,11 +333,289 @@ export default function PrivacyGeneratorPage() {
   const handleDownload = (policy: PolicyDocument) => {
     if (!policy.generatedContent) return;
     
-    const blob = new Blob([policy.generatedContent], { type: 'text/plain;charset=utf-8' });
+    // دوال مساعدة آمنة لـ HTML escaping
+    const escapeHtml = (text: string): string => {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    };
+    
+    // معالجة المحتوى وتحويله إلى HTML منسق بشكل صحيح
+    const parseContent = (content: string): string => {
+      const lines = content.split('\n');
+      const parsedLines: string[] = [];
+      let inSection = false;
+      let inList = false;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        if (!line) {
+          // إغلاق القائمة إذا كانت مفتوحة
+          if (inList) {
+            parsedLines.push('</ul>');
+            inList = false;
+          }
+          parsedLines.push('<br>');
+          continue;
+        }
+        
+        // اكتشاف العناوين الرئيسية (تبدأ بأرقام مثل "1." أو "2.")
+        if (/^\d+\./.test(line)) {
+          // إغلاق القائمة إذا كانت مفتوحة
+          if (inList) {
+            parsedLines.push('</ul>');
+            inList = false;
+          }
+          // إغلاق القسم السابق
+          if (inSection) {
+            parsedLines.push('</div>');
+          }
+          parsedLines.push(`<div class="section"><h2>${escapeHtml(line)}</h2>`);
+          inSection = true;
+          continue;
+        }
+        
+        // اكتشاف عناصر القائمة (تبدأ بـ - أو • أو *)
+        if (/^[-•*]/.test(line)) {
+          const listItemText = line.substring(1).trim();
+          if (!inList) {
+            parsedLines.push('<ul>');
+            inList = true;
+          }
+          parsedLines.push(`<li>${escapeHtml(listItemText)}</li>`);
+          continue;
+        }
+        
+        // اكتشاف العناوين الفرعية (تبدأ بحروف عربية مع قوس مثل "أ)" أو "ب)")
+        if (/^[أ-ي]\)/.test(line)) {
+          // إغلاق القائمة إذا كانت مفتوحة
+          if (inList) {
+            parsedLines.push('</ul>');
+            inList = false;
+          }
+          parsedLines.push(`<h3>${escapeHtml(line)}</h3>`);
+          continue;
+        }
+        
+        // إغلاق القائمة إذا كانت مفتوحة قبل الفقرة العادية
+        if (inList) {
+          parsedLines.push('</ul>');
+          inList = false;
+        }
+        
+        // فقرة عادية
+        parsedLines.push(`<p>${escapeHtml(line)}</p>`);
+      }
+      
+      // إغلاق القائمة إذا كانت مفتوحة في النهاية
+      if (inList) {
+        parsedLines.push('</ul>');
+      }
+      
+      // إغلاق القسم الأخير إذا كان مفتوحاً
+      if (inSection) {
+        parsedLines.push('</div>');
+      }
+      
+      return parsedLines.join('\n');
+    };
+    
+    // تنظيف وتنسيق اسم الشركة والتاريخ بشكل آمن
+    const safeCompanyName = escapeHtml(policy.companyName);
+    const safeDate = escapeHtml(new Date(policy.createdAt!).toLocaleDateString('ar-SA', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }));
+    
+    // معالجة المحتوى بشكل آمن
+    const safeContent = parseContent(policy.generatedContent);
+    
+    // بناء HTML النهائي
+    const htmlContent = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سياسة الخصوصية - ${safeCompanyName}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            line-height: 1.8;
+            color: #1a1a1a;
+            background: #ffffff;
+            padding: 40px 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #2563eb;
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #2563eb;
+        }
+        
+        h2 {
+            color: #1e40af;
+            font-size: 1.8em;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 20px;
+            padding-right: 15px;
+            border-right: 5px solid #3b82f6;
+        }
+        
+        h3 {
+            color: #374151;
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+            font-size: 1.1em;
+        }
+        
+        ul {
+            margin-right: 30px;
+            margin-bottom: 20px;
+            list-style: disc;
+        }
+        
+        li {
+            margin-bottom: 10px;
+            font-size: 1.05em;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            color: white;
+            border-bottom: none;
+            margin-bottom: 10px;
+        }
+        
+        .header .company-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .header .date {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .section {
+            margin-bottom: 35px;
+            padding: 25px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-right: 4px solid #3b82f6;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.95em;
+        }
+        
+        strong {
+            color: #1e40af;
+            font-weight: 600;
+        }
+        
+        @media print {
+            body {
+                padding: 20px;
+            }
+            .header {
+                background: #2563eb;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .section {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 20px 10px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            h2 {
+                font-size: 1.5em;
+            }
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>سياسة الخصوصية</h1>
+        <div class="company-name">${safeCompanyName}</div>
+        <div class="date">تاريخ الإصدار: ${safeDate}</div>
+    </div>
+    
+    <div class="content">
+        ${safeContent}
+    </div>
+    
+    <div class="footer">
+        <p><strong>هذا المستند تم توليده بواسطة أداة الذكاء الاصطناعي لتوليد سياسة الخصوصية</strong></p>
+        <p>المتوافقة مع نظام حماية البيانات الشخصية السعودي (PDPL)</p>
+        <p style="margin-top: 15px; font-size: 0.9em;">
+            للاستفسارات والشكاوى، يرجى التواصل مع مسؤول حماية البيانات
+        </p>
+    </div>
+</body>
+</html>`;
+    
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `privacy-policy-${policy.companyName}-${new Date(policy.createdAt!).toISOString().split('T')[0]}.txt`;
+    link.download = `سياسة-الخصوصية-${policy.companyName.replace(/[^a-zA-Z0-9أ-ي]/g, '-')}-${new Date(policy.createdAt!).toISOString().split('T')[0]}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
