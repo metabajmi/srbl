@@ -30,7 +30,7 @@ const ropaFormSchema = z.object({
   department: z.string().min(2, "يجب إدخال اسم القسم"),
   dataTypes: z.array(z.object({
     name: z.string().min(1, "يجب إدخال اسم نوع البيانات"),
-    category: z.string(),
+    category: z.string().min(1, "يجب اختيار التصنيف"),
     isSensitive: z.boolean(),
   })).min(1, "يجب إدخال نوع واحد على الأقل من البيانات"),
   processingPurpose: z.string().min(5, "يجب توضيح الغرض من المعالجة"),
@@ -45,7 +45,23 @@ const ropaFormSchema = z.object({
   internationalTransfers: z.string().optional(),
   transferDetails: z.string().optional(),
   notes: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    // If any recipient field is filled, require at least the name
+    const recipient = data.dataRecipients?.[0];
+    if (!recipient) return true;
+    
+    const hasAnyValue = recipient.purpose.trim() || recipient.location.trim();
+    if (hasAnyValue && !recipient.name.trim()) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "يجب إدخال اسم المستلم إذا تم إدخال غرض أو موقع",
+    path: ["dataRecipients", "0", "name"],
+  }
+);
 
 type RopaFormValues = z.infer<typeof ropaFormSchema>;
 
@@ -76,7 +92,7 @@ export default function RopaManagementPage() {
       processingPurpose: "",
       legalBasis: "consent",
       retentionPeriod: "",
-      dataRecipients: [],
+      dataRecipients: [{ name: "", purpose: "", location: "" }],
       securityMeasures: "",
       internationalTransfers: "no",
       transferDetails: "",
@@ -156,22 +172,45 @@ export default function RopaManagementPage() {
   });
 
   const onSubmit = (data: RopaFormValues) => {
+    // Clean up dataRecipients - filter out empty entries
+    const filteredRecipients = data.dataRecipients
+      ?.filter(r => r.name.trim() || r.purpose.trim() || r.location.trim())
+      .filter(r => r.name.trim()); // Only keep entries with name (required by validation)
+    
+    const cleanedData = {
+      ...data,
+      dataRecipients: filteredRecipients && filteredRecipients.length > 0 
+        ? filteredRecipients 
+        : undefined,
+    };
+    
     if (editingEntry) {
-      updateMutation.mutate({ id: editingEntry.id, data });
+      updateMutation.mutate({ id: editingEntry.id, data: cleanedData });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(cleanedData);
     }
   };
 
   const handleEdit = (entry: RopaEntry) => {
     setEditingEntry(entry);
+    
+    // Type-safe data extraction with proper defaults
+    const dataTypes = (entry.dataTypes as unknown as Array<{name: string, category: string, isSensitive: boolean}>) || 
+      [{ name: "بيانات شخصية", category: "personal", isSensitive: false }];
+    
+    // Preserve existing dataRecipients or use empty array (no forced placeholder)
+    const existingRecipients = entry.dataRecipients as unknown as Array<{name: string, purpose: string, location: string}> | null;
+    const dataRecipients = existingRecipients && existingRecipients.length > 0 
+      ? existingRecipients 
+      : [{ name: "", purpose: "", location: "" }];
+    
     form.reset({
       department: entry.department,
-      dataTypes: entry.dataTypes as any,
+      dataTypes,
       processingPurpose: entry.processingPurpose,
-      legalBasis: entry.legalBasis as any,
+      legalBasis: entry.legalBasis as "consent" | "contract" | "legal_obligation" | "legitimate_interest",
       retentionPeriod: entry.retentionPeriod,
-      dataRecipients: (entry.dataRecipients as any) || [],
+      dataRecipients,
       securityMeasures: entry.securityMeasures || "",
       internationalTransfers: entry.internationalTransfers || "no",
       transferDetails: entry.transferDetails || "",
@@ -287,19 +326,68 @@ export default function RopaManagementPage() {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="dataTypes.0.name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>نوع البيانات المعالجة</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="مثل: بيانات شخصية، بيانات مالية، بيانات صحية" data-testid="input-data-type" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-3 p-4 border rounded-md">
+                      <FormLabel>نوع البيانات المعالجة</FormLabel>
+                      
+                      <FormField
+                        control={form.control}
+                        name="dataTypes.0.name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>اسم نوع البيانات</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="مثل: بيانات شخصية، بيانات مالية" data-testid="input-data-type" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="dataTypes.0.category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>تصنيف البيانات</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-data-category">
+                                  <SelectValue placeholder="اختر التصنيف" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="personal">بيانات شخصية</SelectItem>
+                                <SelectItem value="financial">بيانات مالية</SelectItem>
+                                <SelectItem value="health">بيانات صحية</SelectItem>
+                                <SelectItem value="biometric">بيانات بيومترية</SelectItem>
+                                <SelectItem value="other">أخرى</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="dataTypes.0.isSensitive"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                            <FormControl>
+                              <input
+                                type="checkbox"
+                                checked={field.value}
+                                onChange={field.onChange}
+                                data-testid="checkbox-is-sensitive"
+                                className="h-4 w-4"
+                              />
+                            </FormControl>
+                            <FormLabel className="!m-0">بيانات حساسة</FormLabel>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
                     <FormField
                       control={form.control}
@@ -352,6 +440,53 @@ export default function RopaManagementPage() {
                         </FormItem>
                       )}
                     />
+
+                    <div className="space-y-3 p-4 border rounded-md">
+                      <FormLabel>المستلمون (اختياري)</FormLabel>
+                      <p className="text-sm text-muted-foreground">أطراف ثالثة يتم مشاركة البيانات معهم</p>
+                      
+                      <FormField
+                        control={form.control}
+                        name="dataRecipients.0.name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>اسم المستلم</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="اسم الطرف الثالث" data-testid="input-recipient-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="dataRecipients.0.purpose"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>الغرض</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="غرض المشاركة" data-testid="input-recipient-purpose" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="dataRecipients.0.location"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>الموقع</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="موقع المستلم" data-testid="input-recipient-location" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
                     <FormField
                       control={form.control}
