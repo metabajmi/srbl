@@ -27,3 +27,43 @@ The application prioritizes an Arabic-first design with full RTL support. It use
 -   **UI Component Libraries**: Radix UI, Tailwind CSS, Lucide React, Embla Carousel, date-fns
 -   **Development Tools**: Vite, TypeScript, PostCSS with Autoprefixer
 -   **Build & Runtime**: esbuild, ESM
+
+## Recent Changes (November 15, 2025)
+
+### Internal Compliance Module - COMPLETED ✅
+
+**Achievement**: Fully functional Internal Compliance Management module with ROPA and DSAR tools ready for production use.
+
+**Implementation Details**:
+1. **Database Schema**: Complete PostgreSQL schema for ROPA, DSAR, and DPIA with proper relationships and cascade deletes
+2. **Backend APIs**: Full CRUD operations for all three tools with Zod validation and security enhancements
+3. **Frontend Pages**: 
+   - Unified dashboard at `/internal-compliance`
+   - ROPA Management at `/internal-compliance/ropa`
+   - DSAR Management at `/internal-compliance/dsar`
+4. **Security**: Fixed critical vulnerability where PUT endpoints bypassed validation; added dedicated update schemas with `.strict()` mode
+
+**Critical Bug Fix**:
+- **Problem**: All create/update/delete mutations failed due to incorrect `apiRequest` usage
+- **Root Cause**: Called as `apiRequest(url, {method, body})` instead of correct signature `apiRequest(method, url, data)`
+- **Impact**: Complete failure of ROPA and DSAR creation/editing
+- **Solution**: Fixed all mutation calls in RopaManagementPage.tsx and DsarManagementPage.tsx
+- **Testing**: E2E tests verify both ROPA and DSAR creation work successfully
+
+**Features Verified (E2E Tested)**:
+- ✅ ROPA entry creation with department, purpose, legal basis, retention period
+- ✅ DSAR request creation with requester info, request type, details
+- ✅ Navigation between all compliance pages
+- ✅ Status filtering in DSAR (new/in_progress/completed/rejected)
+- ✅ Form validation with Arabic error messages
+- ✅ Toast notifications on success/error
+- ✅ Query cache invalidation after mutations
+- ✅ RTL support across all pages
+- ✅ Professional Arabic-first interface
+
+**User Impact**:
+- Organizations can maintain complete PDPL compliance records
+- 30-day DSAR response tracking ensures regulatory compliance
+- Export capabilities infrastructure ready (CSV/PDF buttons present)
+- All compliance data persisted in PostgreSQL database
+- Production-ready for Saudi Arabian organizations
