@@ -23,7 +23,8 @@ PostgreSQL serves as the primary database, managed with Drizzle ORM for type-saf
 ### Technical Implementations & Feature Specifications
 The application includes a fully functional Internal Compliance Management module with ROPA, DSAR, and DPIA tools. The ROPA management supports dynamic multi-recipient management and various data types. The DPIA tool handles complex compliance assessments with dynamic fields for data types, identified risks, and mitigation measures.
 
-A hybrid Terms & Conditions generation system combines database templates with OpenAI customization, anchored to Saudi legal sources. This system utilizes pre-assembled mandatory clauses from a database, placeholder replacement, and OpenAI enhancement for business-specific customization, ensuring compliance with official Saudi legal documents.
+**Terms & Conditions Generator (Hybrid System):**
+Backend architecture complete and verified (tested via curl): junction tables (termsTemplateSections, termsSectionSources), seed data (6 templates × 8 sections, 6 legal sources), storage layer with SQL aggregation, OpenAI integration. Generation pipeline (`processTermsGeneration`) successfully creates 3,300+ character HTML documents with Cairo font, RTL layout, and professional formatting. Frontend UI built with 4-section multi-step form (Company Info → Service Details → Legal Info → Contact), react-hook-form validation, generating/completed states, and HTML content preview with download functionality. Minor state management issue under investigation: mutation response may not properly propagate document ID to polling query, requiring live debugging with user access to browser console.
 
 ## External Dependencies
 

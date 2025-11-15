@@ -115,8 +115,9 @@ export default function TermsGeneratorPage() {
     mutationFn: async (data: FormValues) => {
       console.log('[TermsGenerator] Submitting form data...');
       const response = await apiRequest("POST", "/api/terms", data);
-      console.log('[TermsGenerator] API response received:', response);
-      return response as unknown as TermsDocument;
+      const jsonData = await response.json();
+      console.log('[TermsGenerator] Parsed JSON data:', jsonData);
+      return jsonData as TermsDocument;
     },
     onSuccess: (data) => {
       console.log('[TermsGenerator] Mutation onSuccess:', { 
