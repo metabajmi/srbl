@@ -1,10 +1,12 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import CookieBanner from "@/components/CookieBanner";
+import { useConsent } from "@/hooks/useConsent";
 import HomePage from "@/pages/HomePage";
 import ScanResultsPage from "@/pages/ScanResultsPage";
 import PrivacyGeneratorPage from "@/pages/PrivacyGeneratorPage";
@@ -33,30 +35,63 @@ function Router() {
   );
 }
 
-function App() {
+function AppContent() {
+  const { showBanner, acceptConsent, rejectConsent } = useConsent();
+  
+  // Load CMP settings
+  const { data: cmpSettings } = useQuery<{
+    bannerTitle: string;
+    bannerDescription: string;
+    privacyPolicyUrl: string;
+    termsUrl: string;
+  }>({
+    queryKey: ["/api/cmp/settings"],
+  });
+
   const style = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
   };
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <SidebarProvider style={style as React.CSSProperties}>
-          <div className="flex h-screen w-full">
-            <AppSidebar />
-            <div className="flex flex-col flex-1">
-              <header className="flex items-center justify-between px-4 py-2 border-b">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
-              </header>
-              <main className="flex-1 overflow-auto">
-                <Router />
-              </main>
-            </div>
+    <TooltipProvider>
+      <SidebarProvider style={style as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AppSidebar />
+          <div className="flex flex-col flex-1">
+            <header className="flex items-center justify-between px-4 py-2 border-b">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+            </header>
+            <main className="flex-1 overflow-auto">
+              <Router />
+            </main>
           </div>
-        </SidebarProvider>
-        <Toaster />
-      </TooltipProvider>
+        </div>
+      </SidebarProvider>
+      
+      {/* Cookie Banner */}
+      {showBanner && (
+        <CookieBanner
+          onAccept={acceptConsent}
+          onReject={rejectConsent}
+          settings={cmpSettings ? {
+            bannerTitle: cmpSettings.bannerTitle,
+            bannerDescription: cmpSettings.bannerDescription,
+            privacyPolicyUrl: cmpSettings.privacyPolicyUrl || "/privacy-policy",
+            termsUrl: cmpSettings.termsUrl || "/terms",
+          } : undefined}
+        />
+      )}
+      
+      <Toaster />
+    </TooltipProvider>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
     </QueryClientProvider>
   );
 }
