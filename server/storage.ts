@@ -49,7 +49,7 @@ import {
   templateSections
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Compliance Scans
@@ -796,16 +796,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTermsTemplatesByBusinessType(businessType: string, activityScale?: string): Promise<TermsTemplate[]> {
-    let query = db
-      .select()
-      .from(termsTemplates)
-      .where(eq(termsTemplates.businessType, businessType));
+    const conditions = [eq(termsTemplates.businessType, businessType)];
     
     if (activityScale) {
-      query = query.where(eq(termsTemplates.activityScale, activityScale));
+      conditions.push(eq(termsTemplates.activityScale, activityScale));
     }
     
-    const templates = await query.orderBy(desc(termsTemplates.createdAt));
+    const templates = await db
+      .select()
+      .from(termsTemplates)
+      .where(and(...conditions))
+      .orderBy(desc(termsTemplates.createdAt));
+    
     return templates;
   }
 
