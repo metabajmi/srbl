@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -469,6 +469,7 @@ export const insertCmpScriptSchema = createInsertSchema(cmpScripts).omit({
     required_error: "يجب تحديد فئة السكربت"
   }),
   scriptType: z.enum(["inline", "external"]),
+  enabled: z.enum(["yes", "no"]).or(z.boolean().transform(val => val ? "yes" : "no")),
 });
 
 export type InsertCmpScript = z.infer<typeof insertCmpScriptSchema>;
