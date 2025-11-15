@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Edit, Trash2, FileDown, Database, Shield } from "lucide-react";
@@ -47,13 +47,16 @@ const ropaFormSchema = z.object({
   notes: z.string().optional(),
 }).refine(
   (data) => {
-    // If any recipient field is filled, require at least the name
-    const recipient = data.dataRecipients?.[0];
-    if (!recipient) return true;
+    // Validate all recipients - if any field is filled, require name
+    // Guard against undefined from useFieldArray
+    if (!data.dataRecipients || data.dataRecipients.length === 0) return true;
     
-    const hasAnyValue = recipient.purpose.trim() || recipient.location.trim();
-    if (hasAnyValue && !recipient.name.trim()) {
-      return false;
+    for (let i = 0; i < data.dataRecipients.length; i++) {
+      const recipient = data.dataRecipients[i];
+      const hasAnyValue = (recipient.purpose ?? "").trim() || (recipient.location ?? "").trim();
+      if (hasAnyValue && !(recipient.name ?? "").trim()) {
+        return false;
+      }
     }
     return true;
   },
@@ -92,12 +95,18 @@ export default function RopaManagementPage() {
       processingPurpose: "",
       legalBasis: "consent",
       retentionPeriod: "",
-      dataRecipients: [{ name: "", purpose: "", location: "" }],
+      dataRecipients: [],
       securityMeasures: "",
       internationalTransfers: "no",
       transferDetails: "",
       notes: "",
     },
+  });
+
+  // Field array for dataRecipients
+  const { fields: recipientFields, append: appendRecipient, remove: removeRecipient } = useFieldArray({
+    control: form.control,
+    name: "dataRecipients",
   });
 
   // Create mutation
@@ -172,16 +181,19 @@ export default function RopaManagementPage() {
   });
 
   const onSubmit = (data: RopaFormValues) => {
-    // Clean up dataRecipients - filter out empty entries
-    const filteredRecipients = data.dataRecipients
-      ?.filter(r => r.name.trim() || r.purpose.trim() || r.location.trim())
-      .filter(r => r.name.trim()); // Only keep entries with name (required by validation)
+    // Filter out empty recipients - keep all fields for valid entries
+    // Guard against undefined fields from useFieldArray
+    const filteredRecipients = (data.dataRecipients || [])
+      .map(r => ({
+        name: r.name ?? "",
+        purpose: r.purpose ?? "",
+        location: r.location ?? "",
+      }))
+      .filter(r => r.name.trim());
     
     const cleanedData = {
       ...data,
-      dataRecipients: filteredRecipients && filteredRecipients.length > 0 
-        ? filteredRecipients 
-        : undefined,
+      dataRecipients: filteredRecipients.length > 0 ? filteredRecipients : undefined,
     };
     
     if (editingEntry) {
@@ -198,11 +210,8 @@ export default function RopaManagementPage() {
     const dataTypes = (entry.dataTypes as unknown as Array<{name: string, category: string, isSensitive: boolean}>) || 
       [{ name: "بيانات شخصية", category: "personal", isSensitive: false }];
     
-    // Preserve existing dataRecipients or use empty array (no forced placeholder)
-    const existingRecipients = entry.dataRecipients as unknown as Array<{name: string, purpose: string, location: string}> | null;
-    const dataRecipients = existingRecipients && existingRecipients.length > 0 
-      ? existingRecipients 
-      : [{ name: "", purpose: "", location: "" }];
+    // Load all existing recipients (or empty array)
+    const existingRecipients = (entry.dataRecipients as unknown as Array<{name: string, purpose: string, location: string}>) || [];
     
     form.reset({
       department: entry.department,
@@ -210,7 +219,7 @@ export default function RopaManagementPage() {
       processingPurpose: entry.processingPurpose,
       legalBasis: entry.legalBasis as "consent" | "contract" | "legal_obligation" | "legitimate_interest",
       retentionPeriod: entry.retentionPeriod,
-      dataRecipients,
+      dataRecipients: existingRecipients,
       securityMeasures: entry.securityMeasures || "",
       internationalTransfers: entry.internationalTransfers || "no",
       transferDetails: entry.transferDetails || "",
@@ -442,50 +451,87 @@ export default function RopaManagementPage() {
                     />
 
                     <div className="space-y-3 p-4 border rounded-md">
-                      <FormLabel>المستلمون (اختياري)</FormLabel>
-                      <p className="text-sm text-muted-foreground">أطراف ثالثة يتم مشاركة البيانات معهم</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <FormLabel>المستلمون (اختياري)</FormLabel>
+                          <p className="text-sm text-muted-foreground">أطراف ثالثة يتم مشاركة البيانات معهم</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => appendRecipient({ name: "", purpose: "", location: "" })}
+                          data-testid="button-add-recipient"
+                        >
+                          <Plus className="ml-2 h-4 w-4" />
+                          إضافة مستلم
+                        </Button>
+                      </div>
                       
-                      <FormField
-                        control={form.control}
-                        name="dataRecipients.0.name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>اسم المستلم</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="اسم الطرف الثالث" data-testid="input-recipient-name" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {recipientFields.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          لا توجد مستلمين. اضغط "إضافة مستلم" لإضافة طرف ثالث.
+                        </p>
+                      )}
+                      
+                      {recipientFields.map((field, index) => (
+                        <div key={field.id} className="space-y-3 p-3 border rounded-md bg-muted/20">
+                          <div className="flex items-center justify-between">
+                            <FormLabel className="text-sm">مستلم #{index + 1}</FormLabel>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeRecipient(index)}
+                              data-testid={`button-remove-recipient-${index}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          <FormField
+                            control={form.control}
+                            name={`dataRecipients.${index}.name`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>اسم المستلم</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="اسم الطرف الثالث" data-testid={`input-recipient-name-${index}`} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                      <FormField
-                        control={form.control}
-                        name="dataRecipients.0.purpose"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>الغرض</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="غرض المشاركة" data-testid="input-recipient-purpose" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                          <FormField
+                            control={form.control}
+                            name={`dataRecipients.${index}.purpose`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>الغرض</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="غرض المشاركة" data-testid={`input-recipient-purpose-${index}`} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                      <FormField
-                        control={form.control}
-                        name="dataRecipients.0.location"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>الموقع</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="موقع المستلم" data-testid="input-recipient-location" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                          <FormField
+                            control={form.control}
+                            name={`dataRecipients.${index}.location`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>الموقع</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="موقع المستلم" data-testid={`input-recipient-location-${index}`} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      ))}
                     </div>
 
                     <FormField
