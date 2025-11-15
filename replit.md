@@ -107,10 +107,10 @@ The application prioritizes an Arabic-first design with full RTL support. It use
 **Achievement**: Complete Data Protection Impact Assessment (DPIA) tool with advanced form handling for complex compliance assessments.
 
 **Implementation Details**:
-1. **Legal Article Corrections**:
-   - ROPA: المادة (٣١) من اللائحة التنفيذية (corrected from Art. 25)
-   - DSAR: المواد (٥، ٦، ٧، ٨) من اللائحة التنفيذية (corrected from Art. 7)
-   - DPIA: المادة (٢٥) من اللائحة التنفيذية (corrected from Art. 26)
+1. **Legal Article Corrections** (Final Update):
+   - ROPA: المادة ٣١ من نظام حماية البيانات الشخصية
+   - DSAR: المواد ٥ و ٦ و ٧ و ٨ من اللائحة التنفيذية لنظام حماية البيانات الشخصية
+   - DPIA: المادة (٢٥) من اللائحة التنفيذية لنظام حماية البيانات الشخصية
    - Updated status from "قريباً" to "متاح" in dashboard
 
 2. **Complex Form Structure**:
