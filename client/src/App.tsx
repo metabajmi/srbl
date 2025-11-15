@@ -16,6 +16,7 @@ import PreferencesCenterPage from "@/pages/PreferencesCenterPage";
 import InternalCompliancePage from "@/pages/InternalCompliancePage";
 import RopaManagementPage from "@/pages/RopaManagementPage";
 import DsarManagementPage from "@/pages/DsarManagementPage";
+import DpiaManagementPage from "@/pages/DpiaManagementPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -36,6 +37,7 @@ function Router() {
       {/* Internal Compliance Sub-modules */}
       <Route path="/internal-compliance/ropa" component={RopaManagementPage} />
       <Route path="/internal-compliance/dsar" component={DsarManagementPage} />
+      <Route path="/internal-compliance/dpia" component={DpiaManagementPage} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />
