@@ -75,23 +75,23 @@ function AppContent() {
             </main>
           </div>
         </div>
+        
+        {/* Cookie Banner */}
+        {showBanner && (
+          <CookieBanner
+            onAccept={acceptConsent}
+            onReject={rejectConsent}
+            settings={cmpSettings ? {
+              bannerTitle: cmpSettings.bannerTitle,
+              bannerDescription: cmpSettings.bannerDescription,
+              privacyPolicyUrl: cmpSettings.privacyPolicyUrl || "/privacy-policy",
+              termsUrl: cmpSettings.termsUrl || "/terms",
+            } : undefined}
+          />
+        )}
+        
+        <Toaster />
       </SidebarProvider>
-      
-      {/* Cookie Banner */}
-      {showBanner && (
-        <CookieBanner
-          onAccept={acceptConsent}
-          onReject={rejectConsent}
-          settings={cmpSettings ? {
-            bannerTitle: cmpSettings.bannerTitle,
-            bannerDescription: cmpSettings.bannerDescription,
-            privacyPolicyUrl: cmpSettings.privacyPolicyUrl || "/privacy-policy",
-            termsUrl: cmpSettings.termsUrl || "/terms",
-          } : undefined}
-        />
-      )}
-      
-      <Toaster />
     </TooltipProvider>
   );
 }

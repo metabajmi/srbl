@@ -159,10 +159,18 @@ export default function RopaManagementPage() {
   });
 
   const onSubmit = (data: RopaFormValues) => {
+    // Add default dataTypes if not properly filled
+    const submissionData = {
+      ...data,
+      dataTypes: data.dataTypes.length > 0 && data.dataTypes[0].name
+        ? data.dataTypes
+        : [{ name: "بيانات عامة", category: "personal", isSensitive: false }]
+    };
+    
     if (editingEntry) {
-      updateMutation.mutate({ id: editingEntry.id, data });
+      updateMutation.mutate({ id: editingEntry.id, data: submissionData });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(submissionData);
     }
   };
 
