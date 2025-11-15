@@ -987,6 +987,47 @@ async function processTermsGeneration(termsId: string) {
     const terms = await storage.getTermsDocument(termsId);
     if (!terms) return;
     
+    // ====================================
+    // Step 1: Find appropriate template
+    // ====================================
+    const templates = await storage.getTermsTemplatesByBusinessType(
+      terms.businessType,
+      terms.activityScale || undefined
+    );
+    
+    let template = templates.find(t => t.activityScale === terms.activityScale);
+    if (!template && templates.length > 0) {
+      template = templates[0];
+    }
+    
+    // ====================================
+    // Step 2: Get template sections
+    // ====================================
+    let sections: any[] = [];
+    let usedSections: any[] = [];
+    let legalReferences: any[] = [];
+    
+    if (template) {
+      sections = await storage.getTemplateSectionsByTemplateId(template.id);
+      
+      // Track used sections and legal references
+      usedSections = sections.map(s => ({
+        sectionId: s.id,
+        slug: s.slug,
+        heading: s.heading
+      }));
+      
+      // Collect all legal references
+      for (const section of sections) {
+        if (section.legalBasis && Array.isArray(section.legalBasis)) {
+          legalReferences.push(...section.legalBasis);
+        }
+      }
+    }
+    
+    // ====================================
+    // Step 3: Generate content using template + AI
+    // ====================================
     const generatedContent = await generateTermsAndConditions({
       companyName: terms.companyName,
       websiteUrl: terms.websiteUrl,
@@ -996,15 +1037,31 @@ async function processTermsGeneration(termsId: string) {
       hasSubscriptions: terms.hasSubscriptions,
       paymentMethods: (terms.paymentMethods as string[]) || undefined,
       refundPolicy: terms.refundPolicy || undefined,
+      shippingPolicy: terms.shippingPolicy || undefined,
+      returnPolicy: terms.returnPolicy || undefined,
+      deliveryTimeframe: terms.deliveryTimeframe || undefined,
       liabilityLimits: terms.liabilityLimits || undefined,
       governingLaw: terms.governingLaw,
       disputeResolution: terms.disputeResolution || undefined,
       contactEmail: terms.contactEmail,
+      contactPhone: terms.contactPhone || undefined,
+      commercialRegistration: terms.commercialRegistration || undefined,
+      taxNumber: terms.taxNumber || undefined,
+      licenseNumber: terms.licenseNumber || undefined,
+      // Pass template data for AI to use
+      templateSections: sections,
+      templateMetadata: template?.basePromptSeed || undefined,
     });
     
+    // ====================================
+    // Step 4: Update document with generated content and metadata
+    // ====================================
     await storage.updateTermsDocument(termsId, {
       status: "completed",
       generatedContent,
+      templateId: template?.id,
+      usedSections,
+      legalReferences,
     });
   } catch (error) {
     console.error("Error processing terms generation:", error);

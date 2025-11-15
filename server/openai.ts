@@ -740,10 +740,20 @@ export interface TermsDocumentData {
   hasSubscriptions: string;
   paymentMethods?: string[];
   refundPolicy?: string;
+  shippingPolicy?: string;
+  returnPolicy?: string;
+  deliveryTimeframe?: string;
   liabilityLimits?: string;
   governingLaw: string;
   disputeResolution?: string;
   contactEmail: string;
+  contactPhone?: string;
+  commercialRegistration?: string;
+  taxNumber?: string;
+  licenseNumber?: string;
+  // Template-based generation
+  templateSections?: any[];
+  templateMetadata?: any;
 }
 
 export async function generateTermsAndConditions(data: TermsDocumentData): Promise<string> {
@@ -752,38 +762,76 @@ export async function generateTermsAndConditions(data: TermsDocumentData): Promi
     return generateMockTermsAndConditions(data);
   }
 
-  const prompt = `أنشئ شروطاً وأحكاماً شاملة للاستخدام للشركة التالية:
+  // ====================================
+  // Build prompt with template sections
+  // ====================================
+  let prompt = `أنشئ شروطاً وأحكاماً متوافقة مع الأنظمة السعودية (نظام التجارة الإلكترونية ولائحته التنفيذية) للشركة التالية:
 
 معلومات الشركة:
 - اسم الشركة: ${data.companyName}
+${data.commercialRegistration ? `- رقم السجل التجاري: ${data.commercialRegistration}` : ''}
+${data.taxNumber ? `- الرقم الضريبي: ${data.taxNumber}` : ''}
+${data.licenseNumber ? `- رقم الترخيص: ${data.licenseNumber}` : ''}
 - الموقع الإلكتروني: ${data.websiteUrl}
 - نوع النشاط: ${data.businessType}
 - وصف الخدمة: ${data.serviceDescription}
-- يوجد حسابات مستخدمين: ${data.hasUserAccounts}
-- يوجد اشتراكات: ${data.hasSubscriptions}
+- البريد الإلكتروني: ${data.contactEmail}
+${data.contactPhone ? `- الهاتف: ${data.contactPhone}` : ''}
+
+تفاصيل الخدمة:
+- حسابات مستخدمين: ${data.hasUserAccounts}
+- اشتراكات: ${data.hasSubscriptions}
 ${data.paymentMethods && data.paymentMethods.length > 0 ? `- طرق الدفع: ${data.paymentMethods.join(', ')}` : ''}
+${data.shippingPolicy ? `- سياسة الشحن: ${data.shippingPolicy}` : ''}
+${data.deliveryTimeframe ? `- مدة التوصيل: ${data.deliveryTimeframe}` : ''}
+${data.returnPolicy ? `- سياسة الاسترجاع: ${data.returnPolicy}` : ''}
 ${data.refundPolicy ? `- سياسة الاسترداد: ${data.refundPolicy}` : ''}
 ${data.liabilityLimits ? `- حدود المسؤولية: ${data.liabilityLimits}` : ''}
 - القانون الحاكم: ${data.governingLaw}
 ${data.disputeResolution ? `- حل النزاعات: ${data.disputeResolution}` : ''}
-- البريد الإلكتروني: ${data.contactEmail}
+`;
 
-يجب أن تتضمن الشروط الأقسام التالية:
-1. القبول بالشروط
-2. وصف الخدمة
-3. حسابات المستخدمين (إن وجدت)
-4. حقوق الملكية الفكرية
-5. قواعد الاستخدام المقبول
-6. الاشتراكات والمدفوعات (إن وجدت)
-7. الإلغاء والاسترداد
-8. إخلاء المسؤولية
-9. حدود المسؤولية
-10. التعويض
-11. التعديلات على الشروط
-12. القانون الحاكم وحل النزاعات
-13. معلومات الاتصال
+  // ====================================
+  // Add template sections as examples
+  // ====================================
+  if (data.templateSections && data.templateSections.length > 0) {
+    prompt += `\n\n=== قوالب الأقسام المتاحة ===\n`;
+    prompt += `استخدم الأقسام التالية كقوالب أساسية، واملأ {{المتغيرات}} بالمعلومات المناسبة:\n\n`;
+    
+    for (const section of data.templateSections) {
+      prompt += `${section.heading}\n`;
+      prompt += `${section.clauseText}\n`;
+      
+      if (section.legalBasis && section.legalBasis.length > 0) {
+        const references = section.legalBasis.map((ref: any) => 
+          `${ref.sourceCode} - المواد: ${ref.articles.join(', ')}`
+        ).join('; ');
+        prompt += `\nالمرجع القانوني: ${references}\n`;
+      }
+      prompt += `\n---\n\n`;
+    }
+  } else {
+    // Fallback to default sections if no template
+    prompt += `\nيجب أن تتضمن الشروط الأقسام التالية:
+1. المقدمة وقبول الشروط
+2. معلومات الممارس (وفقاً لنظام التجارة الإلكترونية)
+3. الخدمات والمنتجات
+4. الدفع والأسعار
+5. الشحن والتوصيل (للتجارة الإلكترونية)
+6. حق العدول والاسترجاع (7 أيام وفقاً للنظام)
+7. المسؤولية والضمانات
+8. تسوية النزاعات والقانون الواجب التطبيق
+9. معلومات الاتصال
+`;
+  }
 
-استخدم لغة قانونية واضحة باللغة العربية متوافقة مع الأنظمة السعودية.`;
+  prompt += `\nملاحظات مهمة:
+- استخدم لغة قانونية واضحة وبسيطة باللغة العربية
+- التزم بنظام التجارة الإلكترونية ولائحته التنفيذية
+- وضح حق العدول خلال 7 أيام للمستهلك
+- اذكر آليات تقديم الشكاوى (وزارة التجارة - بلاغ تجاري)
+- استخدم تنسيق HTML بسيط مع عناوين <h2> للأقسام الرئيسية و <h3> للأقسام الفرعية
+`;
 
   try {
     const response = await openai.chat.completions.create({
