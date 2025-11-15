@@ -475,36 +475,176 @@ export const insertCmpScriptSchema = createInsertSchema(cmpScripts).omit({
 export type InsertCmpScript = z.infer<typeof insertCmpScriptSchema>;
 export type CmpScript = typeof cmpScripts.$inferSelect;
 
-// Terms Documents - وثائق الشروط والأحكام
+// ====================================
+// Terms & Conditions Generator with Templates
+// مُولّد الشروط والأحكام مع القوالب
+// ====================================
+
+// Legal Sources - المصادر القانونية
+export const legalSources = pgTable("legal_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: text("code").notNull().unique(), // e.g., "ECOMMERCE_LAW", "TELECOM_LAW"
+  title: text("title").notNull(), // e.g., "نظام التجارة الإلكترونية"
+  sourceType: text("source_type").notNull(), // law, regulation, guideline
+  sourceUrl: text("source_url"), // URL to official document
+  fileReference: text("file_reference"), // Reference to uploaded PDF
+  content: text("content"), // Extracted text content
+  articles: jsonb("articles"), // [{number, title, content}]
+  effectiveDate: timestamp("effective_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertLegalSourceSchema = createInsertSchema(legalSources).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertLegalSource = z.infer<typeof insertLegalSourceSchema>;
+export type LegalSource = typeof legalSources.$inferSelect;
+
+// Terms Templates - قوالب الشروط والأحكام
+export const termsTemplates = pgTable("terms_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  businessType: text("business_type").notNull(), // ecommerce_general, ecommerce_automotive, ecommerce_jewelry, telecommunications, digital_services, multi_category
+  sector: text("sector"), // retail, services, food, electronics, etc.
+  activityScale: text("activity_scale").notNull(), // micro, smb, enterprise
+  locale: text("locale").notNull().default("ar-SA"),
+  title: text("title").notNull(),
+  summary: text("summary"),
+  status: text("status").notNull().default("active"), // active, archived, draft
+  version: text("version").notNull().default("1.0"),
+  effectiveFrom: timestamp("effective_from").defaultNow(),
+  effectiveTo: timestamp("effective_to"),
+  basePromptSeed: jsonb("base_prompt_seed"), // Metadata for AI generation
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTermsTemplateSchema = createInsertSchema(termsTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTermsTemplate = z.infer<typeof insertTermsTemplateSchema>;
+export type TermsTemplate = typeof termsTemplates.$inferSelect;
+
+// Template Sections - أقسام القوالب
+export const templateSections = pgTable("template_sections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull().references(() => termsTemplates.id, { onDelete: "cascade" }),
+  slug: text("slug").notNull(), // e.g., "intro", "services", "payment", "liability", "dispute_resolution"
+  heading: text("heading").notNull(), // Arabic title
+  ordering: integer("ordering").notNull(), // Display order
+  clauseText: text("clause_text").notNull(), // Template text with {{placeholders}}
+  placeholders: jsonb("placeholders"), // [{key: "companyName", description: "اسم الشركة"}]
+  legalBasis: jsonb("legal_basis"), // [{sourceCode: "ECOMMERCE_LAW", articles: ["3", "4"]}]
+  riskLevel: text("risk_level").notNull().default("medium"), // low, medium, high, critical
+  isRequired: boolean("is_required").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTemplateSectionSchema = createInsertSchema(templateSections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTemplateSection = z.infer<typeof insertTemplateSectionSchema>;
+export type TemplateSection = typeof templateSections.$inferSelect;
+
+// Terms Documents - وثائق الشروط والأحكام (Enhanced)
 export const termsDocuments = pgTable("terms_documents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Template reference
+  templateId: varchar("template_id").references(() => termsTemplates.id),
+  
+  // Basic company information
   companyName: text("company_name").notNull(),
   websiteUrl: text("website_url").notNull(),
-  businessType: text("business_type").notNull(),
+  businessType: text("business_type").notNull(), // ecommerce_general, ecommerce_automotive, etc.
+  sector: text("sector"), // retail, services, food, electronics
+  activityScale: text("activity_scale"), // micro, smb, enterprise
+  
+  // Service details
   serviceDescription: text("service_description").notNull(),
   hasUserAccounts: text("has_user_accounts").notNull(),
   hasSubscriptions: text("has_subscriptions").notNull(),
+  
+  // E-commerce specific
   paymentMethods: jsonb("payment_methods"),
   refundPolicy: text("refund_policy"),
+  shippingPolicy: text("shipping_policy"),
+  returnPolicy: text("return_policy"),
+  deliveryTimeframe: text("delivery_timeframe"),
+  
+  // Legal
   liabilityLimits: text("liability_limits"),
   governingLaw: text("governing_law").notNull().default("Saudi Arabia"),
   disputeResolution: text("dispute_resolution"),
+  
+  // Contact
   contactEmail: text("contact_email").notNull(),
+  contactPhone: text("contact_phone"),
+  
+  // Compliance specific to business type
+  hasAgeRestrictions: text("has_age_restrictions"), // yes/no
+  requiresLicense: text("requires_license"), // yes/no
+  licenseNumber: text("license_number"),
+  commercialRegistration: text("commercial_registration"),
+  taxNumber: text("tax_number"),
+  
+  // Generation metadata
   generatedContent: text("generated_content"),
+  usedSections: jsonb("used_sections"), // Track which sections were used
+  legalReferences: jsonb("legal_references"), // Track legal citations
   status: text("status").notNull().default("pending"), // pending, generating, completed, failed
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertTermsDocumentSchema = createInsertSchema(termsDocuments).omit({
   id: true,
+  templateId: true,
   generatedContent: true,
+  usedSections: true,
+  legalReferences: true,
   status: true,
   createdAt: true,
   updatedAt: true,
 }).extend({
+  companyName: z.string().min(2, "يجب إدخال اسم الشركة"),
   websiteUrl: z.string().url("يجب إدخال رابط صحيح"),
+  businessType: z.enum([
+    "ecommerce_general",
+    "ecommerce_automotive",
+    "ecommerce_jewelry",
+    "ecommerce_food",
+    "ecommerce_electronics",
+    "telecommunications",
+    "digital_services",
+    "multi_category"
+  ], {
+    required_error: "يجب تحديد نوع النشاط"
+  }),
+  sector: z.string().nullish(),
+  activityScale: z.enum(["micro", "smb", "enterprise"]).nullish(),
   contactEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
+  contactPhone: z.string().nullish(),
+  serviceDescription: z.string().min(10, "يجب إدخال وصف للخدمة"),
+  shippingPolicy: z.string().nullish(),
+  returnPolicy: z.string().nullish(),
+  deliveryTimeframe: z.string().nullish(),
+  hasAgeRestrictions: z.string().nullish(),
+  requiresLicense: z.string().nullish(),
+  licenseNumber: z.string().nullish(),
+  commercialRegistration: z.string().nullish(),
+  taxNumber: z.string().nullish(),
 });
 
 export type InsertTermsDocument = z.infer<typeof insertTermsDocumentSchema>;
