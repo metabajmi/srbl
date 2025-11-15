@@ -334,32 +334,145 @@ export const insertPolicyDocumentSchema = createInsertSchema(policyDocuments).om
 export type InsertPolicyDocument = z.infer<typeof insertPolicyDocumentSchema>;
 export type PolicyDocument = typeof policyDocuments.$inferSelect;
 
-// Consent Records - سجلات الموافقة
+// Consent Records - سجلات الموافقة (CMP)
 export const consentRecords = pgTable("consent_records", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: text("user_id").notNull(),
+  
+  // معرف مجهول للمستخدم (fingerprint أو session ID)
+  anonymousId: text("anonymous_id").notNull(), // Browser fingerprint or session ID
+  
+  // معلومات المستخدم (اختيارية - إذا كان مسجل دخول)
+  userId: text("user_id"),
   userName: text("user_name"),
   userEmail: text("user_email"),
-  consentType: text("consent_type").notNull(), // marketing, analytics, cookies, data_sharing
-  consentGiven: text("consent_given").notNull(), // yes, no
+  
+  // الموافقة التفصيلية (Granular Consent)
+  necessaryCookies: text("necessary_cookies").notNull().default("accepted"), // دائماً مقبولة
+  analyticsCookies: text("analytics_cookies").notNull(), // accepted, rejected
+  marketingCookies: text("marketing_cookies").notNull(), // accepted, rejected
+  performanceCookies: text("performance_cookies").notNull(), // accepted, rejected
+  
+  // معلومات الموافقة
   consentDate: timestamp("consent_date").defaultNow(),
+  consentVersion: text("consent_version"), // نسخة سياسة الخصوصية
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  consentMethod: text("consent_method"), // checkbox, button, form
-  expiryDate: timestamp("expiry_date"),
+  consentMethod: text("consent_method"), // banner, preferences_center
+  
+  // سحب الموافقة
   withdrawnAt: timestamp("withdrawn_at"),
-  notes: text("notes"),
-  metadata: jsonb("metadata"),
+  withdrawalReason: text("withdrawal_reason"),
+  
+  // بيانات إضافية
+  metadata: jsonb("metadata"), // أي بيانات إضافية
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertConsentRecordSchema = createInsertSchema(consentRecords).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
+}).extend({
+  anonymousId: z.string().min(1, "معرف مجهول مطلوب"),
+  analyticsCookies: z.enum(["accepted", "rejected"]),
+  marketingCookies: z.enum(["accepted", "rejected"]),
+  performanceCookies: z.enum(["accepted", "rejected"]),
 });
 
 export type InsertConsentRecord = z.infer<typeof insertConsentRecordSchema>;
 export type ConsentRecord = typeof consentRecords.$inferSelect;
+
+// CMP Settings - إعدادات منصة إدارة الموافقة
+export const cmpSettings = pgTable("cmp_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // الألوان والتخصيص
+  primaryColor: text("primary_color").default("#2563eb"), // اللون الأساسي
+  backgroundColor: text("background_color").default("#ffffff"), // لون الخلفية
+  textColor: text("text_color").default("#000000"), // لون النص
+  buttonColor: text("button_color").default("#2563eb"), // لون الأزرار
+  
+  // النصوص العربية
+  bannerTitle: text("banner_title").default("نحن نستخدم ملفات تعريف الارتباط"),
+  bannerDescription: text("banner_description").default("نستخدم ملفات تعريف الارتباط لتحسين تجربتك وتحليل استخدام الموقع. يمكنك قبول جميع الكوكيز أو تخصيص خياراتك."),
+  acceptAllButtonText: text("accept_all_button_text").default("قبول الكل"),
+  rejectAllButtonText: text("reject_all_button_text").default("رفض الكل"),
+  customizeButtonText: text("customize_button_text").default("تخصيص"),
+  
+  // نصوص فئات الكوكيز
+  necessaryCookiesTitle: text("necessary_cookies_title").default("الكوكيز الضرورية"),
+  necessaryCookiesDesc: text("necessary_cookies_desc").default("ضرورية لعمل الموقع الأساسي ولا يمكن تعطيلها"),
+  analyticsCookiesTitle: text("analytics_cookies_title").default("الكوكيز التحليلية"),
+  analyticsCookiesDesc: text("analytics_cookies_desc").default("تساعدنا على فهم كيفية استخدام الزوار للموقع"),
+  marketingCookiesTitle: text("marketing_cookies_title").default("الكوكيز التسويقية"),
+  marketingCookiesDesc: text("marketing_cookies_desc").default("تُستخدم لعرض إعلانات ذات صلة"),
+  performanceCookiesTitle: text("performance_cookies_title").default("كوكيز الأداء"),
+  performanceCookiesDesc: text("performance_cookies_desc").default("تساعد على تحسين أداء الموقع"),
+  
+  // الإعدادات التقنية
+  bannerPosition: text("banner_position").default("bottom"), // bottom, top, center
+  language: text("language").default("ar"), // ar, en
+  showLogo: text("show_logo").default("yes"), // yes, no
+  logoUrl: text("logo_url"),
+  
+  // الإعدادات القانونية
+  privacyPolicyUrl: text("privacy_policy_url"),
+  termsUrl: text("terms_url"),
+  consentVersion: text("consent_version").default("1.0"),
+  
+  // بيانات إضافية
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCmpSettingsSchema = createInsertSchema(cmpSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCmpSettings = z.infer<typeof insertCmpSettingsSchema>;
+export type CmpSettings = typeof cmpSettings.$inferSelect;
+
+// CMP Scripts - السكربتات المحجوبة
+export const cmpScripts = pgTable("cmp_scripts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // معلومات السكربت
+  name: text("name").notNull(), // Google Analytics, Meta Pixel, etc.
+  category: text("category").notNull(), // analytics, marketing, performance
+  enabled: text("enabled").notNull().default("yes"), // yes, no
+  
+  // السكربت نفسه
+  scriptType: text("script_type").notNull(), // inline, external
+  scriptContent: text("script_content"), // الكود للـ inline scripts
+  scriptUrl: text("script_url"), // URL للـ external scripts
+  scriptPosition: text("script_position").default("head"), // head, body
+  
+  // البيانات الإضافية
+  description: text("description"),
+  legalBasis: text("legal_basis"), // consent, legitimate_interest
+  
+  // بيانات النظام
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCmpScriptSchema = createInsertSchema(cmpScripts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  name: z.string().min(1, "يجب إدخال اسم السكربت"),
+  category: z.enum(["analytics", "marketing", "performance"], {
+    required_error: "يجب تحديد فئة السكربت"
+  }),
+  scriptType: z.enum(["inline", "external"]),
+});
+
+export type InsertCmpScript = z.infer<typeof insertCmpScriptSchema>;
+export type CmpScript = typeof cmpScripts.$inferSelect;
 
 // Terms Documents - وثائق الشروط والأحكام
 export const termsDocuments = pgTable("terms_documents", {
