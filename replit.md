@@ -156,3 +156,75 @@ The application prioritizes an Arabic-first design with full RTL support. It use
 - Document risk mitigation measures
 - Maintain audit trail for regulatory compliance
 - Complete Internal Compliance Module now fully operational
+
+### Terms & Conditions Template System - November 15, 2025 🚧 IN PROGRESS
+
+**Achievement**: Advanced hybrid T&C generation system using database templates + OpenAI customization, all anchored to Saudi legal sources.
+
+**Architecture Decision**:
+- **Hybrid Approach**: Pre-assembled mandatory clauses from database templates with placeholder replacement + OpenAI enhancement
+- **Legal Compliance**: All templates extracted from official Saudi legal documents (E-commerce System, ERECS, Telecom regulations, MCI Consumer Rights)
+- **Template-Based**: Structured sections with legal citations vs. pure AI generation
+- **Business Classification**: ENUM-based system for precise template selection
+
+**Implementation Details**:
+
+1. **Database Schema** (3 new tables):
+   - `legal_sources`: Source documents (E-commerce System, ERECS, Telecom Act, etc.)
+   - `terms_templates`: Business-type templates (ecommerce_general, telecommunications, digital_services, etc.)
+   - `template_sections`: Reusable legal clauses with placeholders ({{company_name}}, {{commercial_registration}}, etc.)
+   - Relationships: templates → sections (many-to-many), sections → legal_sources (many-to-many)
+
+2. **Business Type ENUMs**:
+   ```typescript
+   business_type: ecommerce_general | ecommerce_automotive | ecommerce_fashion | 
+                  telecommunications | digital_services | financial_services
+   activity_scale: micro | smb | enterprise
+   ```
+
+3. **Seed Data Loaded** (via server/seedTermsTemplates.ts):
+   - 6 legal sources with article mappings
+   - 6 T&C templates for different business types
+   - 8 template sections: introduction, merchant info, services, payment, shipping, refund rights, liability, dispute resolution
+   - All sections include legal citations (e.g., "نظام التجارة الإلكترونية - المادة ٥, ٦, ٧")
+
+4. **Storage Layer Enhancement** (15 new methods):
+   - Legal sources: create, get, list, update, delete
+   - Templates: create, get, list, update, delete, getByBusinessType
+   - Sections: create, get, list, update, delete
+
+5. **Generation Pipeline** (server/routes.ts processTermsGeneration):
+   - Step 1: Fetch template by business type
+   - Step 2: Load associated sections with legal citations
+   - Step 3: Replace placeholders ({{company_name}}, {{tax_number}}, {{website_url}}, etc.)
+   - Step 4: Pass to OpenAI with template sections as examples
+   - Step 5: OpenAI customizes based on business specifics while preserving legal compliance
+
+6. **OpenAI Integration** (server/openai.ts):
+   - Updated `TermsDocumentData` interface with new fields:
+     - `shippingPolicy`, `returnPolicy`, `deliveryTimeframe`
+     - `contactPhone`, `commercialRegistration`, `taxNumber`, `licenseNumber`
+     - `templateSections`, `templateMetadata` for template-based generation
+   - Enhanced `generateTermsAndConditions` prompt:
+     - Includes template sections as examples
+     - Legal citations preserved in output
+     - Placeholder replacement guidance
+     - Saudi regulatory compliance instructions
+
+**Technical Features**:
+- Template sections support placeholders: {{company_name}}, {{commercial_registration}}, {{email}}, {{phone}}
+- Legal basis tracking: Each section links to source articles (e.g., ERECS المادة ١٥)
+- Fallback logic: If no template found, uses default sections
+- HTML formatting in output with proper RTL structure
+
+**Status**: Backend implementation complete. Pending:
+- API endpoints for template listing (/api/terms/templates)
+- Frontend form updates for business type/sector/scale selection
+- Frontend validation using new ENUMs
+
+**User Impact**:
+- Organizations get legally compliant T&C based on actual Saudi regulations
+- Template-based approach ensures mandatory clauses are never missed
+- AI customization adds business-specific details while maintaining legal accuracy
+- Full traceability to legal sources (E-commerce System, Telecom regulations, etc.)
+- Reduced generation time and improved consistency vs. pure AI generation

@@ -811,6 +811,57 @@ export class DatabaseStorage implements IStorage {
     return templates;
   }
 
+  // Get template with sections and legal sources (using junction tables)
+  async getTemplateWithSectionsAndSources(templateId: string): Promise<any> {
+    // Get template
+    const template = await this.getTermsTemplate(templateId);
+    if (!template) return null;
+
+    // Get sections linked to this template via junction table
+    const sectionsWithJoin = await db
+      .select({
+        section: templateSections,
+        ordering: termsTemplateSections.ordering,
+        isRequired: termsTemplateSections.isRequired,
+      })
+      .from(termsTemplateSections)
+      .innerJoin(templateSections, eq(termsTemplateSections.sectionId, templateSections.id))
+      .where(eq(termsTemplateSections.templateId, templateId))
+      .orderBy(termsTemplateSections.ordering);
+
+    // For each section, get legal sources
+    const sectionsWithLegal = await Promise.all(
+      sectionsWithJoin.map(async ({ section, ordering, isRequired }) => {
+        const legalLinks = await db
+          .select({
+            source: legalSources,
+            articles: sectionLegalSources.articles,
+            relevanceNotes: sectionLegalSources.relevanceNotes,
+          })
+          .from(sectionLegalSources)
+          .innerJoin(legalSources, eq(sectionLegalSources.sourceId, legalSources.id))
+          .where(eq(sectionLegalSources.sectionId, section.id));
+
+        return {
+          ...section,
+          ordering,
+          isRequired,
+          legalBasis: legalLinks.map(link => ({
+            sourceCode: link.source.code,
+            sourceTitle: link.source.title,
+            articles: link.articles,
+            relevanceNotes: link.relevanceNotes,
+          })),
+        };
+      })
+    );
+
+    return {
+      ...template,
+      sections: sectionsWithLegal,
+    };
+  }
+
   async updateTermsTemplate(id: string, updates: Partial<TermsTemplate>): Promise<TermsTemplate | undefined> {
     const { id: _, createdAt, ...updateFields } = updates as any;
     const [updatedTemplate] = await db
