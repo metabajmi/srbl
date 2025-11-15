@@ -201,3 +201,10 @@ Preferred communication style: Simple, everyday language.
 - Generated policies are significantly more detailed and compliant with Saudi regulations
 - Automatic status updates show generation progress in real-time
 - Higher quality AI-generated content using GPT-4o
+
+**UX Improvements (November 15, 2025)**:
+- Added clear validation error messages with toast notifications
+- Implemented automatic section navigation when validation fails
+- Added prominent alert in Section 2 reminding users that at least one data category is required
+- Error handler now guides users directly to the problematic section
+- Improved form submission feedback to prevent silent failures

@@ -30,9 +30,7 @@ const formSchema = z.object({
   contactEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
   contactPhone: z.string().optional(),
   contactAddress: z.string().optional(),
-  processesSensitiveData: z.enum(["yes", "no"], {
-    required_error: "يجب الإجابة على هذا السؤال"
-  }),
+  processesSensitiveData: z.enum(["yes", "no"]).optional(),
   requiresDPO: z.string().optional(),
   dpoName: z.string().optional(),
   dpoEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح").optional().or(z.literal("")),
@@ -239,7 +237,34 @@ export default function PrivacyGeneratorPage() {
     },
   });
 
+  const onSubmitError = (errors: any) => {
+    console.log("Form validation errors:", errors);
+    
+    if (errors.dataCategories) {
+      toast({
+        title: "خطأ في النموذج",
+        description: "يجب إضافة فئة بيانات واحدة على الأقل في القسم الثاني",
+        variant: "destructive",
+      });
+      setCurrentSection(2);
+    } else if (errors.companyName || errors.businessType || errors.entityType || errors.contactEmail) {
+      toast({
+        title: "خطأ في النموذج",
+        description: "يرجى ملء جميع الحقول المطلوبة في القسم الأول",
+        variant: "destructive",
+      });
+      setCurrentSection(1);
+    } else {
+      toast({
+        title: "خطأ في النموذج",
+        description: "يرجى التحقق من جميع الحقول المطلوبة",
+        variant: "destructive",
+      });
+    }
+  };
+
   const onSubmit = (values: FormValues) => {
+    console.log("onSubmit called with values:", values);
     const submitData: z.infer<typeof insertPolicyDocumentSchema> = {
       companyName: values.companyName,
       businessType: values.businessType,
@@ -301,6 +326,7 @@ export default function PrivacyGeneratorPage() {
       complaintResponseTime: values.complaintResponseTime || null,
       sdaiaContactInfo: values.sdaiaContactInfo || null,
     };
+    console.log("About to call generateMutation.mutate with:", submitData);
     generateMutation.mutate(submitData);
   };
 
@@ -362,7 +388,7 @@ export default function PrivacyGeneratorPage() {
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit, onSubmitError)} className="space-y-6">
             {/* القسم الأول: هوية الجهة والمسؤولية */}
             {currentSection === 1 && (
               <Card>
@@ -675,6 +701,14 @@ export default function PrivacyGeneratorPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* تنبيه مهم */}
+                  <Alert className="bg-primary/5 border-primary/20" data-testid="alert-data-category-required">
+                    <AlertCircle className="h-5 w-5 text-primary" />
+                    <AlertDescription className="text-base font-medium">
+                      يجب إضافة <span className="font-bold text-primary">فئة بيانات واحدة على الأقل</span> لتتمكن من توليد السياسة
+                    </AlertDescription>
+                  </Alert>
+
                   {/* س6-10: فئات البيانات */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
