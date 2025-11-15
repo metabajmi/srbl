@@ -8,7 +8,7 @@ export default function InternalCompliancePage() {
     {
       title: "سجل أنشطة المعالجة",
       titleEn: "ROPA",
-      description: "تسجيل وإدارة جميع عمليات معالجة البيانات الشخصية بما يتوافق مع المادة (٢٥) من نظام حماية البيانات الشخصية",
+      description: "تسجيل وإدارة جميع عمليات معالجة البيانات الشخصية بما يتوافق مع المادة (٣١) من اللائحة التنفيذية لنظام حماية البيانات الشخصية",
       icon: Database,
       href: "/internal-compliance/ropa",
       color: "text-blue-600 dark:text-blue-400",
@@ -18,7 +18,7 @@ export default function InternalCompliancePage() {
     {
       title: "إدارة طلبات أصحاب البيانات",
       titleEn: "DSAR",
-      description: "استقبال ومعالجة طلبات الوصول والحذف والتصحيح والاعتراض على معالجة البيانات الشخصية وفق المادة (٧) من النظام",
+      description: "استقبال ومعالجة طلبات الوصول والحذف والتصحيح والاعتراض على معالجة البيانات الشخصية وفق المواد (٥، ٦، ٧، ٨) من اللائحة التنفيذية لنظام PDPL",
       icon: UserCheck,
       href: "/internal-compliance/dsar",
       color: "text-green-600 dark:text-green-400",
@@ -28,12 +28,12 @@ export default function InternalCompliancePage() {
     {
       title: "تقييم تأثير حماية البيانات",
       titleEn: "DPIA",
-      description: "تقييم المخاطر المرتبطة بأنشطة المعالجة ذات المخاطر العالية وفق المادة (٢٦) من نظام حماية البيانات الشخصية",
+      description: "تقييم المخاطر المرتبطة بأنشطة المعالجة ذات المخاطر العالية وفق المادة (٢٥) من اللائحة التنفيذية لنظام حماية البيانات الشخصية",
       icon: AlertTriangle,
-      href: "#",
+      href: "/internal-compliance/dpia",
       color: "text-orange-600 dark:text-orange-400",
       bgColor: "bg-orange-500/10",
-      status: "قريباً",
+      status: "متاح",
     },
   ];
 
