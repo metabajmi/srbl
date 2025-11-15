@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Shield, FileText, CheckSquare, ScrollText, ClipboardList, Home, FileSearch } from "lucide-react";
+import { Shield, FileText, CheckSquare, ScrollText, ClipboardList, Home, FileSearch, Cookie } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -40,6 +40,11 @@ const toolsItems = [
     title: "إدارة الموافقة",
     url: "/consent-management",
     icon: CheckSquare,
+  },
+  {
+    title: "إعدادات الخصوصية",
+    url: "/preferences-center",
+    icon: Cookie,
   },
   {
     title: "الامتثال الداخلي",

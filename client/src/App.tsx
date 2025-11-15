@@ -12,6 +12,7 @@ import ScanResultsPage from "@/pages/ScanResultsPage";
 import PrivacyGeneratorPage from "@/pages/PrivacyGeneratorPage";
 import TermsGeneratorPage from "@/pages/TermsGeneratorPage";
 import ConsentManagementPage from "@/pages/ConsentManagementPage";
+import PreferencesCenterPage from "@/pages/PreferencesCenterPage";
 import InternalCompliancePage from "@/pages/InternalCompliancePage";
 import NotFound from "@/pages/not-found";
 
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/privacy-generator" component={PrivacyGeneratorPage} />
       <Route path="/terms-generator" component={TermsGeneratorPage} />
       <Route path="/consent-management" component={ConsentManagementPage} />
+      <Route path="/preferences-center" component={PreferencesCenterPage} />
       <Route path="/internal-compliance" component={InternalCompliancePage} />
       
       {/* Fallback to 404 */}
