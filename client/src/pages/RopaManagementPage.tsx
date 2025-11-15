@@ -25,11 +25,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Form schema matching InsertRopaEntry
+// Form schema matching backend InsertRopaEntry
 const ropaFormSchema = z.object({
   department: z.string().min(2, "يجب إدخال اسم القسم"),
   dataTypes: z.array(z.object({
-    name: z.string(),
+    name: z.string().min(1, "يجب إدخال اسم نوع البيانات"),
     category: z.string(),
     isSensitive: z.boolean(),
   })).min(1, "يجب إدخال نوع واحد على الأقل من البيانات"),
@@ -72,7 +72,7 @@ export default function RopaManagementPage() {
     resolver: zodResolver(ropaFormSchema),
     defaultValues: {
       department: "",
-      dataTypes: [{ name: "", category: "personal", isSensitive: false }],
+      dataTypes: [{ name: "بيانات شخصية", category: "personal", isSensitive: false }],
       processingPurpose: "",
       legalBasis: "consent",
       retentionPeriod: "",
@@ -87,10 +87,8 @@ export default function RopaManagementPage() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: RopaFormValues) => {
-      return await apiRequest("/api/ropa", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/ropa", data);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ropa"] });
@@ -113,10 +111,8 @@ export default function RopaManagementPage() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<RopaEntry> }) => {
-      return await apiRequest(`/api/ropa/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("PUT", `/api/ropa/${id}`, data);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ropa"] });
@@ -139,7 +135,8 @@ export default function RopaManagementPage() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/ropa/${id}`, { method: "DELETE" });
+      const response = await apiRequest("DELETE", `/api/ropa/${id}`);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ropa"] });
@@ -159,18 +156,10 @@ export default function RopaManagementPage() {
   });
 
   const onSubmit = (data: RopaFormValues) => {
-    // Add default dataTypes if not properly filled
-    const submissionData = {
-      ...data,
-      dataTypes: data.dataTypes.length > 0 && data.dataTypes[0].name
-        ? data.dataTypes
-        : [{ name: "بيانات عامة", category: "personal", isSensitive: false }]
-    };
-    
     if (editingEntry) {
-      updateMutation.mutate({ id: editingEntry.id, data: submissionData });
+      updateMutation.mutate({ id: editingEntry.id, data });
     } else {
-      createMutation.mutate(submissionData);
+      createMutation.mutate(data);
     }
   };
 

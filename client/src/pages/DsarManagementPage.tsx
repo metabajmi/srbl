@@ -110,10 +110,8 @@ export default function DsarManagementPage() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: DsarFormValues) => {
-      return await apiRequest("/api/dsar", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("POST", "/api/dsar", data);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dsar"] });
@@ -136,10 +134,8 @@ export default function DsarManagementPage() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<DsarRequest> }) => {
-      return await apiRequest(`/api/dsar/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      });
+      const response = await apiRequest("PUT", `/api/dsar/${id}`, data);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dsar"] });
@@ -162,7 +158,8 @@ export default function DsarManagementPage() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/dsar/${id}`, { method: "DELETE" });
+      const response = await apiRequest("DELETE", `/api/dsar/${id}`);
+      return await response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dsar"] });
