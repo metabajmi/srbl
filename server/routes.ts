@@ -8,7 +8,13 @@ import {
   insertTermsDocumentSchema, 
   insertComplianceTaskSchema,
   insertCmpSettingsSchema,
-  insertCmpScriptSchema
+  insertCmpScriptSchema,
+  insertRopaEntrySchema,
+  insertDsarRequestSchema,
+  insertDpiaAssessmentSchema,
+  updateRopaEntrySchema,
+  updateDsarRequestSchema,
+  updateDpiaAssessmentSchema
 } from "@shared/schema";
 import { analyzeWebsiteCompliance, generateComplianceReport, generatePrivacyPolicy, generateTermsAndConditions } from "./openai";
 import { z } from "zod";
@@ -741,6 +747,212 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error exporting consents:", error);
       res.status(500).json({ error: "فشل في تصدير سجلات الموافقة" });
+    }
+  });
+
+  // ====================================
+  // Internal Compliance Management APIs
+  // وحدة الامتثال الداخلي
+  // ====================================
+
+  // ROPA Entries - سجل أنشطة المعالجة
+  app.post("/api/ropa", async (req, res) => {
+    try {
+      const validatedData = insertRopaEntrySchema.parse(req.body);
+      const entry = await storage.createRopaEntry(validatedData);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error creating ROPA entry:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "بيانات غير صحيحة" });
+      }
+      res.status(500).json({ error: "فشل في إنشاء سجل المعالجة" });
+    }
+  });
+
+  app.get("/api/ropa", async (req, res) => {
+    try {
+      const entries = await storage.getAllRopaEntries();
+      res.json(entries);
+    } catch (error) {
+      console.error("Error getting ROPA entries:", error);
+      res.status(500).json({ error: "فشل في جلب سجلات المعالجة" });
+    }
+  });
+
+  app.get("/api/ropa/:id", async (req, res) => {
+    try {
+      const entry = await storage.getRopaEntry(req.params.id);
+      if (!entry) {
+        return res.status(404).json({ error: "السجل غير موجود" });
+      }
+      res.json(entry);
+    } catch (error) {
+      console.error("Error getting ROPA entry:", error);
+      res.status(500).json({ error: "فشل في جلب السجل" });
+    }
+  });
+
+  app.put("/api/ropa/:id", async (req, res) => {
+    try {
+      const validatedData = updateRopaEntrySchema.parse(req.body);
+      const entry = await storage.updateRopaEntry(req.params.id, validatedData);
+      if (!entry) {
+        return res.status(404).json({ error: "السجل غير موجود" });
+      }
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating ROPA entry:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "بيانات غير صحيحة" });
+      }
+      res.status(500).json({ error: "فشل في تحديث السجل" });
+    }
+  });
+
+  app.delete("/api/ropa/:id", async (req, res) => {
+    try {
+      await storage.deleteRopaEntry(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting ROPA entry:", error);
+      res.status(500).json({ error: "فشل في حذف السجل" });
+    }
+  });
+
+  // DSAR Requests - طلبات أصحاب البيانات
+  app.post("/api/dsar", async (req, res) => {
+    try {
+      const validatedData = insertDsarRequestSchema.parse(req.body);
+      const request = await storage.createDsarRequest(validatedData);
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating DSAR request:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "بيانات غير صحيحة" });
+      }
+      res.status(500).json({ error: "فشل في إنشاء الطلب" });
+    }
+  });
+
+  app.get("/api/dsar", async (req, res) => {
+    try {
+      const status = req.query.status as string;
+      const requests = status 
+        ? await storage.getDsarRequestsByStatus(status)
+        : await storage.getAllDsarRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error getting DSAR requests:", error);
+      res.status(500).json({ error: "فشل في جلب الطلبات" });
+    }
+  });
+
+  app.get("/api/dsar/:id", async (req, res) => {
+    try {
+      const request = await storage.getDsarRequest(req.params.id);
+      if (!request) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Error getting DSAR request:", error);
+      res.status(500).json({ error: "فشل في جلب الطلب" });
+    }
+  });
+
+  app.put("/api/dsar/:id", async (req, res) => {
+    try {
+      const validatedData = updateDsarRequestSchema.parse(req.body);
+      const request = await storage.updateDsarRequest(req.params.id, validatedData);
+      if (!request) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Error updating DSAR request:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "بيانات غير صحيحة" });
+      }
+      res.status(500).json({ error: "فشل في تحديث الطلب" });
+    }
+  });
+
+  app.delete("/api/dsar/:id", async (req, res) => {
+    try {
+      await storage.deleteDsarRequest(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting DSAR request:", error);
+      res.status(500).json({ error: "فشل في حذف الطلب" });
+    }
+  });
+
+  // DPIA Assessments - تقييم تأثير حماية البيانات
+  app.post("/api/dpia", async (req, res) => {
+    try {
+      const validatedData = insertDpiaAssessmentSchema.parse(req.body);
+      const assessment = await storage.createDpiaAssessment(validatedData);
+      res.json(assessment);
+    } catch (error) {
+      console.error("Error creating DPIA assessment:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "بيانات غير صحيحة" });
+      }
+      res.status(500).json({ error: "فشل في إنشاء التقييم" });
+    }
+  });
+
+  app.get("/api/dpia", async (req, res) => {
+    try {
+      const status = req.query.status as string;
+      const assessments = status 
+        ? await storage.getDpiaAssessmentsByStatus(status)
+        : await storage.getAllDpiaAssessments();
+      res.json(assessments);
+    } catch (error) {
+      console.error("Error getting DPIA assessments:", error);
+      res.status(500).json({ error: "فشل في جلب التقييمات" });
+    }
+  });
+
+  app.get("/api/dpia/:id", async (req, res) => {
+    try {
+      const assessment = await storage.getDpiaAssessment(req.params.id);
+      if (!assessment) {
+        return res.status(404).json({ error: "التقييم غير موجود" });
+      }
+      res.json(assessment);
+    } catch (error) {
+      console.error("Error getting DPIA assessment:", error);
+      res.status(500).json({ error: "فشل في جلب التقييم" });
+    }
+  });
+
+  app.put("/api/dpia/:id", async (req, res) => {
+    try {
+      const validatedData = updateDpiaAssessmentSchema.parse(req.body);
+      const assessment = await storage.updateDpiaAssessment(req.params.id, validatedData);
+      if (!assessment) {
+        return res.status(404).json({ error: "التقييم غير موجود" });
+      }
+      res.json(assessment);
+    } catch (error) {
+      console.error("Error updating DPIA assessment:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "بيانات غير صحيحة" });
+      }
+      res.status(500).json({ error: "فشل في تحديث التقييم" });
+    }
+  });
+
+  app.delete("/api/dpia/:id", async (req, res) => {
+    try {
+      await storage.deleteDpiaAssessment(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting DPIA assessment:", error);
+      res.status(500).json({ error: "فشل في حذف التقييم" });
     }
   });
 

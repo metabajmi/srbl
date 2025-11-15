@@ -14,6 +14,8 @@ import TermsGeneratorPage from "@/pages/TermsGeneratorPage";
 import ConsentManagementPage from "@/pages/ConsentManagementPage";
 import PreferencesCenterPage from "@/pages/PreferencesCenterPage";
 import InternalCompliancePage from "@/pages/InternalCompliancePage";
+import RopaManagementPage from "@/pages/RopaManagementPage";
+import DsarManagementPage from "@/pages/DsarManagementPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -30,6 +32,10 @@ function Router() {
       <Route path="/consent-management" component={ConsentManagementPage} />
       <Route path="/preferences-center" component={PreferencesCenterPage} />
       <Route path="/internal-compliance" component={InternalCompliancePage} />
+      
+      {/* Internal Compliance Sub-modules */}
+      <Route path="/internal-compliance/ropa" component={RopaManagementPage} />
+      <Route path="/internal-compliance/dsar" component={DsarManagementPage} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />
