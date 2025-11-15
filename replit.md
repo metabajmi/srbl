@@ -110,6 +110,43 @@ The application uses PostgreSQL as its database, with Drizzle ORM for type-safe 
 - Persistent forms prevent accidental data loss
 - Test-friendly with comprehensive data-testid attributes
 
+### Preferences Center Implementation
+
+**Achievement**: Built a comprehensive Preferences Center allowing users to view, modify, and withdraw their cookie consent at any time, with full Arabic RTL support and professional accessibility-focused design.
+
+**Features Implemented**:
+- **Standalone Page**: Dedicated route at `/preferences-center` accessible from sidebar navigation
+- **Four Cookie Categories**: Display and manage consent for necessary, analytics, marketing, and performance cookies
+- **Visual Icons**: Lucide React icons (Lock, BarChart3, Megaphone, Zap) instead of emoji for accessibility compliance
+- **Current Status Card**: Shows when user has existing consent, explaining they can modify or withdraw
+- **Category Cards**: Each category displays icon, title, description, and toggle switch (necessary category disabled)
+- **Save Functionality**: Updates preferences in localStorage and sends consent to backend via POST /api/cmp/consent
+- **Withdraw Consent**: AlertDialog confirmation flow that resets all optional categories and notifies backend via POST /api/cmp/consent/withdraw
+- **Metadata Handling Fix**: Extracts only consent categories (necessary/analytics/marketing/performance) from localStorage, preventing timestamp/version from appearing as pseudo-categories in UI
+
+**Technical Implementation**:
+- **Component**: `client/src/pages/PreferencesCenterPage.tsx` with complete state management
+- **Rehydration Logic**: Properly filters stored metadata (timestamp, version) when loading from localStorage, maintaining clean UI state
+- **Form State**: Uses React useState with manual switch handling, no react-hook-form needed for simple toggles
+- **Persistence**: Updates both localStorage (client-side) and backend database (server-side audit trail)
+- **Anonymous Tracking**: Generates/retrieves anonymous user ID for consent records without requiring authentication
+
+**Testing**:
+- End-to-end tests verified all user flows work correctly
+- Four categories display correctly (no metadata pollution)
+- Toggle switches work with boolean values
+- Save functionality persists preferences across page reloads
+- Withdraw consent resets optional categories and updates backend
+- localStorage correctly stores and retrieves consent with metadata
+
+**User Experience Impact**:
+- PDPL-compliant preferences center for transparency and user control
+- Arabic-first interface with complete RTL support
+- Professional legal aesthetic matching platform design
+- Accessible design using semantic icons instead of emoji
+- Clear withdrawal flow with confirmation dialog
+- Persistent state prevents data loss
+
 ### Privacy Policy Download Enhancement
 
 **Problem**: Downloaded privacy policies appeared as plain unformatted text files, making them unprofessional and difficult to read. Additionally, there was a critical XSS security vulnerability where user/AI-generated content could inject malicious scripts.
