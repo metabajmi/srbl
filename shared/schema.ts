@@ -119,56 +119,118 @@ export const remediationTemplatesRelations = relations(remediationTemplates, ({ 
   issues: many(complianceIssues),
 }));
 
-// Policy Documents - وثائق سياسة الخصوصية
+// Policy Documents - وثائق سياسة الخصوصية (بناءً على الهيكل الجديد SDAIA)
 export const policyDocuments = pgTable("policy_documents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  companyName: text("company_name").notNull(),
-  websiteUrl: text("website_url").notNull(),
-  businessType: text("business_type").notNull(),
   
-  // بيانات التواصل من النموذج
-  responsibleDepartment: text("responsible_department"), // القسم/الفريق المختص
-  address: text("address"), // العنوان
-  contactPhone: text("contact_phone"), // رقم الهاتف
-  contactEmail: text("contact_email").notNull(), // البريد الإلكتروني
-  licenseNumber: text("license_number"), // الترخيص أو السجل التجاري
+  // القسم الأول: هوية الجهة والمسؤولية (جهة التحكم)
+  companyName: text("company_name").notNull(), // س1: الاسم الرسمي
+  businessType: text("business_type").notNull(), // س2: طبيعة النشاط الرئيسي
+  entityType: text("entity_type").notNull(), // س3: صفة الجهة (حكومية/خاصة/فرد)
   
-  // البيانات الشخصية
-  dataTypes: jsonb("data_types").notNull(), // Array of data types collected
-  dataUsagePurposes: jsonb("data_usage_purposes").notNull(),
-  hasThirdPartySharing: text("has_third_party_sharing").notNull(),
-  retentionPeriod: text("retention_period").notNull(),
+  // س4: بيانات التواصل
+  contactEmail: text("contact_email").notNull(),
+  contactPhone: text("contact_phone"),
+  contactAddress: text("contact_address"),
   
-  // كيفية جمع البيانات
-  dataCollectionMethods: text("data_collection_methods"), // طرق جمع البيانات (مباشرة، غير مباشرة)
+  // س5: معالجة بيانات حساسة أو مراقبة مستمرة
+  processesSensitiveData: text("processes_sensitive_data"), // نعم/لا
+  requiresDPO: text("requires_dpo"), // نعم/لا (محسوبة من س5)
+  
+  // مسؤول حماية البيانات (إذا كان مطلوباً)
+  dpoName: text("dpo_name"),
+  dpoEmail: text("dpo_email"),
+  dpoPhone: text("dpo_phone"),
+  dpoAddress: text("dpo_address"),
+  
+  // القسم الثاني: جمع البيانات والأغراض النظامية
+  // س6: فئات البيانات الشخصية
+  dataCategories: jsonb("data_categories").notNull(), // [{name, required, purpose, legalBasis}]
+  
+  // س7: كيفية جمع البيانات
+  collectionMethod: text("collection_method"), // مباشرة/غير مباشرة/كلاهما
+  directCollectionDetails: text("direct_collection_details"), // تفاصيل الجمع المباشر
+  indirectCollectionDetails: text("indirect_collection_details"), // تفاصيل الجمع غير المباشر
   indirectDataSources: text("indirect_data_sources"), // مصادر البيانات غير المباشرة
   
-  // كيفية الاستخدام والإفصاح
-  dataUsageDetails: text("data_usage_details"), // تفاصيل استخدام البيانات
-  disclosureDetails: text("disclosure_details"), // تفاصيل الإفصاح عن البيانات
-  thirdPartyCategories: text("third_party_categories"), // فئات الجهات الخارجية
+  // س8: إلزامية البيانات (مدمج في dataCategories)
+  // س9: السبب المحدد (مدمج في dataCategories)
+  // س10: المسوغ النظامي (مدمج في dataCategories)
   
-  // التخزين والحماية
-  storageLocation: text("storage_location"), // موقع تخزين البيانات
-  securityMeasures: text("security_measures"), // إجراءات الحماية
+  // القسم الثالث: معالجة البيانات، مشاركتها، وأمنها
+  // س11: آليات معالجة البيانات
+  processingMethods: text("processing_methods"), // وصف دورة حياة البيانات
   
-  // مسؤول حماية البيانات
-  dpoName: text("dpo_name"), // اسم مسؤول حماية البيانات
-  dpoAddress: text("dpo_address"), // عنوان المسؤول
-  dpoPhone: text("dpo_phone"), // رقم هاتف المسؤول
-  dpoEmail: text("dpo_email"), // بريد المسؤول الإلكتروني
+  // س12: مشاركة البيانات مع أطراف أخرى
+  sharesWithThirdParties: text("shares_with_third_parties"), // نعم/لا
+  thirdPartyDetails: jsonb("third_party_details"), // [{party, purpose, safeguards}]
   
-  // تاريخ آخر تحديث
+  // س13: نقل البيانات خارج المملكة
+  transfersDataAbroad: text("transfers_data_abroad"), // نعم/لا
+  transferDestinations: text("transfer_destinations"), // الدول المستهدفة
+  transferSafeguards: text("transfer_safeguards"), // الضمانات
+  transferMechanism: text("transfer_mechanism"), // الآلية (اتفاقيات، قرار، قواعد ملزمة)
+  
+  // س14: حقوق صاحب البيانات الشخصية
+  rightsExerciseMethod: text("rights_exercise_method"), // كيفية ممارسة الحقوق
+  rightsResponseTime: text("rights_response_time"), // مدة الرد (بالأيام)
+  rightsContactChannel: text("rights_contact_channel"), // قناة التواصل
+  
+  // س15: حق الوصول إلى البيانات
+  accessRightDetails: text("access_right_details"),
+  
+  // س16: حق الحصول على نسخة
+  obtainCopyDetails: text("obtain_copy_details"),
+  obtainCopyFormat: text("obtain_copy_format"), // الصيغة (PDF، Word، إلخ)
+  obtainCopyLimitations: text("obtain_copy_limitations"), // القيود
+  
+  // س17: حق تصحيح البيانات
+  correctionRightDetails: text("correction_right_details"),
+  correctionResponseTime: text("correction_response_time"), // المدة بالأيام
+  correctionNotificationMethod: text("correction_notification_method"),
+  
+  // س18: حق حذف البيانات
+  deletionRightConditions: text("deletion_right_conditions"),
+  deletionExceptions: text("deletion_exceptions"), // الاستثناءات
+  
+  // س19: حق الاعتراض
+  objectionRightDetails: text("objection_right_details"),
+  objectionEvaluationTime: text("objection_evaluation_time"),
+  
+  // س20: حق سحب الموافقة
+  withdrawalConsentDetails: text("withdrawal_consent_details"),
+  withdrawalConsentMethod: text("withdrawal_consent_method"),
+  withdrawalConsentImpact: text("withdrawal_consent_impact"), // الأثر على الخدمات
+  
+  // س21: التخزين والأمان
+  storageLocation: text("storage_location"), // داخل/خارج المملكة
+  storageLocationDetails: text("storage_location_details"),
+  retentionPeriod: text("retention_period"),
+  retentionCriteria: text("retention_criteria"), // المعايير
+  deletionMethod: text("deletion_method"), // طريقة الإتلاف
+  
+  // س22: الإجراءات الأمنية
+  securityMeasures: jsonb("security_measures"), // [{type, description}]
+  technicalMeasures: text("technical_measures"),
+  organizationalMeasures: text("organizational_measures"),
+  
+  // س23: الإخطار بانتهاك البيانات
+  breachNotificationProcess: text("breach_notification_process"),
+  breachNotificationTime: text("breach_notification_time"), // المدة
+  
+  // س24: ملفات الارتباط (الكوكيز)
+  usesCookies: text("uses_cookies"), // نعم/لا
+  cookieTypes: jsonb("cookie_types"), // [{type, purpose, duration}]
+  cookieManagementMethod: text("cookie_management_method"),
+  
+  // س25: التحديثات على السياسة
+  updateNotificationMethod: text("update_notification_method"),
   lastUpdatedDate: timestamp("last_updated_date"),
   
-  // الحقول المطلوبة من القالب الرسمي SDAIA
-  legalBasis: text("legal_basis"), // الأساس القانوني للمعالجة
-  consentWithdrawalProcess: text("consent_withdrawal_process"), // عملية سحب الموافقة
-  rightsProcedures: text("rights_procedures"), // إجراءات ممارسة حقوق أصحاب البيانات
-  storageDetails: text("storage_details"), // تفاصيل التخزين (موقع التخزين، نوع البيانات، فترة الحفظ، طريقة الإتلاف)
-  breachNotificationProcess: text("breach_notification_process"), // عملية الإبلاغ عن الانتهاكات
-  thirdPartyAgreements: text("third_party_agreements"), // اتفاقيات الجهات الخارجية
-  trainingPrograms: text("training_programs"), // برامج تدريب الموظفين
+  // س26: جهة الاختصاص والشكاوى
+  complaintProcedure: text("complaint_procedure"),
+  complaintResponseTime: text("complaint_response_time"),
+  sdaiaContactInfo: text("sdaia_contact_info"), // معلومات التواصل مع هيئة سدايا
   
   generatedContent: text("generated_content"),
   status: text("status").notNull().default("pending"), // pending, generating, completed, failed
@@ -183,36 +245,90 @@ export const insertPolicyDocumentSchema = createInsertSchema(policyDocuments).om
   createdAt: true,
   updatedAt: true,
 }).extend({
-  websiteUrl: z.string().url("يجب إدخال رابط صحيح"),
-  contactEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
+  // الحقول الإلزامية
   companyName: z.string().min(2, "يجب إدخال اسم الجهة"),
   businessType: z.string().min(2, "يجب إدخال نوع النشاط"),
-  retentionPeriod: z.string().min(1, "يجب تحديد مدة الاحتفاظ بالبيانات"),
-  hasThirdPartySharing: z.string().min(1, "يجب تحديد ما إذا كانت هناك مشاركة مع جهات خارجية"),
-  dataTypes: z.array(z.string()).min(1, "يجب إدخال نوع واحد على الأقل من البيانات"),
-  dataUsagePurposes: z.array(z.string()).min(1, "يجب إدخال غرض واحد على الأقل"),
+  entityType: z.enum(["government", "private", "individual"], {
+    required_error: "يجب تحديد صفة الجهة"
+  }),
+  contactEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
+  dataCategories: z.array(z.object({
+    name: z.string(),
+    required: z.boolean(),
+    purpose: z.string(),
+    legalBasis: z.enum(["consent", "contract", "legal_obligation", "legitimate_interest"]),
+  })).min(1, "يجب إدخال فئة واحدة على الأقل من البيانات"),
   
-  // جميع الحقول الاختيارية يمكن أن تكون string أو null
-  responsibleDepartment: z.string().nullish(),
-  address: z.string().nullish(),
+  // جميع الحقول الاختيارية
   contactPhone: z.string().nullish(),
-  licenseNumber: z.string().nullish(),
-  dataCollectionMethods: z.string().nullish(),
-  indirectDataSources: z.string().nullish(),
-  dataUsageDetails: z.string().nullish(),
-  disclosureDetails: z.string().nullish(),
-  thirdPartyCategories: z.string().nullish(),
-  storageLocation: z.string().nullish(),
-  securityMeasures: z.string().nullish(),
+  contactAddress: z.string().nullish(),
+  processesSensitiveData: z.string().nullish(),
+  requiresDPO: z.string().nullish(),
   dpoName: z.string().nullish(),
-  dpoAddress: z.string().nullish(),
-  dpoPhone: z.string().nullish(),
   dpoEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح").nullish().or(z.literal("")),
+  dpoPhone: z.string().nullish(),
+  dpoAddress: z.string().nullish(),
+  collectionMethod: z.string().nullish(),
+  directCollectionDetails: z.string().nullish(),
+  indirectCollectionDetails: z.string().nullish(),
+  indirectDataSources: z.string().nullish(),
+  processingMethods: z.string().nullish(),
+  sharesWithThirdParties: z.string().nullish(),
+  thirdPartyDetails: z.array(z.object({
+    party: z.string(),
+    purpose: z.string(),
+    safeguards: z.string().optional(),
+  })).nullish(),
+  transfersDataAbroad: z.string().nullish(),
+  transferDestinations: z.string().nullish(),
+  transferSafeguards: z.string().nullish(),
+  transferMechanism: z.string().nullish(),
+  rightsExerciseMethod: z.string().nullish(),
+  rightsResponseTime: z.string().nullish(),
+  rightsContactChannel: z.string().nullish(),
+  accessRightDetails: z.string().nullish(),
+  obtainCopyDetails: z.string().nullish(),
+  obtainCopyFormat: z.string().nullish(),
+  obtainCopyLimitations: z.string().nullish(),
+  correctionRightDetails: z.string().nullish(),
+  correctionResponseTime: z.string().nullish(),
+  correctionNotificationMethod: z.string().nullish(),
+  deletionRightConditions: z.string().nullish(),
+  deletionExceptions: z.string().nullish(),
+  objectionRightDetails: z.string().nullish(),
+  objectionEvaluationTime: z.string().nullish(),
+  withdrawalConsentDetails: z.string().nullish(),
+  withdrawalConsentMethod: z.string().nullish(),
+  withdrawalConsentImpact: z.string().nullish(),
+  storageLocation: z.string().nullish(),
+  storageLocationDetails: z.string().nullish(),
+  retentionPeriod: z.string().nullish(),
+  retentionCriteria: z.string().nullish(),
+  deletionMethod: z.string().nullish(),
+  securityMeasures: z.array(z.object({
+    type: z.string(),
+    description: z.string(),
+  })).nullish(),
+  technicalMeasures: z.string().nullish(),
+  organizationalMeasures: z.string().nullish(),
+  breachNotificationProcess: z.string().nullish(),
+  breachNotificationTime: z.string().nullish(),
+  usesCookies: z.string().nullish(),
+  cookieTypes: z.array(z.object({
+    type: z.string(),
+    purpose: z.string(),
+    duration: z.string(),
+  })).nullish(),
+  cookieManagementMethod: z.string().nullish(),
+  updateNotificationMethod: z.string().nullish(),
   lastUpdatedDate: z.preprocess((val) => {
     if (!val || val === '') return null;
     const date = val instanceof Date ? val : new Date(val as string);
     return isNaN(date.getTime()) ? null : date;
   }, z.date().optional()).nullable(),
+  complaintProcedure: z.string().nullish(),
+  complaintResponseTime: z.string().nullish(),
+  sdaiaContactInfo: z.string().nullish(),
 });
 
 export type InsertPolicyDocument = z.infer<typeof insertPolicyDocumentSchema>;
