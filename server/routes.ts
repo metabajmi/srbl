@@ -1,7 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertComplianceScanSchema, insertPolicyDocumentSchema, insertConsentRecordSchema, insertTermsDocumentSchema, insertComplianceTaskSchema } from "@shared/schema";
+import { 
+  insertComplianceScanSchema, 
+  insertPolicyDocumentSchema, 
+  insertConsentRecordSchema, 
+  insertTermsDocumentSchema, 
+  insertComplianceTaskSchema,
+  insertCmpSettingsSchema,
+  insertCmpScriptSchema
+} from "@shared/schema";
 import { analyzeWebsiteCompliance, generateComplianceReport, generatePrivacyPolicy, generateTermsAndConditions } from "./openai";
 import { z } from "zod";
 
@@ -505,6 +513,234 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting task:", error);
       res.status(500).json({ error: "فشل في حذف المهمة" });
+    }
+  });
+
+  // ========== CMP (Consent Management Platform) Endpoints ==========
+
+  // CMP Settings
+  app.get("/api/cmp/settings", async (req, res) => {
+    try {
+      let settings = await storage.getCmpSettings();
+      if (!settings) {
+        settings = await storage.createDefaultCmpSettings();
+      }
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching CMP settings:", error);
+      res.status(500).json({ error: "فشل في جلب إعدادات CMP" });
+    }
+  });
+
+  app.put("/api/cmp/settings", async (req, res) => {
+    try {
+      const validatedData = insertCmpSettingsSchema.parse(req.body);
+      const settings = await storage.updateCmpSettings(validatedData);
+      res.json(settings);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error updating CMP settings:", error);
+      res.status(500).json({ error: "فشل في تحديث إعدادات CMP" });
+    }
+  });
+
+  // CMP Scripts
+  app.get("/api/cmp/scripts", async (req, res) => {
+    try {
+      const scripts = await storage.getAllCmpScripts();
+      res.json(scripts);
+    } catch (error) {
+      console.error("Error fetching scripts:", error);
+      res.status(500).json({ error: "فشل في جلب السكربتات" });
+    }
+  });
+
+  app.post("/api/cmp/scripts", async (req, res) => {
+    try {
+      const validatedData = insertCmpScriptSchema.parse(req.body);
+      const script = await storage.createCmpScript(validatedData);
+      res.json(script);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error creating script:", error);
+      res.status(500).json({ error: "فشل في إنشاء السكربت" });
+    }
+  });
+
+  app.put("/api/cmp/scripts/:id", async (req, res) => {
+    try {
+      const validatedData = insertCmpScriptSchema.partial().parse(req.body);
+      const script = await storage.updateCmpScript(req.params.id, validatedData);
+      if (!script) {
+        return res.status(404).json({ error: "السكربت غير موجود" });
+      }
+      res.json(script);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error updating script:", error);
+      res.status(500).json({ error: "فشل في تحديث السكربت" });
+    }
+  });
+
+  app.delete("/api/cmp/scripts/:id", async (req, res) => {
+    try {
+      await storage.deleteCmpScript(req.params.id);
+      res.json({ message: "تم حذف السكربت بنجاح" });
+    } catch (error) {
+      console.error("Error deleting script:", error);
+      res.status(500).json({ error: "فشل في حذف السكربت" });
+    }
+  });
+
+  // CMP Public Config (for snippet)
+  app.get("/api/cmp/config", async (req, res) => {
+    try {
+      let settings = await storage.getCmpSettings();
+      if (!settings) {
+        settings = await storage.createDefaultCmpSettings();
+      }
+      
+      const scripts = await storage.getAllCmpScripts();
+      const enabledScripts = scripts.filter(s => s.enabled === "yes");
+      
+      res.json({
+        settings: {
+          primaryColor: settings.primaryColor,
+          backgroundColor: settings.backgroundColor,
+          textColor: settings.textColor,
+          buttonColor: settings.buttonColor,
+          bannerTitle: settings.bannerTitle,
+          bannerDescription: settings.bannerDescription,
+          acceptAllButtonText: settings.acceptAllButtonText,
+          rejectAllButtonText: settings.rejectAllButtonText,
+          customizeButtonText: settings.customizeButtonText,
+          necessaryCookiesTitle: settings.necessaryCookiesTitle,
+          necessaryCookiesDesc: settings.necessaryCookiesDesc,
+          analyticsCookiesTitle: settings.analyticsCookiesTitle,
+          analyticsCookiesDesc: settings.analyticsCookiesDesc,
+          marketingCookiesTitle: settings.marketingCookiesTitle,
+          marketingCookiesDesc: settings.marketingCookiesDesc,
+          performanceCookiesTitle: settings.performanceCookiesTitle,
+          performanceCookiesDesc: settings.performanceCookiesDesc,
+          bannerPosition: settings.bannerPosition,
+          language: settings.language,
+          showLogo: settings.showLogo,
+          logoUrl: settings.logoUrl,
+          privacyPolicyUrl: settings.privacyPolicyUrl,
+          termsUrl: settings.termsUrl,
+          consentVersion: settings.consentVersion,
+        },
+        scripts: enabledScripts.map(script => ({
+          id: script.id,
+          name: script.name,
+          category: script.category,
+          scriptType: script.scriptType,
+          scriptContent: script.scriptType === "inline" ? script.scriptContent : undefined,
+          scriptUrl: script.scriptType === "external" ? script.scriptUrl : undefined,
+          scriptPosition: script.scriptPosition,
+        }))
+      });
+    } catch (error) {
+      console.error("Error fetching CMP config:", error);
+      res.status(500).json({ error: "فشل في جلب تكوين CMP" });
+    }
+  });
+
+  // Consent Records (CMP)
+  app.post("/api/cmp/consent", async (req, res) => {
+    try {
+      const validatedData = insertConsentRecordSchema.parse(req.body);
+      
+      // Add IP address and user agent from request
+      const consentData = {
+        ...validatedData,
+        ipAddress: req.ip || req.headers['x-forwarded-for'] as string || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+      };
+      
+      const consent = await storage.createConsentRecord(consentData);
+      res.json(consent);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      console.error("Error creating consent:", error);
+      res.status(500).json({ error: "فشل في تسجيل الموافقة" });
+    }
+  });
+
+  app.post("/api/cmp/consent/:id/withdraw", async (req, res) => {
+    try {
+      const { reason } = req.body;
+      const consent = await storage.withdrawConsent(req.params.id, reason);
+      
+      if (!consent) {
+        return res.status(404).json({ error: "السجل غير موجود" });
+      }
+      
+      res.json(consent);
+    } catch (error) {
+      console.error("Error withdrawing consent:", error);
+      res.status(500).json({ error: "فشل في سحب الموافقة" });
+    }
+  });
+
+  app.get("/api/cmp/consent/export", async (req, res) => {
+    try {
+      const format = req.query.format as string || "json";
+      const consents = await storage.getAllConsentRecords();
+      
+      if (format === "csv") {
+        // Generate CSV
+        const headers = [
+          "ID",
+          "Anonymous ID",
+          "User ID",
+          "Consent Date",
+          "Necessary",
+          "Analytics",
+          "Marketing",
+          "Performance",
+          "IP Address",
+          "Withdrawn At",
+        ];
+        
+        const rows = consents.map(c => [
+          c.id,
+          c.anonymousId,
+          c.userId || "",
+          c.consentDate?.toISOString() || "",
+          c.necessaryCookies,
+          c.analyticsCookies,
+          c.marketingCookies,
+          c.performanceCookies,
+          c.ipAddress || "",
+          c.withdrawnAt?.toISOString() || "",
+        ]);
+        
+        const csv = [
+          headers.join(","),
+          ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+        ].join("\n");
+        
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", `attachment; filename=consent-records-${new Date().toISOString().split('T')[0]}.csv`);
+        res.send(csv);
+      } else {
+        // JSON format
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Content-Disposition", `attachment; filename=consent-records-${new Date().toISOString().split('T')[0]}.json`);
+        res.json(consents);
+      }
+    } catch (error) {
+      console.error("Error exporting consents:", error);
+      res.status(500).json({ error: "فشل في تصدير سجلات الموافقة" });
     }
   });
 

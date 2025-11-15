@@ -15,6 +15,10 @@ import {
   type InsertTermsDocument,
   type ComplianceTask,
   type InsertComplianceTask,
+  type CmpSettings,
+  type InsertCmpSettings,
+  type CmpScript,
+  type InsertCmpScript,
   complianceScans,
   complianceIssues,
   reports,
@@ -22,7 +26,9 @@ import {
   policyDocuments,
   consentRecords,
   termsDocuments,
-  complianceTasks
+  complianceTasks,
+  cmpSettings,
+  cmpScripts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -74,6 +80,23 @@ export interface IStorage {
   updateComplianceTask(id: string, updates: Partial<ComplianceTask>): Promise<ComplianceTask | undefined>;
   getAllComplianceTasks(): Promise<ComplianceTask[]>;
   deleteComplianceTask(id: string): Promise<void>;
+  
+  // CMP Settings
+  getCmpSettings(): Promise<CmpSettings | undefined>;
+  updateCmpSettings(updates: Partial<CmpSettings>): Promise<CmpSettings | undefined>;
+  createDefaultCmpSettings(): Promise<CmpSettings>;
+  
+  // CMP Scripts
+  createCmpScript(script: InsertCmpScript): Promise<CmpScript>;
+  getCmpScript(id: string): Promise<CmpScript | undefined>;
+  updateCmpScript(id: string, updates: Partial<CmpScript>): Promise<CmpScript | undefined>;
+  getAllCmpScripts(): Promise<CmpScript[]>;
+  deleteCmpScript(id: string): Promise<void>;
+  getCmpScriptsByCategory(category: string): Promise<CmpScript[]>;
+  
+  // Consent Records (Extended)
+  getConsentRecordsByAnonymousId(anonymousId: string): Promise<ConsentRecord[]>;
+  withdrawConsent(id: string, reason?: string): Promise<ConsentRecord | undefined>;
 }
 
 // Database storage implementation using Drizzle ORM
@@ -370,6 +393,118 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(complianceTasks)
       .where(eq(complianceTasks.id, id));
+  }
+
+  // CMP Settings
+  async getCmpSettings(): Promise<CmpSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(cmpSettings)
+      .limit(1);
+    return settings || undefined;
+  }
+
+  async updateCmpSettings(updates: Partial<CmpSettings>): Promise<CmpSettings | undefined> {
+    const { id, ...updateData } = updates;
+    const existing = await this.getCmpSettings();
+    
+    if (!existing) {
+      return await this.createDefaultCmpSettings();
+    }
+
+    const [updatedSettings] = await db
+      .update(cmpSettings)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(eq(cmpSettings.id, existing.id))
+      .returning();
+    return updatedSettings || undefined;
+  }
+
+  async createDefaultCmpSettings(): Promise<CmpSettings> {
+    const [settings] = await db
+      .insert(cmpSettings)
+      .values({})
+      .returning();
+    return settings;
+  }
+
+  // CMP Scripts
+  async createCmpScript(insertScript: InsertCmpScript): Promise<CmpScript> {
+    const [script] = await db
+      .insert(cmpScripts)
+      .values(insertScript)
+      .returning();
+    return script;
+  }
+
+  async getCmpScript(id: string): Promise<CmpScript | undefined> {
+    const [script] = await db
+      .select()
+      .from(cmpScripts)
+      .where(eq(cmpScripts.id, id));
+    return script || undefined;
+  }
+
+  async updateCmpScript(id: string, updates: Partial<CmpScript>): Promise<CmpScript | undefined> {
+    const { id: _, ...updateData } = updates;
+    const [updatedScript] = await db
+      .update(cmpScripts)
+      .set({
+        ...updateData,
+        updatedAt: new Date(),
+      })
+      .where(eq(cmpScripts.id, id))
+      .returning();
+    return updatedScript || undefined;
+  }
+
+  async getAllCmpScripts(): Promise<CmpScript[]> {
+    const scripts = await db
+      .select()
+      .from(cmpScripts)
+      .orderBy(desc(cmpScripts.createdAt));
+    return scripts;
+  }
+
+  async deleteCmpScript(id: string): Promise<void> {
+    await db
+      .delete(cmpScripts)
+      .where(eq(cmpScripts.id, id));
+  }
+
+  async getCmpScriptsByCategory(category: string): Promise<CmpScript[]> {
+    const scripts = await db
+      .select()
+      .from(cmpScripts)
+      .where(eq(cmpScripts.category, category))
+      .orderBy(desc(cmpScripts.createdAt));
+    return scripts;
+  }
+
+  // Consent Records (Extended)
+  async getConsentRecordsByAnonymousId(anonymousId: string): Promise<ConsentRecord[]> {
+    const consents = await db
+      .select()
+      .from(consentRecords)
+      .where(eq(consentRecords.anonymousId, anonymousId))
+      .orderBy(desc(consentRecords.consentDate));
+    return consents;
+  }
+
+  async withdrawConsent(id: string, reason?: string): Promise<ConsentRecord | undefined> {
+    const [updatedConsent] = await db
+      .update(consentRecords)
+      .set({
+        withdrawnAt: new Date(),
+        withdrawalReason: reason || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(consentRecords.id, id))
+      .returning();
+    return updatedConsent || undefined;
   }
 
   // Initialize default remediation templates if they don't exist
