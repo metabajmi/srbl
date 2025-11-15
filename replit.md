@@ -55,7 +55,7 @@ Preferred communication style: Simple, everyday language.
 - Retrieving scan results and issues
 - Generating compliance reports
 
-**AI Integration**: Uses OpenAI's GPT-3.5-turbo model for multiple intelligent features:
+**AI Integration**: Uses OpenAI's GPT-4o model for multiple intelligent features:
 - **Website Analysis**: Analyzes HTML content for PDPL compliance, identifies violations across categories, references specific articles from Saudi regulations, provides remediation guidance
 - **Privacy Policy Generation**: Creates comprehensive, PDPL-compliant privacy policies following the official SDAIA template with 12 detailed sections covering all regulatory requirements:
   * **Complete Form Fields**: All fields from the official SDAIA template are now fully integrated in the privacy policy generator:
@@ -124,7 +124,7 @@ Preferred communication style: Simple, everyday language.
 ### External Dependencies
 
 **AI Service**: 
-- OpenAI API (GPT-5 model) for compliance analysis and report generation
+- OpenAI API (GPT-4o model) for compliance analysis and report generation
 - Requires OPENAI_API_KEY environment variable
 
 **Database**: 
@@ -148,37 +148,56 @@ Preferred communication style: Simple, everyday language.
 - esbuild for server-side bundling in production
 - ESM module system throughout the application
 
-## Recent Changes (November 14, 2025)
+## Recent Changes (November 15, 2025)
 
-### Privacy Policy Generator Enhancements
+### Privacy Policy Generator Complete Rebuild
 
-**Problem Addressed**: The privacy policy generator needed to be fully compliant with the official SDAIA template and ensure all user-provided data is accurately reflected in generated policies.
+**Problem Addressed**: The privacy policy generator needed to be rebuilt completely to follow a comprehensive PDF-based questionnaire template that aligns with Saudi PDPL requirements, and upgraded to use GPT-4o for higher quality output.
 
 **Changes Implemented**:
 
-1. **Frontend UI Fixes** (client/src/pages/PrivacyGeneratorPage.tsx):
-   - Fixed policy sorting: Policies now display in descending order by creation date (newest first)
-   - Implemented automatic polling (every 2 seconds) for policies with "generating" or "pending" status
-   - Added defensive type checking for refetchInterval to prevent runtime errors
-   - Policies automatically update in the UI when generation completes
+1. **Schema Updates** (shared/schema.ts):
+   - Completely redesigned PolicyDocument schema with 50+ fields covering all PDPL requirements
+   - Organized into logical sections: Entity Information, Data Collection, Data Processing, User Rights, Storage & Security, Cookies & Updates, Complaints
+   - Added support for complex arrays: dataCategories, thirdPartyDetails, securityMeasures, cookieTypes
+   - All fields properly typed with Zod validation schemas
 
-2. **Backend Data Flow** (server/routes.ts, server/openai.ts):
-   - All 23 form fields now properly passed to the AI generation function
-   - Enhanced processPrivacyPolicyGeneration to include all optional fields (DPO info, storage location, security measures, etc.)
-   - Mock policy generator updated to follow the complete 12-section SDAIA template structure
+2. **Frontend Complete Rebuild** (client/src/pages/PrivacyGeneratorPage.tsx):
+   - Rebuilt entire form interface from scratch with 3 main sections using Accordion components
+   - **Section 1 - Entity Identity**: Company info, contact details, DPO information, sensitive data handling
+   - **Section 2 - Data Collection**: Collection methods, data categories with legal basis, third-party sharing, international transfers, user rights exercise methods
+   - **Section 3 - Additional Details**: Storage location & retention, security measures, breach notification, cookies, complaints, SDAIA contact
+   - Implemented step-by-step navigation between sections
+   - Added dynamic field arrays for data categories, third parties, security measures, and cookies
+   - Comprehensive form validation using react-hook-form with Zod
+   - Auto-polling for policies with "generating" or "pending" status
 
-3. **Type Safety Improvements**:
-   - Added proper TypeScript type assertions in refetchInterval callback
-   - Implemented Array.isArray checks to prevent .some() errors on undefined data
-   - Query state data properly typed as PolicyDocument[] | undefined
+3. **Backend Updates** (server/routes.ts, server/openai.ts):
+   - Updated processPrivacyPolicyGeneration to handle full PolicyDocument with all new fields
+   - Completely rewrote generatePrivacyPolicy function with comprehensive Arabic prompt covering all PDPL sections
+   - Upgraded all OpenAI API calls from GPT-3.5-turbo to GPT-4o for:
+     * Website compliance analysis (analyzeWebsiteCompliance)
+     * Compliance report generation (generateComplianceReport)
+     * Regulation reference extraction (extractRegulationReferences)
+     * Privacy policy generation (generatePrivacyPolicy)
+     * Terms & conditions generation (generateTermsAndConditions)
+   - Enhanced prompt to generate complete 12-section PDPL-compliant policies
+
+4. **Testing & Validation**:
+   - Completed end-to-end testing using Playwright
+   - Verified successful policy creation, generation, and status progression
+   - Confirmed GPT-4o integration working correctly
+   - All frontend-backend integrations validated
 
 **Technical Details**:
-- The refetchInterval callback now safely accesses query.state.data with type guards
-- Sorting implemented using Array.sort() with date comparison on createdAt timestamps
-- All fields from the comprehensive form (basic info, data types, usage purposes, third-party sharing, retention, DPO details, etc.) flow correctly from frontend → backend → AI generation
+- GPT-4o provides significantly better Arabic language generation and legal compliance understanding
+- Form handles complex nested data structures (arrays of objects with validation)
+- Backend processes generation asynchronously with status updates
+- Storage layer properly persists all new fields to PostgreSQL database
 
 **User Experience Impact**:
-- Users now see their newest policies first in the list
-- UI automatically refreshes when generation completes (no manual refresh needed)
-- All input data appears accurately in the generated policy content
-- No more stale/incorrect data being displayed
+- Users now have a comprehensive form covering all PDPL requirements
+- Step-by-step interface makes complex data entry manageable
+- Generated policies are significantly more detailed and compliant with Saudi regulations
+- Automatic status updates show generation progress in real-time
+- Higher quality AI-generated content using GPT-4o
