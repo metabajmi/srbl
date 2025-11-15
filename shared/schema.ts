@@ -536,3 +536,255 @@ export const insertComplianceTaskSchema = createInsertSchema(complianceTasks).om
 
 export type InsertComplianceTask = z.infer<typeof insertComplianceTaskSchema>;
 export type ComplianceTask = typeof complianceTasks.$inferSelect;
+
+// ====================================
+// Internal Compliance Management Module
+// وحدة الامتثال الداخلي
+// ====================================
+
+// ROPA Entries - سجل أنشطة المعالجة (Record of Processing Activities)
+export const ropaEntries = pgTable("ropa_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // الجهة أو القسم المسؤول
+  department: text("department").notNull(), // مثل: التسويق، الموارد البشرية، تقنية المعلومات
+  
+  // نوع البيانات
+  dataTypes: jsonb("data_types").notNull(), // [{name, category, isSensitive}]
+  
+  // الغرض من المعالجة
+  processingPurpose: text("processing_purpose").notNull(), // مثل: التوظيف، التسويق، تقديم الخدمات
+  
+  // الأساس النظامي (Legal Basis)
+  legalBasis: text("legal_basis").notNull(), // consent, contract, legal_obligation, legitimate_interest
+  
+  // مدة الاحتفاظ بالبيانات
+  retentionPeriod: text("retention_period").notNull(), // مثل: 5 سنوات، حتى انتهاء العقد
+  
+  // الأطراف المستلمة للبيانات
+  dataRecipients: jsonb("data_recipients"), // [{name, purpose, location}]
+  
+  // التدابير الأمنية
+  securityMeasures: text("security_measures"), // وصف التدابير الأمنية المطبقة
+  
+  // النقل عبر الحدود
+  internationalTransfers: text("international_transfers"), // yes/no
+  transferDetails: text("transfer_details"), // تفاصيل النقل إذا كان موجود
+  
+  // ملاحظات إضافية
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRopaEntrySchema = createInsertSchema(ropaEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  department: z.string().min(2, "يجب إدخال اسم القسم أو الجهة"),
+  dataTypes: z.array(z.object({
+    name: z.string(),
+    category: z.string(), // personal, sensitive, special
+    isSensitive: z.boolean(),
+  })).min(1, "يجب إدخال نوع واحد على الأقل من البيانات"),
+  processingPurpose: z.string().min(5, "يجب توضيح الغرض من المعالجة"),
+  legalBasis: z.enum(["consent", "contract", "legal_obligation", "legitimate_interest"], {
+    required_error: "يجب تحديد الأساس النظامي"
+  }),
+  retentionPeriod: z.string().min(2, "يجب تحديد مدة الاحتفاظ"),
+});
+
+export type InsertRopaEntry = z.infer<typeof insertRopaEntrySchema>;
+export type RopaEntry = typeof ropaEntries.$inferSelect;
+
+// Update schema for ROPA - only allows updating specific mutable fields
+export const updateRopaEntrySchema = insertRopaEntrySchema.partial().strict();
+
+// DSAR Requests - طلبات أصحاب البيانات (Data Subject Access Requests)
+export const dsarRequests = pgTable("dsar_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // معلومات مقدم الطلب
+  requesterName: text("requester_name").notNull(),
+  requesterEmail: text("requester_email").notNull(),
+  requesterPhone: text("requester_phone"),
+  requesterIdentification: text("requester_identification"), // رقم الهوية للتحقق
+  
+  // نوع الطلب
+  requestType: text("request_type").notNull(), // access, delete, rectify, restrict, object, portability
+  
+  // تفاصيل الطلب
+  requestDetails: text("request_details").notNull(), // وصف تفصيلي للطلب
+  
+  // الحالة
+  status: text("status").notNull().default("new"), // new, in_progress, completed, rejected
+  
+  // التواريخ والمهل
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  dueDate: timestamp("due_date").notNull(), // المهلة النظامية (30 يوم من تاريخ التقديم حسب PDPL)
+  completedAt: timestamp("completed_at"),
+  
+  // الرد والمعالجة
+  responseNote: text("response_note"), // ملاحظة الرد على الطلب
+  handledBy: text("handled_by"), // الموظف المسؤول عن المعالجة
+  
+  // المرفقات
+  attachments: jsonb("attachments"), // [{fileName, fileUrl, uploadedAt}]
+  
+  // الأولوية
+  priority: text("priority").default("medium"), // low, medium, high
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertDsarRequestSchema = createInsertSchema(dsarRequests).omit({
+  id: true,
+  submittedAt: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  requesterName: z.string().min(2, "يجب إدخال اسم مقدم الطلب"),
+  requesterEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
+  requestType: z.enum(["access", "delete", "rectify", "restrict", "object", "portability"], {
+    required_error: "يجب تحديد نوع الطلب"
+  }),
+  requestDetails: z.string().min(10, "يجب توضيح تفاصيل الطلب"),
+  dueDate: z.preprocess((val) => {
+    if (!val) return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default: 30 days from now
+    const date = val instanceof Date ? val : new Date(val as string);
+    return isNaN(date.getTime()) ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : date;
+  }, z.date()),
+});
+
+export type InsertDsarRequest = z.infer<typeof insertDsarRequestSchema>;
+export type DsarRequest = typeof dsarRequests.$inferSelect;
+
+// Update schema for DSAR - only allows updating specific mutable fields
+export const updateDsarRequestSchema = z.object({
+  requesterName: z.string().min(2).optional(),
+  requesterEmail: z.string().email().optional(),
+  requesterPhone: z.string().optional(),
+  requesterIdentification: z.string().optional(),
+  requestType: z.enum(["access", "delete", "rectify", "restrict", "object", "portability"]).optional(),
+  requestDetails: z.string().min(10).optional(),
+  status: z.enum(["new", "in_progress", "completed", "rejected"]).optional(),
+  responseNote: z.string().optional(),
+  handledBy: z.string().optional(),
+  priority: z.enum(["low", "medium", "high"]).optional(),
+  attachments: z.array(z.object({
+    fileName: z.string(),
+    fileUrl: z.string(),
+    uploadedAt: z.string(),
+  })).optional(),
+  completedAt: z.preprocess((val) => {
+    if (!val || val === '') return null;
+    const date = val instanceof Date ? val : new Date(val as string);
+    return isNaN(date.getTime()) ? null : date;
+  }, z.date().nullable()).optional(),
+}).strict(); // strict() prevents extra fields
+
+// DPIA Assessments - تقييم تأثير حماية البيانات (Data Protection Impact Assessment)
+export const dpiaAssessments = pgTable("dpia_assessments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // معلومات المشروع
+  projectName: text("project_name").notNull(),
+  projectDescription: text("project_description").notNull(),
+  department: text("department").notNull(),
+  
+  // طبيعة البيانات
+  dataTypes: jsonb("data_types").notNull(), // [{name, category, volume, sensitivity}]
+  dataSubjects: text("data_subjects").notNull(), // الفئات المستهدفة: موظفين، عملاء، أطفال، إلخ
+  
+  // تقييم الضرورة والتناسب
+  necessityJustification: text("necessity_justification").notNull(), // لماذا هذه المعالجة ضرورية؟
+  proportionalityAssessment: text("proportionality_assessment").notNull(), // هل المعالجة متناسبة مع الغرض؟
+  
+  // المخاطر المحتملة
+  identifiedRisks: jsonb("identified_risks").notNull(), // [{risk, likelihood, impact, severity}]
+  
+  // التدابير الوقائية
+  mitigationMeasures: jsonb("mitigation_measures").notNull(), // [{measure, effectiveness, status}]
+  
+  // الشفافية والإبلاغ
+  transparencyMeasures: text("transparency_measures"), // كيف سيتم إبلاغ أصحاب البيانات؟
+  
+  // التأثير على الأفراد
+  individualImpact: text("individual_impact").notNull(), // high, medium, low
+  individualImpactDetails: text("individual_impact_details"), // تفصيل التأثير
+  
+  // استشارة مسؤول حماية البيانات (DPO)
+  dpoConsulted: text("dpo_consulted").default("no"), // yes/no
+  dpoRecommendations: text("dpo_recommendations"),
+  
+  // القرار النهائي
+  finalDecision: text("final_decision"), // approved, rejected, approved_with_conditions
+  decisionRationale: text("decision_rationale"),
+  
+  // الحالة
+  status: text("status").notNull().default("draft"), // draft, under_review, completed
+  
+  // المرفقات
+  attachments: jsonb("attachments"), // [{fileName, fileUrl, uploadedAt}]
+  
+  // التقييم
+  overallRiskLevel: text("overall_risk_level"), // low, medium, high, critical
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  reviewedBy: text("reviewed_by"),
+  approvedBy: text("approved_by"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertDpiaAssessmentSchema = createInsertSchema(dpiaAssessments).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+  updatedAt: true,
+}).extend({
+  projectName: z.string().min(3, "يجب إدخال اسم المشروع"),
+  projectDescription: z.string().min(10, "يجب وصف المشروع"),
+  department: z.string().min(2, "يجب إدخال اسم القسم"),
+  dataTypes: z.array(z.object({
+    name: z.string(),
+    category: z.string(),
+    volume: z.string().optional(),
+    sensitivity: z.enum(["low", "medium", "high"]),
+  })).min(1, "يجب إدخال نوع واحد على الأقل من البيانات"),
+  dataSubjects: z.string().min(3, "يجب تحديد الفئات المستهدفة"),
+  necessityJustification: z.string().min(10, "يجب توضيح ضرورة المعالجة"),
+  proportionalityAssessment: z.string().min(10, "يجب تقييم التناسب"),
+  identifiedRisks: z.array(z.object({
+    risk: z.string(),
+    likelihood: z.enum(["low", "medium", "high"]),
+    impact: z.enum(["low", "medium", "high"]),
+    severity: z.enum(["low", "medium", "high", "critical"]),
+  })).min(1, "يجب تحديد مخاطرة واحدة على الأقل"),
+  mitigationMeasures: z.array(z.object({
+    measure: z.string(),
+    effectiveness: z.enum(["low", "medium", "high"]),
+    status: z.enum(["planned", "implemented", "ongoing"]),
+  })).min(1, "يجب تحديد تدبير وقائي واحد على الأقل"),
+  individualImpact: z.enum(["low", "medium", "high"], {
+    required_error: "يجب تقييم التأثير على الأفراد"
+  }),
+});
+
+export type InsertDpiaAssessment = z.infer<typeof insertDpiaAssessmentSchema>;
+export type DpiaAssessment = typeof dpiaAssessments.$inferSelect;
+
+// Update schema for DPIA - only allows updating specific mutable fields
+export const updateDpiaAssessmentSchema = insertDpiaAssessmentSchema.partial().extend({
+  completedAt: z.preprocess((val) => {
+    if (!val || val === '') return null;
+    const date = val instanceof Date ? val : new Date(val as string);
+    return isNaN(date.getTime()) ? null : date;
+  }, z.date().nullable()).optional(),
+  reviewedBy: z.string().optional(),
+  approvedBy: z.string().optional(),
+}).strict();

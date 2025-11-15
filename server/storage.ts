@@ -19,6 +19,12 @@ import {
   type InsertCmpSettings,
   type CmpScript,
   type InsertCmpScript,
+  type RopaEntry,
+  type InsertRopaEntry,
+  type DsarRequest,
+  type InsertDsarRequest,
+  type DpiaAssessment,
+  type InsertDpiaAssessment,
   complianceScans,
   complianceIssues,
   reports,
@@ -28,7 +34,10 @@ import {
   termsDocuments,
   complianceTasks,
   cmpSettings,
-  cmpScripts
+  cmpScripts,
+  ropaEntries,
+  dsarRequests,
+  dpiaAssessments
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -97,6 +106,29 @@ export interface IStorage {
   // Consent Records (Extended)
   getConsentRecordsByAnonymousId(anonymousId: string): Promise<ConsentRecord[]>;
   withdrawConsent(id: string, reason?: string): Promise<ConsentRecord | undefined>;
+  
+  // ROPA Entries - سجل أنشطة المعالجة
+  createRopaEntry(entry: InsertRopaEntry): Promise<RopaEntry>;
+  getRopaEntry(id: string): Promise<RopaEntry | undefined>;
+  updateRopaEntry(id: string, updates: Partial<RopaEntry>): Promise<RopaEntry | undefined>;
+  getAllRopaEntries(): Promise<RopaEntry[]>;
+  deleteRopaEntry(id: string): Promise<void>;
+  
+  // DSAR Requests - طلبات أصحاب البيانات
+  createDsarRequest(request: InsertDsarRequest): Promise<DsarRequest>;
+  getDsarRequest(id: string): Promise<DsarRequest | undefined>;
+  updateDsarRequest(id: string, updates: Partial<DsarRequest>): Promise<DsarRequest | undefined>;
+  getAllDsarRequests(): Promise<DsarRequest[]>;
+  deleteDsarRequest(id: string): Promise<void>;
+  getDsarRequestsByStatus(status: string): Promise<DsarRequest[]>;
+  
+  // DPIA Assessments - تقييم تأثير حماية البيانات
+  createDpiaAssessment(assessment: InsertDpiaAssessment): Promise<DpiaAssessment>;
+  getDpiaAssessment(id: string): Promise<DpiaAssessment | undefined>;
+  updateDpiaAssessment(id: string, updates: Partial<DpiaAssessment>): Promise<DpiaAssessment | undefined>;
+  getAllDpiaAssessments(): Promise<DpiaAssessment[]>;
+  deleteDpiaAssessment(id: string): Promise<void>;
+  getDpiaAssessmentsByStatus(status: string): Promise<DpiaAssessment[]>;
 }
 
 // Database storage implementation using Drizzle ORM
@@ -505,6 +537,155 @@ export class DatabaseStorage implements IStorage {
       .where(eq(consentRecords.id, id))
       .returning();
     return updatedConsent || undefined;
+  }
+
+  // ====================================
+  // Internal Compliance Management Module
+  // وحدة الامتثال الداخلي
+  // ====================================
+
+  // ROPA Entries - سجل أنشطة المعالجة
+  async createRopaEntry(entry: InsertRopaEntry): Promise<RopaEntry> {
+    const [ropaEntry] = await db
+      .insert(ropaEntries)
+      .values(entry)
+      .returning();
+    return ropaEntry;
+  }
+
+  async getRopaEntry(id: string): Promise<RopaEntry | undefined> {
+    const [entry] = await db
+      .select()
+      .from(ropaEntries)
+      .where(eq(ropaEntries.id, id));
+    return entry || undefined;
+  }
+
+  async updateRopaEntry(id: string, updates: Partial<RopaEntry>): Promise<RopaEntry | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updatedEntry] = await db
+      .update(ropaEntries)
+      .set({
+        ...updateFields,
+        updatedAt: new Date(),
+      })
+      .where(eq(ropaEntries.id, id))
+      .returning();
+    return updatedEntry || undefined;
+  }
+
+  async getAllRopaEntries(): Promise<RopaEntry[]> {
+    const entries = await db
+      .select()
+      .from(ropaEntries)
+      .orderBy(desc(ropaEntries.createdAt));
+    return entries;
+  }
+
+  async deleteRopaEntry(id: string): Promise<void> {
+    await db.delete(ropaEntries).where(eq(ropaEntries.id, id));
+  }
+
+  // DSAR Requests - طلبات أصحاب البيانات
+  async createDsarRequest(request: InsertDsarRequest): Promise<DsarRequest> {
+    const [dsarRequest] = await db
+      .insert(dsarRequests)
+      .values(request)
+      .returning();
+    return dsarRequest;
+  }
+
+  async getDsarRequest(id: string): Promise<DsarRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(dsarRequests)
+      .where(eq(dsarRequests.id, id));
+    return request || undefined;
+  }
+
+  async updateDsarRequest(id: string, updates: Partial<DsarRequest>): Promise<DsarRequest | undefined> {
+    const { id: _, submittedAt, createdAt, ...updateFields } = updates as any;
+    const [updatedRequest] = await db
+      .update(dsarRequests)
+      .set({
+        ...updateFields,
+        updatedAt: new Date(),
+      })
+      .where(eq(dsarRequests.id, id))
+      .returning();
+    return updatedRequest || undefined;
+  }
+
+  async getAllDsarRequests(): Promise<DsarRequest[]> {
+    const requests = await db
+      .select()
+      .from(dsarRequests)
+      .orderBy(desc(dsarRequests.submittedAt));
+    return requests;
+  }
+
+  async deleteDsarRequest(id: string): Promise<void> {
+    await db.delete(dsarRequests).where(eq(dsarRequests.id, id));
+  }
+
+  async getDsarRequestsByStatus(status: string): Promise<DsarRequest[]> {
+    const requests = await db
+      .select()
+      .from(dsarRequests)
+      .where(eq(dsarRequests.status, status))
+      .orderBy(desc(dsarRequests.submittedAt));
+    return requests;
+  }
+
+  // DPIA Assessments - تقييم تأثير حماية البيانات
+  async createDpiaAssessment(assessment: InsertDpiaAssessment): Promise<DpiaAssessment> {
+    const [dpiaAssessment] = await db
+      .insert(dpiaAssessments)
+      .values(assessment)
+      .returning();
+    return dpiaAssessment;
+  }
+
+  async getDpiaAssessment(id: string): Promise<DpiaAssessment | undefined> {
+    const [assessment] = await db
+      .select()
+      .from(dpiaAssessments)
+      .where(eq(dpiaAssessments.id, id));
+    return assessment || undefined;
+  }
+
+  async updateDpiaAssessment(id: string, updates: Partial<DpiaAssessment>): Promise<DpiaAssessment | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updatedAssessment] = await db
+      .update(dpiaAssessments)
+      .set({
+        ...updateFields,
+        updatedAt: new Date(),
+      })
+      .where(eq(dpiaAssessments.id, id))
+      .returning();
+    return updatedAssessment || undefined;
+  }
+
+  async getAllDpiaAssessments(): Promise<DpiaAssessment[]> {
+    const assessments = await db
+      .select()
+      .from(dpiaAssessments)
+      .orderBy(desc(dpiaAssessments.createdAt));
+    return assessments;
+  }
+
+  async deleteDpiaAssessment(id: string): Promise<void> {
+    await db.delete(dpiaAssessments).where(eq(dpiaAssessments.id, id));
+  }
+
+  async getDpiaAssessmentsByStatus(status: string): Promise<DpiaAssessment[]> {
+    const assessments = await db
+      .select()
+      .from(dpiaAssessments)
+      .where(eq(dpiaAssessments.status, status))
+      .orderBy(desc(dpiaAssessments.createdAt));
+    return assessments;
   }
 
   // Initialize default remediation templates if they don't exist
