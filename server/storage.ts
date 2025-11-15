@@ -46,7 +46,9 @@ import {
   dpiaAssessments,
   legalSources,
   termsTemplates,
-  templateSections
+  templateSections,
+  termsTemplateSections,
+  sectionLegalSources
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -817,10 +819,16 @@ export class DatabaseStorage implements IStorage {
     const template = await this.getTermsTemplate(templateId);
     if (!template) return null;
 
-    // Get sections linked to this template via junction table
+    // Get sections linked to this template via junction table (unique per section)
     const sectionsWithJoin = await db
       .select({
-        section: templateSections,
+        sectionId: templateSections.id,
+        slug: templateSections.slug,
+        heading: templateSections.heading,
+        clauseText: templateSections.clauseText,
+        placeholders: templateSections.placeholders,
+        createdAt: templateSections.createdAt,
+        updatedAt: templateSections.updatedAt,
         ordering: termsTemplateSections.ordering,
         isRequired: termsTemplateSections.isRequired,
       })
@@ -829,36 +837,50 @@ export class DatabaseStorage implements IStorage {
       .where(eq(termsTemplateSections.templateId, templateId))
       .orderBy(termsTemplateSections.ordering);
 
-    // For each section, get legal sources
-    const sectionsWithLegal = await Promise.all(
-      sectionsWithJoin.map(async ({ section, ordering, isRequired }) => {
-        const legalLinks = await db
-          .select({
-            source: legalSources,
-            articles: sectionLegalSources.articles,
-            relevanceNotes: sectionLegalSources.relevanceNotes,
-          })
-          .from(sectionLegalSources)
-          .innerJoin(legalSources, eq(sectionLegalSources.sourceId, legalSources.id))
-          .where(eq(sectionLegalSources.sectionId, section.id));
+    // Use Map to ensure unique sections (defensive against potential duplicates)
+    const sectionMap = new Map<string, any>();
+    
+    for (const sectionData of sectionsWithJoin) {
+      if (!sectionMap.has(sectionData.sectionId)) {
+        // Initialize section with empty legalBasis array
+        sectionMap.set(sectionData.sectionId, {
+          id: sectionData.sectionId,
+          slug: sectionData.slug,
+          heading: sectionData.heading,
+          clauseText: sectionData.clauseText,
+          placeholders: sectionData.placeholders,
+          createdAt: sectionData.createdAt,
+          updatedAt: sectionData.updatedAt,
+          ordering: sectionData.ordering,
+          isRequired: sectionData.isRequired,
+          legalBasis: [],
+        });
+      }
+    }
 
-        return {
-          ...section,
-          ordering,
-          isRequired,
-          legalBasis: legalLinks.map(link => ({
-            sourceCode: link.source.code,
-            sourceTitle: link.source.title,
-            articles: link.articles,
-            relevanceNotes: link.relevanceNotes,
-          })),
-        };
-      })
-    );
+    // For each unique section, fetch legal sources and populate legalBasis
+    for (const [sectionId, section] of sectionMap.entries()) {
+      const legalLinks = await db
+        .select({
+          sourceCode: legalSources.code,
+          sourceTitle: legalSources.title,
+          articles: sectionLegalSources.articles,
+          relevanceNotes: sectionLegalSources.relevanceNotes,
+        })
+        .from(sectionLegalSources)
+        .innerJoin(legalSources, eq(sectionLegalSources.sourceId, legalSources.id))
+        .where(eq(sectionLegalSources.sectionId, sectionId));
+
+      // Assign legalBasis (will only happen once per unique sectionId)
+      section.legalBasis = legalLinks;
+    }
+
+    // Convert Map to array - will maintain ordering since we added in order
+    const sections = Array.from(sectionMap.values());
 
     return {
       ...template,
-      sections: sectionsWithLegal,
+      sections,
     };
   }
 
