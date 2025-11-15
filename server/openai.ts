@@ -128,7 +128,7 @@ ${htmlContent.substring(0, 30000)}
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
@@ -216,7 +216,7 @@ ${JSON.stringify(issues, null, 2)}
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -362,7 +362,7 @@ export async function extractRegulationReferences(
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -787,7 +787,7 @@ ${data.disputeResolution ? `- حل النزاعات: ${data.disputeResolution}` 
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
