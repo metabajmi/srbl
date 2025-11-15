@@ -279,7 +279,9 @@ export default function DpiaManagementPage() {
       overallRiskLevel: assessment.overallRiskLevel as any || "low",
       reviewedBy: assessment.reviewedBy || "",
       approvedBy: assessment.approvedBy || "",
-      attachments: [],
+      attachments: assessment.attachments && Array.isArray(assessment.attachments) 
+        ? assessment.attachments as any[]
+        : [],
     });
   };
 
