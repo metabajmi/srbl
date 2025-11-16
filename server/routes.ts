@@ -26,6 +26,7 @@ import {
   type RetrievedContext 
 } from "./openai";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 
 // Helper function to validate URL for security
 function validateUrl(url: string): boolean {
@@ -149,6 +150,147 @@ async function processScan(scanId: string) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
+  // ============================================
+  // Authentication Routes
+  // ============================================
+  
+  // Register new user
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, password, name } = req.body;
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: "البريد الإلكتروني مسجل مسبقاً" });
+      }
+      
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Create user
+      const user = await storage.createUser({
+        email,
+        password: hashedPassword,
+        name,
+      });
+      
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+      
+      res.status(201).json({ user: userWithoutPassword });
+    } catch (error) {
+      console.error("Error registering user:", error);
+      res.status(500).json({ error: "فشل في تسجيل المستخدم" });
+    }
+  });
+  
+  // Login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
+      }
+      
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
+      }
+      
+      // Create session (implement passport later)
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword });
+    } catch (error) {
+      console.error("Error logging in:", error);
+      res.status(500).json({ error: "فشل في تسجيل الدخول" });
+    }
+  });
+  
+  // Get current user
+  app.get("/api/auth/me", async (req, res) => {
+    // TODO: Implement session check
+    res.status(401).json({ error: "غير مصرح" });
+  });
+  
+  // Logout
+  app.post("/api/auth/logout", async (req, res) => {
+    // TODO: Implement session destroy
+    res.json({ message: "تم تسجيل الخروج بنجاح" });
+  });
+
+  // ============================================
+  // Client Policy Routes
+  // ============================================
+  
+  // Get client policies
+  app.get("/api/client/policies", async (req, res) => {
+    try {
+      // TODO: Get from authenticated user
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const policies = await storage.getClientPoliciesByUserId(userId);
+      res.json(policies);
+    } catch (error) {
+      console.error("Error fetching client policies:", error);
+      res.status(500).json({ error: "فشل في جلب السياسات" });
+    }
+  });
+  
+  // Create client policy
+  app.post("/api/client/policies", async (req, res) => {
+    try {
+      // TODO: Get from authenticated user
+      const policy = await storage.createClientPolicy(req.body);
+      res.status(201).json(policy);
+    } catch (error) {
+      console.error("Error creating client policy:", error);
+      res.status(500).json({ error: "فشل في إنشاء السياسة" });
+    }
+  });
+
+  // ============================================
+  // Client Request Routes
+  // ============================================
+  
+  // Get client requests
+  app.get("/api/client/requests", async (req, res) => {
+    try {
+      // TODO: Get from authenticated user
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const requests = await storage.getClientRequestsByUserId(userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching client requests:", error);
+      res.status(500).json({ error: "فشل في جلب الطلبات" });
+    }
+  });
+  
+  // Create client request
+  app.post("/api/client/requests", async (req, res) => {
+    try {
+      // TODO: Get from authenticated user
+      const request = await storage.createClientRequest(req.body);
+      res.status(201).json(request);
+    } catch (error) {
+      console.error("Error creating client request:", error);
+      res.status(500).json({ error: "فشل في إنشاء الطلب" });
+    }
+  });
+
+  // ============================================
+  // Compliance Scan Routes
+  // ============================================
+  
   // Create a new compliance scan
   app.post("/api/scans", async (req, res) => {
     try {

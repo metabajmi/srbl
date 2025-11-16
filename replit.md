@@ -18,10 +18,19 @@ This project is a web application assisting organizations in complying with Saud
 - ✅ Database: 9 PDPL articles with embeddings (Arabic + English), conversation tracking
 - ✅ E2E Testing: All features tested and working (chat, feedback, context, new conversation)
 
+**Client Authentication System (In Development - Nov 16, 2025):**
+- ✅ Database: 3 tables (users, clientPolicies, clientRequests) with proper relations
+- ✅ Backend: Auth endpoints (register, login), bcrypt password hashing
+- ✅ Frontend: SignUpPage, LoginPage, DashboardPage with RTL support
+- ✅ E2E Testing: Full flow working (signup → login → dashboard → logout)
+- ⚠️ Session Management: Currently using localStorage (temporary), needs Passport integration
+- ⏳ TODO: Proper session middleware, protected routes, email verification
+
 **Pending Verification:**
 - Cookie Consent Management pages
-- Home page dashboard
+- Home page dashboard  
 - Website scanner functionality
+- Client policies & requests pages
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
