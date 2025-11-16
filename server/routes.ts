@@ -138,15 +138,24 @@ async function processScan(scanId: string) {
       else if (issue.severity === "suggestion") suggestionCount++;
     }
     
-    // Update scan with results
+    // Update scan with results including new findings
     await storage.updateScan(scanId, {
       status: "completed",
       completedAt: new Date(),
       overallScore: analysisResult.overallScore,
+      complianceLevel: analysisResult.complianceLevel,
       issuesCount: analysisResult.issues.length,
       criticalCount,
       warningCount,
       suggestionCount,
+      // Store compliance findings
+      hasPrivacyPolicy: analysisResult.findings.hasPrivacyPolicy,
+      privacyPolicyUrl: analysisResult.findings.privacyPolicyUrl || null,
+      hasTermsAndConditions: analysisResult.findings.hasTermsAndConditions,
+      termsAndConditionsUrl: analysisResult.findings.termsAndConditionsUrl || null,
+      hasCookieBanner: analysisResult.findings.hasCookieBanner,
+      hasDataCollectionForms: analysisResult.findings.hasDataCollectionForms,
+      hasContactInfo: analysisResult.findings.hasContactInfo,
       analysisResult: analysisResult as any,
     });
     
