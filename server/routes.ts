@@ -65,7 +65,7 @@ function validateUrl(url: string): boolean {
   }
 }
 
-// Helper function to fetch website content
+// Helper function to fetch website content with improved error handling
 async function fetchWebsiteContent(url: string): Promise<string> {
   if (!validateUrl(url)) {
     throw new Error("عنوان URL غير صالح أو محظور لأسباب أمنية");
@@ -76,18 +76,47 @@ async function fetchWebsiteContent(url: string): Promise<string> {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       },
-      signal: AbortSignal.timeout(30000) // 30 second timeout
+      signal: AbortSignal.timeout(45000), // 45 second timeout for slow websites
+      redirect: 'follow' // Follow redirects automatically
     });
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch website: ${response.statusText}`);
+      if (response.status === 404) {
+        throw new Error("الموقع غير موجود (404). تأكد من صحة الرابط.");
+      } else if (response.status === 403) {
+        throw new Error("تم رفض الوصول إلى الموقع (403). قد يكون الموقع محمياً.");
+      } else if (response.status >= 500) {
+        throw new Error("خطأ في خادم الموقع المستهدف. حاول مرة أخرى لاحقاً.");
+      }
+      throw new Error(`فشل في جلب الموقع: ${response.statusText}`);
     }
     
     const html = await response.text();
+    if (!html || html.length < 100) {
+      throw new Error("الموقع فارغ أو لا يحتوي على محتوى كافٍ للفحص");
+    }
+    
     return html;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching website:", error);
-    throw new Error("فشل في الوصول إلى الموقع المطلوب");
+    
+    // Provide user-friendly error messages
+    if (error.name === 'AbortError') {
+      throw new Error("انتهت مهلة الاتصال بالموقع. تأكد من أن الموقع يعمل أو حاول مرة أخرى.");
+    } else if (error.message?.includes('ENOTFOUND')) {
+      throw new Error("لم يتم العثور على الموقع. تأكد من صحة الرابط.");
+    } else if (error.message?.includes('ECONNREFUSED')) {
+      throw new Error("تم رفض الاتصال بالموقع. قد يكون الموقع غير متاح حالياً.");
+    } else if (error.message?.includes('ETIMEDOUT')) {
+      throw new Error("انتهت مهلة الاتصال. تحقق من اتصالك بالإنترنت أو حاول لاحقاً.");
+    }
+    
+    // If error message is already in Arabic, pass it through
+    if (error.message && error.message.match(/[\u0600-\u06FF]/)) {
+      throw error;
+    }
+    
+    throw new Error("فشل في الوصول إلى الموقع. تأكد من صحة الرابط وحاول مرة أخرى.");
   }
 }
 
@@ -159,11 +188,26 @@ async function processScan(scanId: string) {
       analysisResult: analysisResult as any,
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error processing scan:", error);
+    
+    // Extract user-friendly error message
+    let errorMessage = "حدث خطأ غير متوقع أثناء الفحص";
+    if (error.message) {
+      // If error is already in Arabic, use it
+      if (error.message.match(/[\u0600-\u06FF]/)) {
+        errorMessage = error.message;
+      } else if (error.message.includes('timeout')) {
+        errorMessage = "انتهت مهلة الفحص. قد يكون الموقع بطيئاً. حاول مرة أخرى.";
+      } else if (error.message.includes('fetch')) {
+        errorMessage = "فشل في الوصول إلى الموقع. تأكد من صحة الرابط.";
+      }
+    }
+    
     await storage.updateScan(scanId, { 
       status: "failed",
-      completedAt: new Date()
+      completedAt: new Date(),
+      errorMessage
     });
   }
 }
