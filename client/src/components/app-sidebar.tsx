@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Shield, FileText, CheckSquare, ScrollText, ClipboardList, Home, FileSearch, Cookie, Sparkles } from "lucide-react";
+import { Shield, FileText, CheckSquare, ScrollText, Home, FileSearch, Cookie, Sparkles } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -50,11 +50,6 @@ const toolsItems = [
     title: "إعدادات الخصوصية",
     url: "/preferences-center",
     icon: Cookie,
-  },
-  {
-    title: "الامتثال الداخلي",
-    url: "/internal-compliance",
-    icon: ClipboardList,
   },
 ];
 
