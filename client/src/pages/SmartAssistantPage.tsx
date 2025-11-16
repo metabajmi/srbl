@@ -98,7 +98,10 @@ export default function SmartAssistantPage() {
             content: message,
             createdAt: new Date().toISOString(),
           },
-          data.message,
+          {
+            ...data.message,
+            wasHelpful: undefined,
+          },
         ];
       });
     },
