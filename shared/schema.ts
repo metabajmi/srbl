@@ -1235,3 +1235,70 @@ export const clientRequestsRelations = relations(clientRequests, ({ one }) => ({
     references: [clientPolicies.id],
   }),
 }));
+
+// ============================================
+// Admin Portal Tables
+// ============================================
+
+// Admin Users - المستخدمون الإداريون
+export const adminUsers = pgTable("admin_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default("support"), // admin, legal, support
+  isActive: boolean("is_active").notNull().default(true),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
+  id: true,
+  lastLogin: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  email: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
+  password: z.string().min(8, "يجب أن تكون كلمة المرور 8 أحرف على الأقل"),
+  name: z.string().min(2, "يجب إدخال الاسم"),
+  role: z.enum(["admin", "legal", "support"]).default("support"),
+});
+
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+export type AdminUser = typeof adminUsers.$inferSelect;
+
+// Audit Logs - سجل التدقيق
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminUserId: varchar("admin_user_id").references(() => adminUsers.id),
+  action: text("action").notNull(), // login, logout, create_user, update_policy, etc.
+  entityType: text("entity_type"), // user, policy, request, etc.
+  entityId: text("entity_id"),
+  details: text("details"), // JSON string with additional info
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  action: z.string().min(1, "يجب تحديد الإجراء"),
+});
+
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+
+// Relations
+export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
+  auditLogs: many(auditLogs),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  adminUser: one(adminUsers, {
+    fields: [auditLogs.adminUserId],
+    references: [adminUsers.id],
+  }),
+}));
