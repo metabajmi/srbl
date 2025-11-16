@@ -57,6 +57,15 @@ This project is a web application assisting organizations in complying with Saud
 - ✅ Comprehensive Compliance Checking: Privacy Policy, Terms & Conditions, Cookie Banner, Contact Info
 - ✅ Database Schema: Enhanced with compliance fields (hasPrivacyPolicy, hasTermsAndConditions, hasCookieBanner, hasContactInfo, complianceLevel)
 - ✅ OpenAI Integration: Improved analysis prompt for accurate detection of legal documents and compliance elements
+- ✅ **Deterministic Scoring System (Nov 16, 2025):** Fixed critical inconsistency bug
+  - **Issue:** Same website returned 100% compliance first scan, 20% second scan
+  - **Root Cause:** OpenAI used default temperature=1 (random), and final score relied on LLM's free-form output
+  - **Solution:** 
+    - Set OpenAI to temperature=0 and top_p=0.1 for deterministic responses
+    - Implemented rule-based scoring: Privacy Policy (+25), Terms (+25), Cookie Banner (+5), Contact (+5)
+    - Severity-based deductions: Critical (-15 each), Warning (-5 each), Suggestion (-2 each)
+    - Compliance levels: High ≥70, Medium ≥40, Low <40
+  - **E2E Testing:** Verified consistency - two scans of same website produce identical scores and levels
 - ✅ Frontend UI: Compliance level badges (low/medium/high), compliance findings cards with visual status indicators
 - ✅ Error Handling: Specific Arabic error messages for timeout, SSL, DNS failures, redirects
 - ✅ Export Functionality: PDF/HTML/JSON report generation with proper concurrent request protection
@@ -65,7 +74,8 @@ This project is a web application assisting organizations in complying with Saud
   - Toast notifications for success/error states
   - Download initiated via `/api/reports/:id/download`
 - ✅ CTA Integration: Low/medium compliance shows "استكشف خدماتنا" button linking to services
-- ✅ E2E Testing: Full scanner flow verified (scan → analysis → display → export → navigation)
+- ✅ Navigation: BackButton component added to all service pages including PreferencesCenterPage
+- ✅ E2E Testing: Full scanner flow verified (scan → analysis → display → export → navigation → consistency)
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
