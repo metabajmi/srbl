@@ -18,11 +18,21 @@ import RopaManagementPage from "@/pages/RopaManagementPage";
 import DsarManagementPage from "@/pages/DsarManagementPage";
 import DpiaManagementPage from "@/pages/DpiaManagementPage";
 import SmartAssistantPage from "@/pages/SmartAssistantPage";
+import SignUpPage from "@/pages/SignUpPage";
+import LoginPage from "@/pages/LoginPage";
+import DashboardPage from "@/pages/DashboardPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
+      {/* Auth pages */}
+      <Route path="/signup" component={SignUpPage} />
+      <Route path="/login" component={LoginPage} />
+      
+      {/* Dashboard */}
+      <Route path="/dashboard" component={DashboardPage} />
+      
       {/* Main pages */}
       <Route path="/" component={HomePage} />
       <Route path="/scans" component={HomePage} />

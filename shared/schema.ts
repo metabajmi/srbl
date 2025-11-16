@@ -1084,3 +1084,154 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
     references: [chatConversations.id],
   }),
 }));
+
+// ============================================
+// Client Authentication & Management System
+// ============================================
+
+// Users (Clients) - العملاء
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(), // hashed password
+  name: text("name").notNull(),
+  isEmailVerified: boolean("is_email_verified").default(false),
+  emailVerificationToken: text("email_verification_token"),
+  resetPasswordToken: text("reset_password_token"),
+  resetPasswordExpiry: timestamp("reset_password_expiry"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  isEmailVerified: true,
+  emailVerificationToken: true,
+  resetPasswordToken: true,
+  resetPasswordExpiry: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  email: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
+  password: z.string().min(8, "يجب أن تكون كلمة المرور 8 أحرف على الأقل"),
+  name: z.string().min(2, "يجب إدخال الاسم"),
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+// Client Policies - سياسات العملاء
+export const clientPolicies = pgTable("client_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  websiteName: text("website_name").notNull(),
+  websiteUrl: text("website_url"),
+  policyType: text("policy_type").notNull(), // privacy, cookies, terms
+  status: text("status").notNull().default("draft"), // draft, active, needs_update
+  
+  // Reference to generated documents
+  policyDocumentId: varchar("policy_document_id").references(() => policyDocuments.id),
+  termsDocumentId: varchar("terms_document_id").references(() => termsDocuments.id),
+  
+  // Embed code for website integration
+  embedCode: text("embed_code"),
+  
+  lastModified: timestamp("last_modified").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertClientPolicySchema = createInsertSchema(clientPolicies).omit({
+  id: true,
+  embedCode: true,
+  lastModified: true,
+  createdAt: true,
+}).extend({
+  userId: z.string(),
+  websiteName: z.string().min(2, "يجب إدخال اسم الموقع"),
+  policyType: z.enum(["privacy", "cookies", "terms"], {
+    required_error: "يجب تحديد نوع السياسة"
+  }),
+  status: z.enum(["draft", "active", "needs_update"]).default("draft"),
+});
+
+export type InsertClientPolicy = z.infer<typeof insertClientPolicySchema>;
+export type ClientPolicy = typeof clientPolicies.$inferSelect;
+
+// Client Requests - طلبات العملاء
+export const clientRequests = pgTable("client_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  requestNumber: text("request_number").notNull().unique(), // REQ-20250116-0001
+  requestType: text("request_type").notNull(), // create_policy, modify_policy, consultation, support
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("pending"), // pending, in_progress, completed, rejected, awaiting_info
+  priority: text("priority").default("normal"), // low, normal, high, urgent
+  
+  // Related policy if applicable
+  relatedPolicyId: varchar("related_policy_id").references(() => clientPolicies.id),
+  
+  // Staff notes and responses
+  staffNotes: text("staff_notes"),
+  staffResponse: text("staff_response"),
+  assignedTo: text("assigned_to"), // Staff member handling the request
+  
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertClientRequestSchema = createInsertSchema(clientRequests).omit({
+  id: true,
+  requestNumber: true,
+  staffNotes: true,
+  staffResponse: true,
+  assignedTo: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  userId: z.string(),
+  requestType: z.enum(["create_policy", "modify_policy", "consultation", "support"], {
+    required_error: "يجب تحديد نوع الطلب"
+  }),
+  title: z.string().min(3, "يجب إدخال عنوان الطلب"),
+  status: z.enum(["pending", "in_progress", "completed", "rejected", "awaiting_info"]).default("pending"),
+  priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+});
+
+export type InsertClientRequest = z.infer<typeof insertClientRequestSchema>;
+export type ClientRequest = typeof clientRequests.$inferSelect;
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  policies: many(clientPolicies),
+  requests: many(clientRequests),
+}));
+
+export const clientPoliciesRelations = relations(clientPolicies, ({ one, many }) => ({
+  user: one(users, {
+    fields: [clientPolicies.userId],
+    references: [users.id],
+  }),
+  policyDocument: one(policyDocuments, {
+    fields: [clientPolicies.policyDocumentId],
+    references: [policyDocuments.id],
+  }),
+  termsDocument: one(termsDocuments, {
+    fields: [clientPolicies.termsDocumentId],
+    references: [termsDocuments.id],
+  }),
+  requests: many(clientRequests),
+}));
+
+export const clientRequestsRelations = relations(clientRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [clientRequests.userId],
+    references: [users.id],
+  }),
+  relatedPolicy: one(clientPolicies, {
+    fields: [clientRequests.relatedPolicyId],
+    references: [clientPolicies.id],
+  }),
+}));

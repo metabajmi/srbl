@@ -37,6 +37,12 @@ import {
   type InsertChatConversation,
   type ChatMessage,
   type InsertChatMessage,
+  type User,
+  type InsertUser,
+  type ClientPolicy,
+  type InsertClientPolicy,
+  type ClientRequest,
+  type InsertClientRequest,
   complianceScans,
   complianceIssues,
   reports,
@@ -57,7 +63,10 @@ import {
   sectionLegalSources,
   knowledgeArticles,
   chatConversations,
-  chatMessages
+  chatMessages,
+  users,
+  clientPolicies,
+  clientRequests
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql as drizzleSql } from "drizzle-orm";
@@ -193,6 +202,28 @@ export interface IStorage {
   getChatMessage(id: string): Promise<ChatMessage | undefined>;
   getMessagesByConversationId(conversationId: string): Promise<ChatMessage[]>;
   updateChatMessage(id: string, updates: Partial<ChatMessage>): Promise<ChatMessage | undefined>;
+  
+  // Client Management - إدارة العملاء
+  createUser(user: InsertUser): Promise<User>;
+  getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
+  
+  // Client Policies - سياسات العملاء
+  createClientPolicy(policy: InsertClientPolicy): Promise<ClientPolicy>;
+  getClientPolicy(id: string): Promise<ClientPolicy | undefined>;
+  getClientPoliciesByUserId(userId: string): Promise<ClientPolicy[]>;
+  updateClientPolicy(id: string, updates: Partial<ClientPolicy>): Promise<ClientPolicy | undefined>;
+  deleteClientPolicy(id: string): Promise<void>;
+  
+  // Client Requests - طلبات العملاء
+  createClientRequest(request: InsertClientRequest): Promise<ClientRequest>;
+  getClientRequest(id: string): Promise<ClientRequest | undefined>;
+  getClientRequestsByUserId(userId: string): Promise<ClientRequest[]>;
+  updateClientRequest(id: string, updates: Partial<ClientRequest>): Promise<ClientRequest | undefined>;
+  deleteClientRequest(id: string): Promise<void>;
+  generateRequestNumber(): Promise<string>;
 }
 
 // Database storage implementation using Drizzle ORM
@@ -1190,6 +1221,126 @@ export class DatabaseStorage implements IStorage {
       .where(eq(chatMessages.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  // Client Management - إدارة العملاء
+  async createUser(user: InsertUser): Promise<User> {
+    const [created] = await db.insert(users).values(user).returning();
+    return created;
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updated] = await db
+      .update(users)
+      .set({ ...updateFields, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
+  // Client Policies - سياسات العملاء
+  async createClientPolicy(policy: InsertClientPolicy): Promise<ClientPolicy> {
+    const [created] = await db.insert(clientPolicies).values(policy).returning();
+    return created;
+  }
+
+  async getClientPolicy(id: string): Promise<ClientPolicy | undefined> {
+    const [policy] = await db.select().from(clientPolicies).where(eq(clientPolicies.id, id));
+    return policy || undefined;
+  }
+
+  async getClientPoliciesByUserId(userId: string): Promise<ClientPolicy[]> {
+    return await db
+      .select()
+      .from(clientPolicies)
+      .where(eq(clientPolicies.userId, userId))
+      .orderBy(desc(clientPolicies.createdAt));
+  }
+
+  async updateClientPolicy(id: string, updates: Partial<ClientPolicy>): Promise<ClientPolicy | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updated] = await db
+      .update(clientPolicies)
+      .set({ ...updateFields, lastModified: new Date() })
+      .where(eq(clientPolicies.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteClientPolicy(id: string): Promise<void> {
+    await db.delete(clientPolicies).where(eq(clientPolicies.id, id));
+  }
+
+  // Client Requests - طلبات العملاء
+  async generateRequestNumber(): Promise<string> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const date = `${year}${month}${day}`;
+    
+    // Get the count of requests created today
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const [result] = await db
+      .select({ count: drizzleSql<number>`count(*)::int` })
+      .from(clientRequests)
+      .where(drizzleSql`${clientRequests.createdAt} >= ${todayStart}`);
+    
+    const count = result?.count || 0;
+    const sequence = String(count + 1).padStart(4, '0');
+    
+    return `REQ-${date}-${sequence}`;
+  }
+
+  async createClientRequest(request: InsertClientRequest): Promise<ClientRequest> {
+    const requestNumber = await this.generateRequestNumber();
+    const [created] = await db
+      .insert(clientRequests)
+      .values({ ...request, requestNumber })
+      .returning();
+    return created;
+  }
+
+  async getClientRequest(id: string): Promise<ClientRequest | undefined> {
+    const [request] = await db.select().from(clientRequests).where(eq(clientRequests.id, id));
+    return request || undefined;
+  }
+
+  async getClientRequestsByUserId(userId: string): Promise<ClientRequest[]> {
+    return await db
+      .select()
+      .from(clientRequests)
+      .where(eq(clientRequests.userId, userId))
+      .orderBy(desc(clientRequests.createdAt));
+  }
+
+  async updateClientRequest(id: string, updates: Partial<ClientRequest>): Promise<ClientRequest | undefined> {
+    const { id: _, createdAt, requestNumber, ...updateFields } = updates as any;
+    const [updated] = await db
+      .update(clientRequests)
+      .set({ ...updateFields, updatedAt: new Date() })
+      .where(eq(clientRequests.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteClientRequest(id: string): Promise<void> {
+    await db.delete(clientRequests).where(eq(clientRequests.id, id));
   }
 }
 
