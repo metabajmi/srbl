@@ -1,5 +1,8 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
 import { storage } from "./storage";
 import { 
   insertComplianceScanSchema, 
@@ -27,6 +30,14 @@ import {
 } from "./openai";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+
+declare module "express-session" {
+  interface SessionData {
+    userId?: string;
+    adminId?: string;
+    adminRole?: "admin" | "legal" | "support";
+  }
+}
 
 // Helper function to validate URL for security
 function validateUrl(url: string): boolean {
@@ -149,6 +160,72 @@ async function processScan(scanId: string) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // ============================================
+  // Session Configuration
+  // ============================================
+  const PgSession = connectPgSimple(session);
+  
+  app.use(
+    session({
+      store: new PgSession({
+        pool,
+        tableName: "session",
+        createTableIfMissing: true,
+      }),
+      secret: process.env.SESSION_SECRET || "pdpl-compliance-secret-key-change-in-production",
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      },
+    })
+  );
+
+  // ============================================
+  // Authentication Middleware
+  // ============================================
+  
+  // Middleware to check if user is authenticated
+  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "غير مصرح. يرجى تسجيل الدخول" });
+    }
+    next();
+  };
+  
+  // Middleware to check if admin is authenticated
+  const requireAdminAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session.adminId) {
+      return res.status(401).json({ message: "غير مصرح. يرجى تسجيل الدخول كمسؤول" });
+    }
+    next();
+  };
+  
+  // Middleware to check admin role (admin only)
+  const requireAdminRole = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session.adminId) {
+      return res.status(401).json({ message: "غير مصرح. يرجى تسجيل الدخول كمسؤول" });
+    }
+    if (req.session.adminRole !== "admin") {
+      return res.status(403).json({ message: "غير مصرح. هذه الصلاحية متاحة للمسؤولين فقط" });
+    }
+    next();
+  };
+  
+  // Middleware to check admin or legal role
+  const requireAdminOrLegal = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session.adminId) {
+      return res.status(401).json({ message: "غير مصرح. يرجى تسجيل الدخول كمسؤول" });
+    }
+    if (req.session.adminRole !== "admin" && req.session.adminRole !== "legal") {
+      return res.status(403).json({ message: "غير مصرح. هذه الصلاحية متاحة للمسؤولين والقانونيين فقط" });
+    }
+    next();
+  };
 
   // ============================================
   // Authentication Routes
@@ -175,6 +252,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name,
       });
       
+      // Create session
+      req.session.userId = user.id.toString();
+      
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       
@@ -200,7 +280,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
-      // Create session (implement passport later)
+      // Regenerate session to prevent session fixation
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
+      // Create session
+      req.session.userId = user.id.toString();
+      
+      // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       res.json({ user: userWithoutPassword });
     } catch (error) {
@@ -210,15 +301,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get current user
-  app.get("/api/auth/me", async (req, res) => {
-    // TODO: Implement session check
-    res.status(401).json({ error: "غير مصرح" });
+  app.get("/api/auth/me", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "المستخدم غير موجود" });
+      }
+      
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword });
+    } catch (error) {
+      console.error("Error getting current user:", error);
+      res.status(500).json({ error: "فشل في جلب بيانات المستخدم" });
+    }
   });
   
   // Logout
-  app.post("/api/auth/logout", async (req, res) => {
-    // TODO: Implement session destroy
-    res.json({ message: "تم تسجيل الخروج بنجاح" });
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Error destroying session:", err);
+        return res.status(500).json({ error: "فشل في تسجيل الخروج" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ message: "تم تسجيل الخروج بنجاح" });
+    });
   });
 
   // ============================================
@@ -226,15 +333,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   
   // Get client policies
-  app.get("/api/client/policies", async (req, res) => {
+  app.get("/api/client/policies", requireAuth, async (req, res) => {
     try {
-      // Get userId from query or body (temporary - will use session later)
-      const userId = (req.query.userId as string) || (req.body?.userId);
-      if (!userId) {
-        return res.status(401).json({ error: "غير مصرح" });
-      }
-      
-      const policies = await storage.getClientPoliciesByUserId(userId);
+      const policies = await storage.getClientPoliciesByUserId(req.session.userId!.toString());
       res.json(policies);
     } catch (error) {
       console.error("Error fetching client policies:", error);
@@ -243,17 +344,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create client policy
-  app.post("/api/client/policies", async (req, res) => {
+  app.post("/api/client/policies", requireAuth, async (req, res) => {
     try {
-      // Expect userId in request body (temporary - will use session later)
-      const { userId, ...policyData } = req.body;
-      if (!userId) {
-        return res.status(401).json({ error: "غير مصرح" });
-      }
-      
       const policy = await storage.createClientPolicy({
-        ...policyData,
-        userId,
+        ...req.body,
+        userId: req.session.userId!.toString(),
       });
       res.status(201).json(policy);
     } catch (error) {
@@ -267,15 +362,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   
   // Get client requests
-  app.get("/api/client/requests", async (req, res) => {
+  app.get("/api/client/requests", requireAuth, async (req, res) => {
     try {
-      // Get userId from query or body (temporary - will use session later)
-      const userId = (req.query.userId as string) || (req.body?.userId);
-      if (!userId) {
-        return res.status(401).json({ error: "غير مصرح" });
-      }
-      
-      const requests = await storage.getClientRequestsByUserId(userId);
+      const requests = await storage.getClientRequestsByUserId(req.session.userId!.toString());
       res.json(requests);
     } catch (error) {
       console.error("Error fetching client requests:", error);
@@ -284,17 +373,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create client request
-  app.post("/api/client/requests", async (req, res) => {
+  app.post("/api/client/requests", requireAuth, async (req, res) => {
     try {
-      // Expect userId in request body (temporary - will use session later)
-      const { userId, ...requestData } = req.body;
-      if (!userId) {
-        return res.status(401).json({ error: "غير مصرح" });
-      }
-      
       const request = await storage.createClientRequest({
-        ...requestData,
-        userId,
+        ...req.body,
+        userId: req.session.userId!.toString(),
       });
       res.status(201).json(request);
     } catch (error) {
@@ -1336,46 +1419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Routes - مسارات لوحة التحكم الإدارية
   // ============================================
 
-  // Admin Authentication
-  app.post("/api/admin/register", async (req, res) => {
-    try {
-      const validatedData = z.object({
-        email: z.string().email(),
-        password: z.string().min(8),
-        name: z.string().min(2),
-        role: z.enum(["admin", "legal", "support"]).default("support"),
-      }).parse(req.body);
-
-      const existingAdmin = await storage.getAdminUserByEmail(validatedData.email);
-      if (existingAdmin) {
-        return res.status(400).json({ message: "البريد الإلكتروني مستخدم بالفعل" });
-      }
-
-      const hashedPassword = await bcrypt.hash(validatedData.password, 10);
-      const admin = await storage.createAdminUser({
-        ...validatedData,
-        password: hashedPassword,
-      });
-
-      await storage.createAuditLog({
-        adminUserId: admin.id,
-        action: "admin_register",
-        entityType: "admin_user",
-        entityId: admin.id,
-        details: JSON.stringify({ email: admin.email, role: admin.role }),
-      });
-
-      const { password, ...adminWithoutPassword } = admin;
-      res.json(adminWithoutPassword);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "بيانات غير صحيحة", errors: error.errors });
-      }
-      console.error("Admin registration error:", error);
-      res.status(500).json({ message: "حدث خطأ أثناء إنشاء الحساب" });
-    }
-  });
-
+  // Admin Login (Registration disabled - admin accounts created manually)
   app.post("/api/admin/login", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -1398,13 +1442,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
       }
 
+      // Regenerate session to prevent session fixation
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      // Create admin session
+      req.session.adminId = admin.id.toString();
+      req.session.adminRole = admin.role as "admin" | "legal" | "support";
+
       await storage.updateAdminLastLogin(admin.id);
       await storage.createAuditLog({
-        adminUserId: admin.id,
+        adminUserId: admin.id.toString(),
         action: "admin_login",
         entityType: "admin_user",
-        entityId: admin.id,
-        details: JSON.stringify({ email: admin.email }),
+        entityId: admin.id.toString(),
+        details: JSON.stringify({ email: admin.email, role: admin.role }),
         ipAddress: req.ip,
         userAgent: req.headers['user-agent'],
       });
@@ -1416,8 +1472,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "حدث خطأ أثناء تسجيل الدخول" });
     }
   });
+  
+  // Get current admin
+  app.get("/api/admin/me", requireAdminAuth, async (req, res) => {
+    try {
+      const admin = await storage.getAdminUser(req.session.adminId!);
+      if (!admin) {
+        return res.status(404).json({ message: "المشرف غير موجود" });
+      }
+      
+      const { password: _, ...adminWithoutPassword } = admin;
+      res.json(adminWithoutPassword);
+    } catch (error) {
+      console.error("Error getting current admin:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء جلب بيانات المشرف" });
+    }
+  });
+  
+  // Admin logout
+  app.post("/api/admin/logout", requireAdminAuth, (req, res) => {
+    const adminId = req.session.adminId;
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Error destroying admin session:", err);
+        return res.status(500).json({ message: "فشل في تسجيل الخروج" });
+      }
+      
+      if (adminId) {
+        storage.createAuditLog({
+          adminUserId: adminId,
+          action: "admin_logout",
+          entityType: "admin_user",
+          entityId: adminId,
+          details: JSON.stringify({}),
+        }).catch(console.error);
+      }
+      
+      res.clearCookie("connect.sid");
+      res.json({ message: "تم تسجيل الخروج بنجاح" });
+    });
+  });
 
-  app.get("/api/admin/stats", async (req, res) => {
+  // Admin statistics (all roles)
+  app.get("/api/admin/stats", requireAdminAuth, async (req, res) => {
     try {
       const stats = await storage.getAdminStats();
       res.json(stats);
@@ -1427,7 +1524,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/users", async (req, res) => {
+  // Get all users (admin & legal only)
+  app.get("/api/admin/users", requireAdminOrLegal, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       const usersWithoutPasswords = users.map(({ password, ...user }) => user);
@@ -1438,48 +1536,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/users/:id", async (req, res) => {
+  // Update user (admin only)
+  app.patch("/api/admin/users/:id", requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
-      const updates = req.body;
-      delete updates.password;
-
-      const updated = await storage.updateUser(id, updates);
+      
+      // Validate update schema (only allow specific fields)
+      const updateSchema = z.object({
+        name: z.string().min(2).optional(),
+        email: z.string().email().optional(),
+      }).strict();
+      
+      const validatedUpdates = updateSchema.parse(req.body);
+      
+      const updated = await storage.updateUser(id, validatedUpdates);
       if (!updated) {
         return res.status(404).json({ message: "المستخدم غير موجود" });
       }
 
-      if (req.body.adminUserId) {
-        await storage.createAuditLog({
-          adminUserId: req.body.adminUserId,
-          action: "update_user",
-          entityType: "user",
-          entityId: id,
-          details: JSON.stringify(updates),
-        });
-      }
+      await storage.createAuditLog({
+        adminUserId: req.session.adminId!,
+        action: "update_user",
+        entityType: "user",
+        entityId: id,
+        details: JSON.stringify(validatedUpdates),
+      });
 
       const { password: _, ...userWithoutPassword } = updated;
       res.json(userWithoutPassword);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: error.errors });
+      }
       console.error("Error updating user:", error);
       res.status(500).json({ message: "حدث خطأ أثناء تحديث المستخدم" });
     }
   });
 
-  app.delete("/api/admin/users/:id", async (req, res) => {
+  // Delete user (admin only)
+  app.delete("/api/admin/users/:id", requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteUser(id);
 
-      if (req.body.adminUserId) {
-        await storage.createAuditLog({
-          adminUserId: req.body.adminUserId,
-          action: "delete_user",
-          entityType: "user",
-          entityId: id,
-        });
-      }
+      await storage.createAuditLog({
+        adminUserId: req.session.adminId!,
+        action: "delete_user",
+        entityType: "user",
+        entityId: id,
+        details: JSON.stringify({ deletedUserId: id }),
+      });
 
       res.json({ message: "تم حذف المستخدم بنجاح" });
     } catch (error) {
@@ -1488,7 +1594,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/policies", async (req, res) => {
+  // Get all client policies (admin & legal only)
+  app.get("/api/admin/policies", requireAdminOrLegal, async (req, res) => {
     try {
       const policies = await storage.getAllClientPolicies();
       res.json(policies);
@@ -1498,7 +1605,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/requests", async (req, res) => {
+  // Get all client requests (admin & legal only)
+  app.get("/api/admin/requests", requireAdminOrLegal, async (req, res) => {
     try {
       const requests = await storage.getAllClientRequests();
       res.json(requests);
@@ -1508,34 +1616,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/requests/:id", async (req, res) => {
+  // Update client request (admin & legal only)
+  app.patch("/api/admin/requests/:id", requireAdminOrLegal, async (req, res) => {
     try {
       const { id } = req.params;
-      const updates = req.body;
+      
+      // Validate update schema (only allow status and assigned admin)
+      const updateSchema = z.object({
+        status: z.enum(["pending", "in_progress", "completed", "rejected"]).optional(),
+        responseNotes: z.string().optional(),
+        assignedTo: z.string().optional(),
+      }).strict();
+      
+      const validatedUpdates = updateSchema.parse(req.body);
 
-      const updated = await storage.updateClientRequest(id, updates);
+      const updated = await storage.updateClientRequest(id, validatedUpdates);
       if (!updated) {
         return res.status(404).json({ message: "الطلب غير موجود" });
       }
 
-      if (req.body.adminUserId) {
-        await storage.createAuditLog({
-          adminUserId: req.body.adminUserId,
-          action: "update_request",
-          entityType: "client_request",
-          entityId: id,
-          details: JSON.stringify(updates),
-        });
-      }
+      await storage.createAuditLog({
+        adminUserId: req.session.adminId!,
+        action: "update_request",
+        entityType: "client_request",
+        entityId: id,
+        details: JSON.stringify(validatedUpdates),
+      });
 
       res.json(updated);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: error.errors });
+      }
       console.error("Error updating request:", error);
       res.status(500).json({ message: "حدث خطأ أثناء تحديث الطلب" });
     }
   });
 
-  app.get("/api/admin/audit-logs", async (req, res) => {
+  // Get audit logs (admin only)
+  app.get("/api/admin/audit-logs", requireAdminRole, async (req, res) => {
     try {
       const logs = await storage.getAllAuditLogs();
       res.json(logs);
@@ -1545,7 +1664,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/admins", async (req, res) => {
+  // Get all admin users (admin only)
+  app.get("/api/admin/admins", requireAdminRole, async (req, res) => {
     try {
       const admins = await storage.getAllAdminUsers();
       const adminsWithoutPasswords = admins.map(({ password, ...admin }) => admin);
@@ -1556,30 +1676,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/admins/:id", async (req, res) => {
+  // Update admin user (admin only)
+  app.patch("/api/admin/admins/:id", requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
-      const updates = req.body;
-      delete updates.password;
+      
+      // Validate update schema (only allow specific fields)
+      const updateSchema = z.object({
+        name: z.string().min(2).optional(),
+        email: z.string().email().optional(),
+        role: z.enum(["admin", "legal", "support"]).optional(),
+        isActive: z.boolean().optional(),
+      }).strict();
+      
+      const validatedUpdates = updateSchema.parse(req.body);
 
-      const updated = await storage.updateAdminUser(id, updates);
+      const updated = await storage.updateAdminUser(id, validatedUpdates);
       if (!updated) {
         return res.status(404).json({ message: "المشرف غير موجود" });
       }
 
-      if (req.body.adminUserId) {
-        await storage.createAuditLog({
-          adminUserId: req.body.adminUserId,
-          action: "update_admin",
-          entityType: "admin_user",
-          entityId: id,
-          details: JSON.stringify(updates),
-        });
-      }
+      await storage.createAuditLog({
+        adminUserId: req.session.adminId!,
+        action: "update_admin",
+        entityType: "admin_user",
+        entityId: id,
+        details: JSON.stringify(validatedUpdates),
+      });
 
       const { password: _, ...adminWithoutPassword } = updated;
       res.json(adminWithoutPassword);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: error.errors });
+      }
       console.error("Error updating admin:", error);
       res.status(500).json({ message: "حدث خطأ أثناء تحديث المشرف" });
     }
