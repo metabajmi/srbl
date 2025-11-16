@@ -31,6 +31,12 @@ import {
   type InsertTermsTemplate,
   type TemplateSection,
   type InsertTemplateSection,
+  type KnowledgeArticle,
+  type InsertKnowledgeArticle,
+  type ChatConversation,
+  type InsertChatConversation,
+  type ChatMessage,
+  type InsertChatMessage,
   complianceScans,
   complianceIssues,
   reports,
@@ -48,10 +54,13 @@ import {
   termsTemplates,
   templateSections,
   termsTemplateSections,
-  sectionLegalSources
+  sectionLegalSources,
+  knowledgeArticles,
+  chatConversations,
+  chatMessages
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql as drizzleSql } from "drizzle-orm";
 
 export interface IStorage {
   // Compliance Scans
@@ -161,6 +170,29 @@ export interface IStorage {
   getTemplateSectionsByTemplateId(templateId: string): Promise<TemplateSection[]>;
   updateTemplateSection(id: string, updates: Partial<TemplateSection>): Promise<TemplateSection | undefined>;
   deleteTemplateSection(id: string): Promise<void>;
+  
+  // AI Assistant - Knowledge Base
+  createKnowledgeArticle(article: InsertKnowledgeArticle): Promise<KnowledgeArticle>;
+  getKnowledgeArticle(id: string): Promise<KnowledgeArticle | undefined>;
+  getAllKnowledgeArticles(): Promise<KnowledgeArticle[]>;
+  updateKnowledgeArticle(id: string, updates: Partial<KnowledgeArticle>): Promise<KnowledgeArticle | undefined>;
+  updateArticleEmbedding(id: string, embedding: number[], embeddingEn?: number[]): Promise<void>;
+  searchKnowledgeByVector(embedding: number[], language: string, limit?: number): Promise<Array<KnowledgeArticle & { similarity: number }>>;
+  incrementArticleView(id: string): Promise<void>;
+  updateArticleFeedback(id: string, helpful: boolean): Promise<void>;
+  
+  // AI Assistant - Conversations
+  createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation>;
+  getChatConversation(id: string): Promise<ChatConversation | undefined>;
+  getAllChatConversations(): Promise<ChatConversation[]>;
+  updateChatConversation(id: string, updates: Partial<ChatConversation>): Promise<ChatConversation | undefined>;
+  deleteChatConversation(id: string): Promise<void>;
+  
+  // AI Assistant - Messages
+  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  getChatMessage(id: string): Promise<ChatMessage | undefined>;
+  getMessagesByConversationId(conversationId: string): Promise<ChatMessage[]>;
+  updateChatMessage(id: string, updates: Partial<ChatMessage>): Promise<ChatMessage | undefined>;
 }
 
 // Database storage implementation using Drizzle ORM
@@ -1004,6 +1036,149 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error ensuring default templates:", error);
     }
+  }
+
+  // ==================== AI ASSISTANT METHODS ====================
+  
+  // Knowledge Base Articles
+  async createKnowledgeArticle(article: InsertKnowledgeArticle): Promise<KnowledgeArticle> {
+    const [created] = await db.insert(knowledgeArticles).values(article).returning();
+    return created;
+  }
+
+  async getKnowledgeArticle(id: string): Promise<KnowledgeArticle | undefined> {
+    const [article] = await db.select().from(knowledgeArticles).where(eq(knowledgeArticles.id, id));
+    return article || undefined;
+  }
+
+  async getAllKnowledgeArticles(): Promise<KnowledgeArticle[]> {
+    return await db.select().from(knowledgeArticles).where(eq(knowledgeArticles.isPublished, true)).orderBy(desc(knowledgeArticles.priority));
+  }
+
+  async updateKnowledgeArticle(id: string, updates: Partial<KnowledgeArticle>): Promise<KnowledgeArticle | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updated] = await db
+      .update(knowledgeArticles)
+      .set({ ...updateFields, updatedAt: new Date() })
+      .where(eq(knowledgeArticles.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async updateArticleEmbedding(id: string, embedding: number[], embeddingEn?: number[]): Promise<void> {
+    const updates: any = { 
+      embedding: JSON.stringify(embedding),
+      updatedAt: new Date()
+    };
+    if (embeddingEn) {
+      updates.embeddingEn = JSON.stringify(embeddingEn);
+    }
+    await db.update(knowledgeArticles).set(updates).where(eq(knowledgeArticles.id, id));
+  }
+
+  async searchKnowledgeByVector(
+    embedding: number[], 
+    language: string, 
+    limit: number = 5
+  ): Promise<Array<KnowledgeArticle & { similarity: number }>> {
+    // Convert embedding to pgvector format
+    const embeddingStr = JSON.stringify(embedding);
+    const embeddingCol = language === 'en' ? 'embedding_en' : 'embedding';
+    
+    // Use cosine similarity search with pgvector
+    const results = await db.execute(drizzleSql`
+      SELECT *, 
+        1 - (${drizzleSql.raw(embeddingCol)} <=> ${embeddingStr}::vector) as similarity
+      FROM knowledge_articles
+      WHERE is_published = true
+        AND ${drizzleSql.raw(embeddingCol)} IS NOT NULL
+      ORDER BY ${drizzleSql.raw(embeddingCol)} <=> ${embeddingStr}::vector
+      LIMIT ${limit}
+    `);
+    
+    return results.rows as Array<KnowledgeArticle & { similarity: number }>;
+  }
+
+  async incrementArticleView(id: string): Promise<void> {
+    await db.execute(drizzleSql`
+      UPDATE knowledge_articles 
+      SET view_count = view_count + 1 
+      WHERE id = ${id}
+    `);
+  }
+
+  async updateArticleFeedback(id: string, helpful: boolean): Promise<void> {
+    const field = helpful ? 'helpful_count' : 'not_helpful_count';
+    await db.execute(drizzleSql`
+      UPDATE knowledge_articles 
+      SET ${drizzleSql.raw(field)} = ${drizzleSql.raw(field)} + 1 
+      WHERE id = ${id}
+    `);
+  }
+
+  // Chat Conversations
+  async createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation> {
+    const [created] = await db.insert(chatConversations).values(conversation).returning();
+    return created;
+  }
+
+  async getChatConversation(id: string): Promise<ChatConversation | undefined> {
+    const [conversation] = await db.select().from(chatConversations).where(eq(chatConversations.id, id));
+    return conversation || undefined;
+  }
+
+  async getAllChatConversations(): Promise<ChatConversation[]> {
+    return await db.select().from(chatConversations).orderBy(desc(chatConversations.lastMessageAt));
+  }
+
+  async updateChatConversation(id: string, updates: Partial<ChatConversation>): Promise<ChatConversation | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updated] = await db
+      .update(chatConversations)
+      .set({ ...updateFields, updatedAt: new Date() })
+      .where(eq(chatConversations.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteChatConversation(id: string): Promise<void> {
+    await db.delete(chatConversations).where(eq(chatConversations.id, id));
+  }
+
+  // Chat Messages
+  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    const [created] = await db.insert(chatMessages).values(message).returning();
+    
+    // Update conversation's lastMessageAt
+    await db
+      .update(chatConversations)
+      .set({ lastMessageAt: new Date(), updatedAt: new Date() })
+      .where(eq(chatConversations.id, message.conversationId));
+    
+    return created;
+  }
+
+  async getChatMessage(id: string): Promise<ChatMessage | undefined> {
+    const [message] = await db.select().from(chatMessages).where(eq(chatMessages.id, id));
+    return message || undefined;
+  }
+
+  async getMessagesByConversationId(conversationId: string): Promise<ChatMessage[]> {
+    return await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.conversationId, conversationId))
+      .orderBy(chatMessages.createdAt);
+  }
+
+  async updateChatMessage(id: string, updates: Partial<ChatMessage>): Promise<ChatMessage | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updated] = await db
+      .update(chatMessages)
+      .set(updateFields)
+      .where(eq(chatMessages.id, id))
+      .returning();
+    return updated || undefined;
   }
 }
 
