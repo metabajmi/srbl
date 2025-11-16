@@ -133,6 +133,7 @@ export default function ScanResultsPage() {
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
       privacy_policy: "سياسة الخصوصية",
+      terms_and_conditions: "شروط الاستخدام",
       data_collection: "جمع البيانات",
       consent: "الموافقة والإذن",
       security: "الأمان والحماية",
@@ -149,6 +150,22 @@ export default function ScanResultsPage() {
     if (score >= 80) return "text-green-600";
     if (score >= 60) return "text-yellow-600";
     if (score >= 40) return "text-orange-600";
+    return "text-destructive";
+  };
+
+  const getComplianceLevelBadge = (level?: string) => {
+    if (level === "high") {
+      return <Badge className="bg-green-600 hover:bg-green-700 text-white gap-2"><CheckCircle className="w-3 h-3" />امتثال عالي</Badge>;
+    } else if (level === "medium") {
+      return <Badge className="bg-orange-500 hover:bg-orange-600 text-white gap-2"><AlertTriangle className="w-3 h-3" />امتثال متوسط</Badge>;
+    } else {
+      return <Badge className="bg-destructive hover:bg-destructive/90 text-white gap-2"><XCircle className="w-3 h-3" />امتثال منخفض</Badge>;
+    }
+  };
+
+  const getComplianceLevelColor = (level?: string) => {
+    if (level === "high") return "text-green-600";
+    if (level === "medium") return "text-orange-500";
     return "text-destructive";
   };
 
@@ -272,52 +289,141 @@ export default function ScanResultsPage() {
         {/* Results */}
         {scan.status === "completed" && (
           <>
-            {/* Score Summary */}
-            <div className="grid gap-6 mb-6 md:grid-cols-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className={`text-4xl font-bold mb-2 ${getScoreColor(scan.overallScore || 0)}`}>
+            {/* Compliance Level & Score Summary */}
+            <div className="grid gap-6 mb-6 md:grid-cols-2">
+              {/* Compliance Level Card */}
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle className="text-lg">مستوى الامتثال</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`text-5xl font-bold ${getComplianceLevelColor(scan.complianceLevel)}`}>
                       {scan.overallScore || 0}%
                     </div>
-                    <p className="text-sm text-muted-foreground">نسبة الامتثال</p>
+                    {getComplianceLevelBadge(scan.complianceLevel)}
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 mt-4">
+                    <div className="text-center p-3 bg-muted rounded-lg">
+                      <div className="flex justify-center mb-1">
+                        <XCircle className="w-5 h-5 text-destructive" />
+                      </div>
+                      <div className="text-xl font-bold">{severityCounts.critical}</div>
+                      <p className="text-xs text-muted-foreground">حرجة</p>
+                    </div>
+                    <div className="text-center p-3 bg-muted rounded-lg">
+                      <div className="flex justify-center mb-1">
+                        <AlertTriangle className="w-5 h-5 text-orange-500" />
+                      </div>
+                      <div className="text-xl font-bold">{severityCounts.warning}</div>
+                      <p className="text-xs text-muted-foreground">تحذيرات</p>
+                    </div>
+                    <div className="text-center p-3 bg-muted rounded-lg">
+                      <div className="flex justify-center mb-1">
+                        <Info className="w-5 h-5 text-yellow-500" />
+                      </div>
+                      <div className="text-xl font-bold">{severityCounts.suggestion}</div>
+                      <p className="text-xs text-muted-foreground">اقتراحات</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card className={severityCounts.critical > 0 ? "border-destructive" : ""}>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className="flex justify-center mb-2">
-                      <XCircle className="w-8 h-8 text-destructive" />
+
+              {/* Compliance Findings Card */}
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle className="text-lg">نتائج الفحص التفصيلية</CardTitle>
+                  <CardDescription>العناصر الموجودة والمفقودة في موقعك</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className={`flex items-center justify-between p-3 rounded-lg ${scan.hasPrivacyPolicy ? 'bg-green-50 dark:bg-green-950' : 'bg-destructive/10'}`}>
+                      <div className="flex items-center gap-2">
+                        {scan.hasPrivacyPolicy ? (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-destructive" />
+                        )}
+                        <span className="font-medium">سياسة الخصوصية</span>
+                      </div>
+                      {scan.hasPrivacyPolicy ? (
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
+                      ) : (
+                        <Badge variant="destructive">مفقودة</Badge>
+                      )}
                     </div>
-                    <div className="text-2xl font-bold mb-1">{severityCounts.critical}</div>
-                    <p className="text-sm text-muted-foreground">مخالفات حرجة</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className="flex justify-center mb-2">
-                      <AlertTriangle className="w-8 h-8 text-orange-500" />
+                    
+                    <div className={`flex items-center justify-between p-3 rounded-lg ${scan.hasTermsAndConditions ? 'bg-green-50 dark:bg-green-950' : 'bg-destructive/10'}`}>
+                      <div className="flex items-center gap-2">
+                        {scan.hasTermsAndConditions ? (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-destructive" />
+                        )}
+                        <span className="font-medium">شروط الاستخدام</span>
+                      </div>
+                      {scan.hasTermsAndConditions ? (
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
+                      ) : (
+                        <Badge variant="destructive">مفقودة</Badge>
+                      )}
                     </div>
-                    <div className="text-2xl font-bold mb-1">{severityCounts.warning}</div>
-                    <p className="text-sm text-muted-foreground">تحذيرات</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <div className="flex justify-center mb-2">
-                      <Info className="w-8 h-8 text-yellow-500" />
+
+                    <div className={`flex items-center justify-between p-3 rounded-lg ${scan.hasCookieBanner ? 'bg-green-50 dark:bg-green-950' : 'bg-orange-50 dark:bg-orange-950'}`}>
+                      <div className="flex items-center gap-2">
+                        {scan.hasCookieBanner ? (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <AlertTriangle className="w-5 h-5 text-orange-500" />
+                        )}
+                        <span className="font-medium">لافتة الكوكيز</span>
+                      </div>
+                      {scan.hasCookieBanner ? (
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">مفقودة</Badge>
+                      )}
                     </div>
-                    <div className="text-2xl font-bold mb-1">{severityCounts.suggestion}</div>
-                    <p className="text-sm text-muted-foreground">اقتراحات</p>
+
+                    <div className={`flex items-center justify-between p-3 rounded-lg ${scan.hasContactInfo ? 'bg-green-50 dark:bg-green-950' : 'bg-orange-50 dark:bg-orange-950'}`}>
+                      <div className="flex items-center gap-2">
+                        {scan.hasContactInfo ? (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <AlertTriangle className="w-5 h-5 text-orange-500" />
+                        )}
+                        <span className="font-medium">معلومات الاتصال</span>
+                      </div>
+                      {scan.hasContactInfo ? (
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">مفقودة</Badge>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Call-to-Action for Low/Medium Compliance */}
+            {(scan.complianceLevel === "low" || scan.complianceLevel === "medium") && (
+              <Card className="mb-6 border-primary bg-primary/5">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold mb-1">هل تريد تحسين امتثال موقعك؟</h3>
+                      <p className="text-sm text-muted-foreground">
+                        احصل على وثائق قانونية احترافية (سياسة الخصوصية + شروط الاستخدام) بالذكاء الاصطناعي خلال دقائق
+                      </p>
+                    </div>
+                    <Button size="lg" className="gap-2" onClick={() => setLocation("/")}>
+                      <ArrowRight className="w-5 h-5" />
+                      استكشف خدماتنا
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Issues Tabs */}
             <Card>
@@ -481,7 +587,7 @@ export default function ScanResultsPage() {
                 <XCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
                 <p className="text-lg font-medium mb-2">فشل الفحص</p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  حدث خطأ أثناء محاولة فحص الموقع. يرجى التأكد من صحة الرابط والمحاولة مرة أخرى.
+                  {scan.errorMessage || "حدث خطأ أثناء محاولة فحص الموقع. يرجى التأكد من صحة الرابط والمحاولة مرة أخرى."}
                 </p>
                 <Button onClick={() => setLocation("/")} data-testid="button-try-again">
                   <RefreshCw className="ml-2 h-4 w-4" />
