@@ -35,30 +35,136 @@ export interface ComplianceAnalysisResult {
   }>;
 }
 
+interface DetectedLinks {
+  hasPrivacyPolicy: boolean;
+  privacyPolicyUrl?: string;
+  hasTermsAndConditions: boolean;
+  termsAndConditionsUrl?: string;
+  hasCookieBanner: boolean;
+  hasContactInfo: boolean;
+}
+
+function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks {
+  const lowerHTML = htmlContent.toLowerCase();
+  
+  const privacyPatterns = [
+    /href=["']([^"']*privacy[^"']*)["']/gi,
+    /href=["']([^"']*خصوصية[^"']*)["']/gi,
+    /href=["']([^"']*\/privacy-policy[^"']*)["']/gi,
+    /href=["']([^"']*سياسة-الخصوصية[^"']*)["']/gi,
+    /<a[^>]*>.*?(privacy policy|سياسة الخصوصية).*?<\/a>/gis,
+  ];
+  
+  const termsPatterns = [
+    /href=["']([^"']*terms[^"']*)["']/gi,
+    /href=["']([^"']*شروط[^"']*)["']/gi,
+    /href=["']([^"']*\/terms-and-conditions[^"']*)["']/gi,
+    /href=["']([^"']*الشروط-والأحكام[^"']*)["']/gi,
+    /<a[^>]*>.*?(terms|terms & conditions|شروط الاستخدام|الشروط والأحكام).*?<\/a>/gis,
+  ];
+  
+  const cookiePatterns = [
+    /cookie.*?(banner|consent|notice|popup)/gi,
+    /\bcookie.*?accept/gi,
+    /gdpr.*?cookie/gi,
+    /class=["'][^"']*cookie[^"']*["']/gi,
+    /id=["'][^"']*cookie[^"']*["']/gi,
+    /كوكيز|ملفات تعريف الارتباط/gi,
+  ];
+  
+  const contactPatterns = [
+    /mailto:/gi,
+    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+    /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
+    /(contact|اتصل|تواصل|للتواصل)/gi,
+  ];
+  
+  let privacyPolicyUrl: string | undefined;
+  let termsUrl: string | undefined;
+  
+  for (const pattern of privacyPatterns) {
+    const match = pattern.exec(htmlContent);
+    if (match && match[1]) {
+      privacyPolicyUrl = match[1];
+      break;
+    }
+  }
+  
+  for (const pattern of termsPatterns) {
+    const match = pattern.exec(htmlContent);
+    if (match && match[1]) {
+      termsUrl = match[1];
+      break;
+    }
+  }
+  
+  const hasPrivacyPolicy = privacyPatterns.some(pattern => {
+    pattern.lastIndex = 0;
+    return pattern.test(htmlContent);
+  });
+  
+  const hasTermsAndConditions = termsPatterns.some(pattern => {
+    pattern.lastIndex = 0;
+    return pattern.test(htmlContent);
+  });
+  
+  const hasCookieBanner = cookiePatterns.some(pattern => {
+    pattern.lastIndex = 0;
+    return pattern.test(lowerHTML);
+  });
+  
+  const hasContactInfo = contactPatterns.some(pattern => {
+    pattern.lastIndex = 0;
+    return pattern.test(htmlContent);
+  });
+  
+  console.log("Direct HTML detection results:", {
+    hasPrivacyPolicy,
+    privacyPolicyUrl,
+    hasTermsAndConditions,
+    termsUrl,
+    hasCookieBanner,
+    hasContactInfo
+  });
+  
+  return {
+    hasPrivacyPolicy,
+    privacyPolicyUrl,
+    hasTermsAndConditions,
+    termsAndConditionsUrl: termsUrl,
+    hasCookieBanner,
+    hasContactInfo,
+  };
+}
+
 // Analyze website content for compliance issues
 export async function analyzeWebsiteCompliance(
   htmlContent: string,
   url: string
 ): Promise<ComplianceAnalysisResult> {
+  // First: Direct HTML detection for better accuracy
+  console.log("Starting direct HTML pattern detection...");
+  const directDetection = detectLinksInHTML(htmlContent, url);
+  
   // Check if API key is available
   if (!apiKey || apiKey === "missing-key") {
-    console.warn("OpenAI API key not configured, using mock analysis");
-    // Return mock data for testing
+    console.warn("OpenAI API key not configured, using direct detection + mock analysis");
+    // Return combined data: direct detection + mock issues
     return {
-      overallScore: 35,
-      complianceLevel: "low",
+      overallScore: directDetection.hasPrivacyPolicy && directDetection.hasTermsAndConditions ? 65 : 35,
+      complianceLevel: directDetection.hasPrivacyPolicy && directDetection.hasTermsAndConditions ? "medium" : "low",
       findings: {
-        hasPrivacyPolicy: false,
-        privacyPolicyUrl: undefined,
-        hasTermsAndConditions: false,
-        termsAndConditionsUrl: undefined,
-        hasCookieBanner: false,
+        hasPrivacyPolicy: directDetection.hasPrivacyPolicy,
+        privacyPolicyUrl: directDetection.privacyPolicyUrl,
+        hasTermsAndConditions: directDetection.hasTermsAndConditions,
+        termsAndConditionsUrl: directDetection.termsAndConditionsUrl,
+        hasCookieBanner: directDetection.hasCookieBanner,
         hasDataCollectionForms: true,
-        hasContactInfo: true,
+        hasContactInfo: directDetection.hasContactInfo,
       },
       issues: [
-        {
-          severity: "critical",
+        ...(!directDetection.hasPrivacyPolicy ? [{
+          severity: "critical" as const,
           category: "privacy_policy",
           title: "سياسة الخصوصية غير موجودة",
           description: "لم يتم العثور على سياسة خصوصية في الموقع. يجب أن تحتوي جميع المواقع التي تجمع بيانات شخصية على سياسة خصوصية مفصلة.",
@@ -66,9 +172,9 @@ export async function analyzeWebsiteCompliance(
           regulation: "نظام حماية البيانات الشخصية",
           remediation: "أضف صفحة سياسة خصوصية شاملة تشرح كيفية جمع واستخدام البيانات الشخصية",
           affectedElement: "الموقع بالكامل"
-        },
-        {
-          severity: "critical",
+        }] : []),
+        ...(!directDetection.hasTermsAndConditions ? [{
+          severity: "critical" as const,
           category: "terms_and_conditions",
           title: "شروط الاستخدام غير موجودة",
           description: "لم يتم العثور على صفحة شروط وأحكام الاستخدام في الموقع.",
@@ -76,7 +182,7 @@ export async function analyzeWebsiteCompliance(
           regulation: "نظام حماية البيانات الشخصية",
           remediation: "أضف صفحة شروط وأحكام واضحة تحدد حقوق والتزامات المستخدمين",
           affectedElement: "الموقع بالكامل"
-        },
+        }] : []),
         {
           severity: "warning",
           category: "consent",
@@ -87,8 +193,8 @@ export async function analyzeWebsiteCompliance(
           remediation: "أضف نموذج موافقة صريحة قبل جمع أي بيانات شخصية",
           affectedElement: "نماذج جمع البيانات"
         },
-        {
-          severity: "suggestion",
+        ...(!directDetection.hasCookieBanner ? [{
+          severity: "suggestion" as const,
           category: "cookies",
           title: "لافتة الكوكيز غير موجودة",
           description: "يفضل إضافة لافتة لإعلام المستخدمين باستخدام ملفات تعريف الارتباط",
@@ -96,7 +202,7 @@ export async function analyzeWebsiteCompliance(
           regulation: "نظام حماية البيانات الشخصية",
           remediation: "أضف لافتة كوكيز تسمح للمستخدمين بالتحكم في تفضيلاتهم",
           affectedElement: "الموقع بالكامل"
-        }
+        }] : [])
       ]
     };
   }
@@ -187,6 +293,7 @@ ${htmlContent.substring(0, 30000)}
 }`;
 
   try {
+    console.log("Calling OpenAI for detailed compliance analysis...");
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -198,44 +305,70 @@ ${htmlContent.substring(0, 30000)}
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
+    console.log("OpenAI analysis results:", result.findings);
     
-    // Validate and ensure proper structure
-    const overallScore = Math.max(0, Math.min(100, result.overallScore || 0));
+    // Merge direct detection with OpenAI results (prioritize positive findings)
+    const mergedFindings = {
+      hasPrivacyPolicy: directDetection.hasPrivacyPolicy || result.findings?.hasPrivacyPolicy || false,
+      privacyPolicyUrl: directDetection.privacyPolicyUrl || result.findings?.privacyPolicyUrl || undefined,
+      hasTermsAndConditions: directDetection.hasTermsAndConditions || result.findings?.hasTermsAndConditions || false,
+      termsAndConditionsUrl: directDetection.termsAndConditionsUrl || result.findings?.termsAndConditionsUrl || undefined,
+      hasCookieBanner: directDetection.hasCookieBanner || result.findings?.hasCookieBanner || false,
+      hasDataCollectionForms: result.findings?.hasDataCollectionForms || false,
+      hasContactInfo: directDetection.hasContactInfo || result.findings?.hasContactInfo || false,
+    };
+    
+    console.log("Merged findings (direct + OpenAI):", mergedFindings);
+    
+    // Filter out issues for elements that were found by direct detection
+    let issues = Array.isArray(result.issues) ? result.issues : [];
+    if (mergedFindings.hasPrivacyPolicy) {
+      issues = issues.filter((issue: any) => issue.category !== "privacy_policy");
+    }
+    if (mergedFindings.hasTermsAndConditions) {
+      issues = issues.filter((issue: any) => issue.category !== "terms_and_conditions");
+    }
+    if (mergedFindings.hasCookieBanner) {
+      issues = issues.filter((issue: any) => issue.category !== "cookies");
+    }
+    
+    // Recalculate score based on merged findings
+    let adjustedScore = result.overallScore || 0;
+    if (mergedFindings.hasPrivacyPolicy && !result.findings?.hasPrivacyPolicy) {
+      adjustedScore += 25; // Boost score if direct detection found privacy policy
+    }
+    if (mergedFindings.hasTermsAndConditions && !result.findings?.hasTermsAndConditions) {
+      adjustedScore += 25; // Boost score if direct detection found terms
+    }
+    const finalScore = Math.max(0, Math.min(100, adjustedScore));
+    
     return {
-      overallScore,
-      complianceLevel: overallScore >= 70 ? "high" : overallScore >= 40 ? "medium" : "low",
-      findings: {
-        hasPrivacyPolicy: result.findings?.hasPrivacyPolicy || false,
-        privacyPolicyUrl: result.findings?.privacyPolicyUrl || undefined,
-        hasTermsAndConditions: result.findings?.hasTermsAndConditions || false,
-        termsAndConditionsUrl: result.findings?.termsAndConditionsUrl || undefined,
-        hasCookieBanner: result.findings?.hasCookieBanner || false,
-        hasDataCollectionForms: result.findings?.hasDataCollectionForms || false,
-        hasContactInfo: result.findings?.hasContactInfo || false,
-      },
-      issues: Array.isArray(result.issues) ? result.issues : []
+      overallScore: finalScore,
+      complianceLevel: finalScore >= 70 ? "high" : finalScore >= 40 ? "medium" : "low",
+      findings: mergedFindings,
+      issues
     };
   } catch (error: any) {
     console.error("Error analyzing website compliance:", error);
     console.error("API Error details:", error.message);
     
-    // Return mock data on API error for testing
-    console.warn("Using fallback mock data due to OpenAI API error");
+    // Return direct detection + mock issues on API error
+    console.warn("Using fallback: direct detection + mock issues due to OpenAI API error");
     return {
-      overallScore: 35,
-      complianceLevel: "low",
+      overallScore: directDetection.hasPrivacyPolicy && directDetection.hasTermsAndConditions ? 65 : 35,
+      complianceLevel: directDetection.hasPrivacyPolicy && directDetection.hasTermsAndConditions ? "medium" : "low",
       findings: {
-        hasPrivacyPolicy: false,
-        privacyPolicyUrl: undefined,
-        hasTermsAndConditions: false,
-        termsAndConditionsUrl: undefined,
-        hasCookieBanner: false,
+        hasPrivacyPolicy: directDetection.hasPrivacyPolicy,
+        privacyPolicyUrl: directDetection.privacyPolicyUrl,
+        hasTermsAndConditions: directDetection.hasTermsAndConditions,
+        termsAndConditionsUrl: directDetection.termsAndConditionsUrl,
+        hasCookieBanner: directDetection.hasCookieBanner,
         hasDataCollectionForms: true,
-        hasContactInfo: true,
+        hasContactInfo: directDetection.hasContactInfo,
       },
       issues: [
-        {
-          severity: "critical",
+        ...(!directDetection.hasPrivacyPolicy ? [{
+          severity: "critical" as const,
           category: "privacy_policy",
           title: "سياسة الخصوصية غير موجودة",
           description: "لم يتم العثور على سياسة خصوصية واضحة في الموقع.",
@@ -243,9 +376,9 @@ ${htmlContent.substring(0, 30000)}
           regulation: "نظام حماية البيانات الشخصية",
           remediation: "أضف صفحة سياسة خصوصية شاملة",
           affectedElement: "الموقع بالكامل"
-        },
-        {
-          severity: "critical",
+        }] : []),
+        ...(!directDetection.hasTermsAndConditions ? [{
+          severity: "critical" as const,
           category: "terms_and_conditions",
           title: "شروط الاستخدام غير موجودة",
           description: "لم يتم العثور على صفحة شروط وأحكام الاستخدام.",
@@ -253,7 +386,7 @@ ${htmlContent.substring(0, 30000)}
           regulation: "نظام حماية البيانات الشخصية",
           remediation: "أضف صفحة شروط وأحكام واضحة",
           affectedElement: "الموقع بالكامل"
-        },
+        }] : []),
         {
           severity: "warning",
           category: "consent",
