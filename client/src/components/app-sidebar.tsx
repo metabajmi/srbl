@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Shield, FileText, CheckSquare, ScrollText, ClipboardList, Home, FileSearch, Cookie } from "lucide-react";
+import { Shield, FileText, CheckSquare, ScrollText, ClipboardList, Home, FileSearch, Cookie, Sparkles } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +26,11 @@ const menuItems = [
 ];
 
 const toolsItems = [
+  {
+    title: "المساعد الذكي",
+    url: "/smart-assistant",
+    icon: Sparkles,
+  },
   {
     title: "مُولّد سياسة الخصوصية",
     url: "/privacy-generator",
