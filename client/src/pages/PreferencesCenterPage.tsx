@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { BackButton } from "@/components/BackButton";
 
 const CONSENT_STORAGE_KEY = "pdpl_consent";
 const ANONYMOUS_ID_KEY = "pdpl_anonymous_id";
@@ -192,6 +193,7 @@ export default function PreferencesCenterPage() {
   return (
     <div className="container mx-auto max-w-4xl p-6" style={{ direction: "rtl" }}>
       <div className="space-y-6">
+        <BackButton />
         {/* Header */}
         <div className="flex items-start gap-4">
           <div className="rounded-lg bg-primary/10 p-3">
