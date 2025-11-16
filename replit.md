@@ -60,12 +60,18 @@ This project is a web application assisting organizations in complying with Saud
 - ✅ **Deterministic Scoring System (Nov 16, 2025):** Fixed critical inconsistency bug
   - **Issue:** Same website returned 100% compliance first scan, 20% second scan
   - **Root Cause:** OpenAI used default temperature=1 (random), and final score relied on LLM's free-form output
-  - **Solution:** 
+  - **Solution (Architect-Reviewed):** 
     - Set OpenAI to temperature=0 and top_p=0.1 for deterministic responses
-    - Implemented rule-based scoring: Privacy Policy (+25), Terms (+25), Cookie Banner (+5), Contact (+5)
-    - Severity-based deductions: Critical (-15 each), Warning (-5 each), Suggestion (-2 each)
+    - Implemented comprehensive rule-based scoring system:
+      - **Positive Points:** Privacy Policy (+25), Terms (+25), Cookie Banner (+5), Contact (+5)
+      - **Direct Penalties:** Missing Privacy (-25), Missing Terms (-25), Missing Cookie (-5), Missing Contact (-5)
+      - **Issue Deductions:** Critical (-15 each), Warning (-5 each), Suggestion (-2 each)
     - Compliance levels: High ≥70, Medium ≥40, Low <40
-  - **E2E Testing:** Verified consistency - two scans of same website produce identical scores and levels
+    - **Key Fix:** Direct penalties prevent score inflation when mandatory elements are absent
+  - **E2E Testing:** 
+    - Consistency Test: Two scans of same website produce identical scores (0% difference)
+    - Non-Compliant Test: Sites missing Privacy/Terms consistently score 0% (low)
+    - Architect validated production-readiness
 - ✅ Frontend UI: Compliance level badges (low/medium/high), compliance findings cards with visual status indicators
 - ✅ Error Handling: Specific Arabic error messages for timeout, SSL, DNS failures, redirects
 - ✅ Export Functionality: PDF/HTML/JSON report generation with proper concurrent request protection
