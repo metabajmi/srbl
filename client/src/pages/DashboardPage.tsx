@@ -10,7 +10,15 @@ export default function DashboardPage() {
   const { toast } = useToast();
   
   // Get user from localStorage (temporary - will implement proper session later)
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  let user = { id: "", email: "", name: "" };
+  try {
+    const userStr = localStorage.getItem("user");
+    if (userStr && userStr !== "undefined" && userStr !== "null") {
+      user = JSON.parse(userStr);
+    }
+  } catch (e) {
+    console.error("Failed to parse user from localStorage", e);
+  }
   
   if (!user.id) {
     navigate("/login");
@@ -97,7 +105,7 @@ export default function DashboardPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => navigate("/dashboard/policies")}
+              onClick={() => navigate("/my-policies")}
               data-testid="button-view-policies"
             >
               عرض السياسات
@@ -116,7 +124,7 @@ export default function DashboardPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => navigate("/dashboard/requests")}
+              onClick={() => navigate("/my-requests")}
               data-testid="button-view-requests"
             >
               عرض الطلبات

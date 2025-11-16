@@ -228,8 +228,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get client policies
   app.get("/api/client/policies", async (req, res) => {
     try {
-      // TODO: Get from authenticated user
-      const userId = req.query.userId as string;
+      // Get userId from query or body (temporary - will use session later)
+      const userId = (req.query.userId as string) || (req.body?.userId);
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }
@@ -245,8 +245,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create client policy
   app.post("/api/client/policies", async (req, res) => {
     try {
-      // TODO: Get from authenticated user
-      const policy = await storage.createClientPolicy(req.body);
+      // Expect userId in request body (temporary - will use session later)
+      const { userId, ...policyData } = req.body;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const policy = await storage.createClientPolicy({
+        ...policyData,
+        userId,
+      });
       res.status(201).json(policy);
     } catch (error) {
       console.error("Error creating client policy:", error);
@@ -261,8 +269,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get client requests
   app.get("/api/client/requests", async (req, res) => {
     try {
-      // TODO: Get from authenticated user
-      const userId = req.query.userId as string;
+      // Get userId from query or body (temporary - will use session later)
+      const userId = (req.query.userId as string) || (req.body?.userId);
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }
@@ -278,8 +286,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create client request
   app.post("/api/client/requests", async (req, res) => {
     try {
-      // TODO: Get from authenticated user
-      const request = await storage.createClientRequest(req.body);
+      // Expect userId in request body (temporary - will use session later)
+      const { userId, ...requestData } = req.body;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const request = await storage.createClientRequest({
+        ...requestData,
+        userId,
+      });
       res.status(201).json(request);
     } catch (error) {
       console.error("Error creating client request:", error);

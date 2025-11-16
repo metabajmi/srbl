@@ -33,7 +33,7 @@ export default function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormData) => {
       const result = await apiRequest("POST", "/api/auth/login", data);
-      return result;
+      return result.json();
     },
     onSuccess: (data: any) => {
       toast({
@@ -41,7 +41,9 @@ export default function LoginPage() {
         description: "تم تسجيل الدخول بنجاح",
       });
       // Store user in localStorage for now (will implement proper session later)
-      localStorage.setItem("user", JSON.stringify(data.user));
+      if (data && data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
       navigate("/dashboard");
     },
     onError: (error: any) => {
