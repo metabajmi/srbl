@@ -18,22 +18,35 @@ This project is a web application assisting organizations in complying with Saud
 - ✅ Database: 9 PDPL articles with embeddings (Arabic + English), conversation tracking
 - ✅ E2E Testing: All features tested and working (chat, feedback, context, new conversation)
 
-**Client Authentication System (In Development - Nov 16, 2025):**
+**Client Authentication System (Production Ready - Nov 16, 2025):**
 - ✅ Database: 3 tables (users, clientPolicies, clientRequests) with proper relations
-- ✅ Backend: Auth endpoints (register, login), bcrypt password hashing
+- ✅ Backend: Auth endpoints (register, login, logout, /me) with bcrypt password hashing
+- ✅ Session Management: Express-session with PostgreSQL store (connect-pg-simple)
+- ✅ Security: Session regeneration on login, requireAuth middleware protecting all client routes
 - ✅ Frontend: SignUpPage, LoginPage, DashboardPage with RTL support
 - ✅ E2E Testing: Full flow working (signup → login → dashboard → logout)
-- ⚠️ Session Management: Currently using localStorage (temporary), needs Passport integration
-- ⏳ TODO: Proper session middleware, protected routes, email verification
+- ⏳ TODO: Frontend migration to session endpoints (/api/auth/me instead of localStorage)
 
-**Admin Portal (Newly Built - Nov 16, 2025):**
+**Admin Portal (Backend Complete - Nov 16, 2025):**
 - ✅ Database: 2 tables (adminUsers with roles, auditLogs for activity tracking)
-- ✅ Backend: 11 admin API endpoints (auth, stats, user management, requests, policies, audit logs)
+- ✅ Backend: 13 admin API endpoints fully secured:
+  - Auth: POST /login, GET /me, POST /logout (session-based)
+  - Stats: GET /stats (all admin roles)
+  - Users: GET /users, PATCH /users/:id, DELETE /users/:id (admin + legal)
+  - Policies: GET /policies (admin + legal)
+  - Requests: GET /requests, PATCH /requests/:id (admin + legal)
+  - Audit: GET /audit-logs (admin only)
+  - Admins: GET /admins, PATCH /admins/:id (admin only)
+- ✅ Security Implementation:
+  - Express-session with PostgreSQL store
+  - Session regeneration on login (prevents session fixation)
+  - Four-tier middleware: requireAuth, requireAdminAuth, requireAdminRole, requireAdminOrLegal
+  - Zod validation schemas for all update endpoints (strict whitelisting)
+  - Audit logging uses session.adminId (no client-supplied IDs)
 - ✅ Frontend: 4 admin pages (login, dashboard, users management, requests management)
 - ✅ Features: Role-based access (admin/legal/support), audit logging, statistics dashboard
-- ⚠️ Session Management: Currently using localStorage (same as client system)
 - ⚠️ Missing Pages: Policies management page, Audit logs page, Admin users management page
-- ⏳ TODO: Complete remaining admin pages, proper session middleware, permission checks
+- ⏳ TODO: Frontend migration to session endpoints, complete remaining admin pages
 
 **Pending Verification:**
 - Cookie Consent Management pages
