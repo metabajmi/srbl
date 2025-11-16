@@ -16,7 +16,15 @@ import {
   updateDsarRequestSchema,
   updateDpiaAssessmentSchema
 } from "@shared/schema";
-import { analyzeWebsiteCompliance, generateComplianceReport, generatePrivacyPolicy, generateTermsAndConditions } from "./openai";
+import { 
+  analyzeWebsiteCompliance, 
+  generateComplianceReport, 
+  generatePrivacyPolicy, 
+  generateTermsAndConditions,
+  generateEmbedding, 
+  generateChatResponse, 
+  type RetrievedContext 
+} from "./openai";
 import { z } from "zod";
 
 // Helper function to validate URL for security
@@ -956,6 +964,216 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== AI ASSISTANT ROUTES ====================
+
+  // Generate embeddings for all knowledge base articles (admin endpoint)
+  app.post("/api/assistant/generate-embeddings", async (req, res) => {
+    try {
+      const articles = await storage.getAllKnowledgeArticles();
+      
+      let processed = 0;
+      const errors: string[] = [];
+      
+      for (const article of articles) {
+        try {
+          const embedding = await generateEmbedding(article.content);
+          let embeddingEn: number[] | undefined;
+          if (article.contentEn) {
+            embeddingEn = await generateEmbedding(article.contentEn);
+          }
+          await storage.updateArticleEmbedding(article.id, embedding, embeddingEn);
+          processed++;
+        } catch (error: any) {
+          console.error(`Error processing article ${article.id}:`, error.message);
+          errors.push(`Article ${article.title}: ${error.message}`);
+        }
+      }
+      
+      res.json({
+        success: true,
+        processed,
+        total: articles.length,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error: any) {
+      console.error("Error generating embeddings:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Search knowledge base
+  app.post("/api/assistant/search", async (req, res) => {
+    try {
+      const { query, language = "ar", limit = 5 } = req.body;
+      
+      if (!query || typeof query !== "string") {
+        return res.status(400).json({ error: "يجب إدخال استعلام البحث" });
+      }
+      
+      const queryEmbedding = await generateEmbedding(query);
+      const results = await storage.searchKnowledgeByVector(queryEmbedding, language, limit);
+      
+      res.json({
+        results: results.map(article => ({
+          id: article.id,
+          title: language === "en" && article.titleEn ? article.titleEn : article.title,
+          content: language === "en" && article.contentEn ? article.contentEn : article.content,
+          category: article.category,
+          type: article.type,
+          similarity: article.similarity,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Error searching knowledge base:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Chat endpoint - send message and get AI response
+  app.post("/api/assistant/chat", async (req, res) => {
+    try {
+      const { conversationId, message, language = "ar" } = req.body;
+      
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "يجب إدخال الرسالة" });
+      }
+      
+      let conversation;
+      if (conversationId) {
+        conversation = await storage.getChatConversation(conversationId);
+        if (!conversation) {
+          return res.status(404).json({ error: "المحادثة غير موجودة" });
+        }
+      } else {
+        conversation = await storage.createChatConversation({
+          title: message.substring(0, 50) + (message.length > 50 ? "..." : ""),
+          language,
+        });
+      }
+      
+      await storage.createChatMessage({
+        conversationId: conversation.id,
+        role: "user",
+        content: message,
+      });
+      
+      const questionEmbedding = await generateEmbedding(message);
+      const searchResults = await storage.searchKnowledgeByVector(questionEmbedding, language, 5);
+      
+      const retrievedContext: RetrievedContext[] = searchResults.map(article => ({
+        id: article.id,
+        title: language === "en" && article.titleEn ? article.titleEn : article.title,
+        content: language === "en" && article.contentEn ? article.contentEn : article.content,
+        category: article.category,
+        similarity: article.similarity,
+      }));
+      
+      const allMessages = await storage.getMessagesByConversationId(conversation.id);
+      const conversationHistory = allMessages.slice(-6).map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+      
+      const aiResponse = await generateChatResponse(message, retrievedContext, conversationHistory);
+      
+      const assistantMessage = await storage.createChatMessage({
+        conversationId: conversation.id,
+        role: "assistant",
+        content: aiResponse,
+        retrievedContext: retrievedContext as any,
+      });
+      
+      for (const article of searchResults) {
+        await storage.incrementArticleView(article.id);
+      }
+      
+      res.json({
+        conversationId: conversation.id,
+        message: assistantMessage,
+        retrievedContext,
+      });
+    } catch (error: any) {
+      console.error("Error in chat endpoint:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all conversations
+  app.get("/api/assistant/conversations", async (req, res) => {
+    try {
+      const conversations = await storage.getAllChatConversations();
+      res.json(conversations);
+    } catch (error: any) {
+      console.error("Error getting conversations:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get conversation by ID with messages
+  app.get("/api/assistant/conversations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const conversation = await storage.getChatConversation(id);
+      
+      if (!conversation) {
+        return res.status(404).json({ error: "المحادثة غير موجودة" });
+      }
+      
+      const messages = await storage.getMessagesByConversationId(id);
+      
+      res.json({
+        ...conversation,
+        messages,
+      });
+    } catch (error: any) {
+      console.error("Error getting conversation:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete conversation
+  app.delete("/api/assistant/conversations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteChatConversation(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting conversation:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Submit feedback for message
+  app.post("/api/assistant/feedback", async (req, res) => {
+    try {
+      const { messageId, helpful } = req.body;
+      
+      if (!messageId) {
+        return res.status(400).json({ error: "يجب تحديد الرسالة" });
+      }
+      
+      await storage.updateChatMessage(messageId, {
+        wasHelpful: helpful,
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error submitting feedback:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get knowledge articles (for admin/management)
+  app.get("/api/assistant/knowledge", async (req, res) => {
+    try {
+      const articles = await storage.getAllKnowledgeArticles();
+      res.json(articles);
+    } catch (error: any) {
+      console.error("Error getting knowledge articles:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
@@ -1072,262 +1290,3 @@ async function processTermsGeneration(termsId: string) {
     await storage.updateTermsDocument(termsId, { status: "failed" });
   }
 }
-
-// ==================== AI ASSISTANT ROUTES ====================
-
-import { 
-  generateEmbedding, 
-  generateChatResponse, 
-  type RetrievedContext 
-} from "./openai";
-
-// Generate embeddings for all knowledge base articles (admin endpoint)
-router.post("/api/assistant/generate-embeddings", async (req, res) => {
-  try {
-    const articles = await storage.getAllKnowledgeArticles();
-    
-    let processed = 0;
-    const errors: string[] = [];
-    
-    for (const article of articles) {
-      try {
-        // Generate embedding for Arabic content
-        const embedding = await generateEmbedding(article.content);
-        
-        // Generate embedding for English content if available
-        let embeddingEn: number[] | undefined;
-        if (article.contentEn) {
-          embeddingEn = await generateEmbedding(article.contentEn);
-        }
-        
-        // Update article with embeddings
-        await storage.updateArticleEmbedding(article.id, embedding, embeddingEn);
-        processed++;
-      } catch (error: any) {
-        console.error(`Error processing article ${article.id}:`, error.message);
-        errors.push(`Article ${article.title}: ${error.message}`);
-      }
-    }
-    
-    res.json({
-      success: true,
-      processed,
-      total: articles.length,
-      errors: errors.length > 0 ? errors : undefined,
-    });
-  } catch (error: any) {
-    console.error("Error generating embeddings:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Search knowledge base
-router.post("/api/assistant/search", async (req, res) => {
-  try {
-    const { query, language = "ar", limit = 5 } = req.body;
-    
-    if (!query || typeof query !== "string") {
-      return res.status(400).json({ error: "يجب إدخال استعلام البحث" });
-    }
-    
-    // Generate embedding for the query
-    const queryEmbedding = await generateEmbedding(query);
-    
-    // Search knowledge base using vector similarity
-    const results = await storage.searchKnowledgeByVector(
-      queryEmbedding,
-      language,
-      limit
-    );
-    
-    res.json({
-      results: results.map(article => ({
-        id: article.id,
-        title: language === "en" && article.titleEn ? article.titleEn : article.title,
-        content: language === "en" && article.contentEn ? article.contentEn : article.content,
-        category: article.category,
-        type: article.type,
-        similarity: article.similarity,
-      })),
-    });
-  } catch (error: any) {
-    console.error("Error searching knowledge base:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Create new chat conversation
-router.post("/api/assistant/conversations", async (req, res) => {
-  try {
-    const conversationData = req.body;
-    const conversation = await storage.createChatConversation(conversationData);
-    res.json(conversation);
-  } catch (error: any) {
-    console.error("Error creating conversation:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get conversation by ID with messages
-router.get("/api/assistant/conversations/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const conversation = await storage.getChatConversation(id);
-    
-    if (!conversation) {
-      return res.status(404).json({ error: "المحادثة غير موجودة" });
-    }
-    
-    const messages = await storage.getMessagesByConversationId(id);
-    
-    res.json({
-      ...conversation,
-      messages,
-    });
-  } catch (error: any) {
-    console.error("Error getting conversation:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get all conversations
-router.get("/api/assistant/conversations", async (req, res) => {
-  try {
-    const conversations = await storage.getAllChatConversations();
-    res.json(conversations);
-  } catch (error: any) {
-    console.error("Error getting conversations:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Delete conversation
-router.delete("/api/assistant/conversations/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    await storage.deleteChatConversation(id);
-    res.json({ success: true });
-  } catch (error: any) {
-    console.error("Error deleting conversation:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Send message and get AI response
-router.post("/api/assistant/chat", async (req, res) => {
-  try {
-    const { conversationId, message, language = "ar" } = req.body;
-    
-    if (!message || typeof message !== "string") {
-      return res.status(400).json({ error: "يجب إدخال الرسالة" });
-    }
-    
-    // Create conversation if not exists
-    let conversation;
-    if (conversationId) {
-      conversation = await storage.getChatConversation(conversationId);
-      if (!conversation) {
-        return res.status(404).json({ error: "المحادثة غير موجودة" });
-      }
-    } else {
-      // Create new conversation
-      conversation = await storage.createChatConversation({
-        title: message.substring(0, 50) + (message.length > 50 ? "..." : ""),
-        language,
-      });
-    }
-    
-    // Save user message
-    await storage.createChatMessage({
-      conversationId: conversation.id,
-      role: "user",
-      content: message,
-    });
-    
-    // Generate embedding for the user's question
-    const questionEmbedding = await generateEmbedding(message);
-    
-    // Search knowledge base for relevant context
-    const searchResults = await storage.searchKnowledgeByVector(
-      questionEmbedding,
-      language,
-      5
-    );
-    
-    // Prepare retrieved context
-    const retrievedContext: RetrievedContext[] = searchResults.map(article => ({
-      id: article.id,
-      title: language === "en" && article.titleEn ? article.titleEn : article.title,
-      content: language === "en" && article.contentEn ? article.contentEn : article.content,
-      category: article.category,
-      similarity: article.similarity,
-    }));
-    
-    // Get conversation history (last 3 exchanges = 6 messages)
-    const allMessages = await storage.getMessagesByConversationId(conversation.id);
-    const conversationHistory = allMessages.slice(-6).map(msg => ({
-      role: msg.role,
-      content: msg.content,
-    }));
-    
-    // Generate AI response using RAG
-    const aiResponse = await generateChatResponse(
-      message,
-      retrievedContext,
-      conversationHistory
-    );
-    
-    // Save assistant message
-    const assistantMessage = await storage.createChatMessage({
-      conversationId: conversation.id,
-      role: "assistant",
-      content: aiResponse,
-      retrievedContext: retrievedContext as any,
-    });
-    
-    // Increment view count for retrieved articles
-    for (const article of searchResults) {
-      await storage.incrementArticleView(article.id);
-    }
-    
-    res.json({
-      conversationId: conversation.id,
-      message: assistantMessage,
-      retrievedContext,
-    });
-  } catch (error: any) {
-    console.error("Error in chat endpoint:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Submit feedback for message
-router.post("/api/assistant/feedback", async (req, res) => {
-  try {
-    const { messageId, helpful } = req.body;
-    
-    if (!messageId) {
-      return res.status(400).json({ error: "يجب تحديد الرسالة" });
-    }
-    
-    await storage.updateChatMessage(messageId, {
-      wasHelpful: helpful,
-    });
-    
-    res.json({ success: true });
-  } catch (error: any) {
-    console.error("Error submitting feedback:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get knowledge articles (for admin/management)
-router.get("/api/assistant/knowledge", async (req, res) => {
-  try {
-    const articles = await storage.getAllKnowledgeArticles();
-    res.json(articles);
-  } catch (error: any) {
-    console.error("Error getting knowledge articles:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
