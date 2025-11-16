@@ -29,6 +29,9 @@ import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
 import AdminUsersPage from "@/pages/admin/AdminUsersPage";
 import AdminRequestsPage from "@/pages/admin/AdminRequestsPage";
+import AdminPoliciesPage from "@/pages/admin/AdminPoliciesPage";
+import AdminAuditLogsPage from "@/pages/admin/AdminAuditLogsPage";
+import AdminManagementPage from "@/pages/admin/AdminManagementPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -39,6 +42,9 @@ function Router() {
       <Route path="/admin/dashboard" component={AdminDashboardPage} />
       <Route path="/admin/users" component={AdminUsersPage} />
       <Route path="/admin/requests" component={AdminRequestsPage} />
+      <Route path="/admin/policies" component={AdminPoliciesPage} />
+      <Route path="/admin/audit-logs" component={AdminAuditLogsPage} />
+      <Route path="/admin/admins" component={AdminManagementPage} />
       
       {/* Auth pages */}
       <Route path="/signup" component={SignUpPage} />
