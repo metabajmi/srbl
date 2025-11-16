@@ -33,10 +33,19 @@ export default function AdminLoginPage() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: AdminLoginForm) => {
-      return await apiRequest<any>("/api/admin/login", {
+      const response = await fetch("/api/admin/login", {
         method: "POST",
-        body: data,
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "فشل تسجيل الدخول");
+      }
+      
+      return response.json();
     },
     onSuccess: (admin) => {
       localStorage.setItem("adminUser", JSON.stringify(admin));
