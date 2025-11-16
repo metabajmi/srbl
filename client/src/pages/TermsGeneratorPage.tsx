@@ -316,6 +316,7 @@ export default function TermsGeneratorPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-6" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-6">
+        <BackButton />
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-l from-primary to-primary/60 bg-clip-text text-transparent">
             مُوَلِّد الشروط والأحكام

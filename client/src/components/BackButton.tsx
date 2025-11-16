@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Home } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface BackButtonProps {
@@ -20,13 +20,14 @@ export function BackButton({ to = "/", label = "رجوع للصفحة الرئي
 
   return (
     <Button
-      variant="ghost"
+      variant="outline"
       onClick={handleBack}
-      className="mb-4"
+      className="mb-6 gap-2 hover-elevate active-elevate-2"
       data-testid="button-back"
     >
-      <ArrowRight className="ml-2 h-4 w-4" />
-      {label}
+      <Home className="w-4 h-4" />
+      <span className="font-semibold">{label}</span>
+      <ArrowRight className="w-4 h-4" />
     </Button>
   );
 }
