@@ -20,7 +20,12 @@ export default function AdminDashboardPage() {
   }
 
   // Fetch statistics
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading } = useQuery<{
+    totalUsers: number;
+    totalPolicies: number;
+    totalRequests: number;
+    pendingRequests: number;
+  }>({
     queryKey: ["/api/admin/stats"],
   });
 
