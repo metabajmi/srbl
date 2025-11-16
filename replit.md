@@ -26,11 +26,19 @@ This project is a web application assisting organizations in complying with Saud
 - ⚠️ Session Management: Currently using localStorage (temporary), needs Passport integration
 - ⏳ TODO: Proper session middleware, protected routes, email verification
 
+**Admin Portal (Newly Built - Nov 16, 2025):**
+- ✅ Database: 2 tables (adminUsers with roles, auditLogs for activity tracking)
+- ✅ Backend: 11 admin API endpoints (auth, stats, user management, requests, policies, audit logs)
+- ✅ Frontend: 4 admin pages (login, dashboard, users management, requests management)
+- ✅ Features: Role-based access (admin/legal/support), audit logging, statistics dashboard
+- ⚠️ Session Management: Currently using localStorage (same as client system)
+- ⚠️ Missing Pages: Policies management page, Audit logs page, Admin users management page
+- ⏳ TODO: Complete remaining admin pages, proper session middleware, permission checks
+
 **Pending Verification:**
 - Cookie Consent Management pages
 - Home page dashboard  
 - Website scanner functionality
-- Client policies & requests pages
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

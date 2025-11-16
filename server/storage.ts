@@ -43,6 +43,10 @@ import {
   type InsertClientPolicy,
   type ClientRequest,
   type InsertClientRequest,
+  type AdminUser,
+  type InsertAdminUser,
+  type AuditLog,
+  type InsertAuditLog,
   complianceScans,
   complianceIssues,
   reports,
@@ -66,7 +70,9 @@ import {
   chatMessages,
   users,
   clientPolicies,
-  clientRequests
+  clientRequests,
+  adminUsers,
+  auditLogs
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql as drizzleSql } from "drizzle-orm";
@@ -224,6 +230,34 @@ export interface IStorage {
   updateClientRequest(id: string, updates: Partial<ClientRequest>): Promise<ClientRequest | undefined>;
   deleteClientRequest(id: string): Promise<void>;
   generateRequestNumber(): Promise<string>;
+  getAllClientRequests(): Promise<ClientRequest[]>;
+  
+  // Admin Users - المستخدمون الإداريون
+  createAdminUser(admin: InsertAdminUser): Promise<AdminUser>;
+  getAdminUser(id: string): Promise<AdminUser | undefined>;
+  getAdminUserByEmail(email: string): Promise<AdminUser | undefined>;
+  updateAdminUser(id: string, updates: Partial<AdminUser>): Promise<AdminUser | undefined>;
+  deleteAdminUser(id: string): Promise<void>;
+  getAllAdminUsers(): Promise<AdminUser[]>;
+  updateAdminLastLogin(id: string): Promise<void>;
+  
+  // Audit Logs - سجل التدقيق
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLog(id: string): Promise<AuditLog | undefined>;
+  getAllAuditLogs(): Promise<AuditLog[]>;
+  getAuditLogsByAdminUser(adminUserId: string): Promise<AuditLog[]>;
+  getAuditLogsByEntity(entityType: string, entityId: string): Promise<AuditLog[]>;
+  
+  // Admin Statistics - إحصائيات إدارية
+  getAllUsers(): Promise<User[]>;
+  getAllClientPolicies(): Promise<ClientPolicy[]>;
+  getAdminStats(): Promise<{
+    totalUsers: number;
+    totalPolicies: number;
+    totalRequests: number;
+    pendingRequests: number;
+    activeAdmins: number;
+  }>;
 }
 
 // Database storage implementation using Drizzle ORM
@@ -1341,6 +1375,163 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClientRequest(id: string): Promise<void> {
     await db.delete(clientRequests).where(eq(clientRequests.id, id));
+  }
+
+  async getAllClientRequests(): Promise<ClientRequest[]> {
+    return await db
+      .select()
+      .from(clientRequests)
+      .orderBy(desc(clientRequests.createdAt));
+  }
+
+  // ============================================
+  // Admin Users - المستخدمون الإداريون
+  // ============================================
+  
+  async createAdminUser(admin: InsertAdminUser): Promise<AdminUser> {
+    const [created] = await db
+      .insert(adminUsers)
+      .values(admin)
+      .returning();
+    return created;
+  }
+
+  async getAdminUser(id: string): Promise<AdminUser | undefined> {
+    const [admin] = await db.select().from(adminUsers).where(eq(adminUsers.id, id));
+    return admin || undefined;
+  }
+
+  async getAdminUserByEmail(email: string): Promise<AdminUser | undefined> {
+    const [admin] = await db.select().from(adminUsers).where(eq(adminUsers.email, email));
+    return admin || undefined;
+  }
+
+  async updateAdminUser(id: string, updates: Partial<AdminUser>): Promise<AdminUser | undefined> {
+    const { id: _, createdAt, ...updateFields } = updates as any;
+    const [updated] = await db
+      .update(adminUsers)
+      .set({ ...updateFields, updatedAt: new Date() })
+      .where(eq(adminUsers.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteAdminUser(id: string): Promise<void> {
+    await db.delete(adminUsers).where(eq(adminUsers.id, id));
+  }
+
+  async getAllAdminUsers(): Promise<AdminUser[]> {
+    return await db
+      .select()
+      .from(adminUsers)
+      .orderBy(desc(adminUsers.createdAt));
+  }
+
+  async updateAdminLastLogin(id: string): Promise<void> {
+    await db
+      .update(adminUsers)
+      .set({ lastLogin: new Date() })
+      .where(eq(adminUsers.id, id));
+  }
+
+  // ============================================
+  // Audit Logs - سجل التدقيق
+  // ============================================
+  
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [created] = await db
+      .insert(auditLogs)
+      .values(log)
+      .returning();
+    return created;
+  }
+
+  async getAuditLog(id: string): Promise<AuditLog | undefined> {
+    const [log] = await db.select().from(auditLogs).where(eq(auditLogs.id, id));
+    return log || undefined;
+  }
+
+  async getAllAuditLogs(): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(1000);
+  }
+
+  async getAuditLogsByAdminUser(adminUserId: string): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.adminUserId, adminUserId))
+      .orderBy(desc(auditLogs.createdAt));
+  }
+
+  async getAuditLogsByEntity(entityType: string, entityId: string): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(and(
+        eq(auditLogs.entityType, entityType),
+        eq(auditLogs.entityId, entityId)
+      ))
+      .orderBy(desc(auditLogs.createdAt));
+  }
+
+  // ============================================
+  // Admin Statistics - إحصائيات إدارية
+  // ============================================
+  
+  async getAllUsers(): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .orderBy(desc(users.createdAt));
+  }
+
+  async getAllClientPolicies(): Promise<ClientPolicy[]> {
+    return await db
+      .select()
+      .from(clientPolicies)
+      .orderBy(desc(clientPolicies.createdAt));
+  }
+
+  async getAdminStats(): Promise<{
+    totalUsers: number;
+    totalPolicies: number;
+    totalRequests: number;
+    pendingRequests: number;
+    activeAdmins: number;
+  }> {
+    const [usersCount] = await db
+      .select({ count: drizzleSql<number>`count(*)::int` })
+      .from(users);
+    
+    const [policiesCount] = await db
+      .select({ count: drizzleSql<number>`count(*)::int` })
+      .from(clientPolicies);
+    
+    const [requestsCount] = await db
+      .select({ count: drizzleSql<number>`count(*)::int` })
+      .from(clientRequests);
+    
+    const [pendingCount] = await db
+      .select({ count: drizzleSql<number>`count(*)::int` })
+      .from(clientRequests)
+      .where(eq(clientRequests.status, "pending"));
+    
+    const [adminsCount] = await db
+      .select({ count: drizzleSql<number>`count(*)::int` })
+      .from(adminUsers)
+      .where(eq(adminUsers.isActive, true));
+    
+    return {
+      totalUsers: usersCount?.count || 0,
+      totalPolicies: policiesCount?.count || 0,
+      totalRequests: requestsCount?.count || 0,
+      pendingRequests: pendingCount?.count || 0,
+      activeAdmins: adminsCount?.count || 0,
+    };
   }
 }
 

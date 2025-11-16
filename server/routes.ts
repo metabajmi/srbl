@@ -1332,6 +1332,259 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // Admin Routes - مسارات لوحة التحكم الإدارية
+  // ============================================
+
+  // Admin Authentication
+  app.post("/api/admin/register", async (req, res) => {
+    try {
+      const validatedData = z.object({
+        email: z.string().email(),
+        password: z.string().min(8),
+        name: z.string().min(2),
+        role: z.enum(["admin", "legal", "support"]).default("support"),
+      }).parse(req.body);
+
+      const existingAdmin = await storage.getAdminUserByEmail(validatedData.email);
+      if (existingAdmin) {
+        return res.status(400).json({ message: "البريد الإلكتروني مستخدم بالفعل" });
+      }
+
+      const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+      const admin = await storage.createAdminUser({
+        ...validatedData,
+        password: hashedPassword,
+      });
+
+      await storage.createAuditLog({
+        adminUserId: admin.id,
+        action: "admin_register",
+        entityType: "admin_user",
+        entityId: admin.id,
+        details: JSON.stringify({ email: admin.email, role: admin.role }),
+      });
+
+      const { password, ...adminWithoutPassword } = admin;
+      res.json(adminWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "بيانات غير صحيحة", errors: error.errors });
+      }
+      console.error("Admin registration error:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء إنشاء الحساب" });
+    }
+  });
+
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: "الرجاء إدخال البريد الإلكتروني وكلمة المرور" });
+      }
+
+      const admin = await storage.getAdminUserByEmail(email);
+      if (!admin) {
+        return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
+      }
+
+      if (!admin.isActive) {
+        return res.status(403).json({ message: "الحساب معطل. يرجى التواصل مع المشرف" });
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, admin.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
+      }
+
+      await storage.updateAdminLastLogin(admin.id);
+      await storage.createAuditLog({
+        adminUserId: admin.id,
+        action: "admin_login",
+        entityType: "admin_user",
+        entityId: admin.id,
+        details: JSON.stringify({ email: admin.email }),
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
+
+      const { password: _, ...adminWithoutPassword } = admin;
+      res.json(adminWithoutPassword);
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء تسجيل الدخول" });
+    }
+  });
+
+  app.get("/api/admin/stats", async (req, res) => {
+    try {
+      const stats = await storage.getAdminStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء جلب الإحصائيات" });
+    }
+  });
+
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء جلب المستخدمين" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      delete updates.password;
+
+      const updated = await storage.updateUser(id, updates);
+      if (!updated) {
+        return res.status(404).json({ message: "المستخدم غير موجود" });
+      }
+
+      if (req.body.adminUserId) {
+        await storage.createAuditLog({
+          adminUserId: req.body.adminUserId,
+          action: "update_user",
+          entityType: "user",
+          entityId: id,
+          details: JSON.stringify(updates),
+        });
+      }
+
+      const { password: _, ...userWithoutPassword } = updated;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء تحديث المستخدم" });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteUser(id);
+
+      if (req.body.adminUserId) {
+        await storage.createAuditLog({
+          adminUserId: req.body.adminUserId,
+          action: "delete_user",
+          entityType: "user",
+          entityId: id,
+        });
+      }
+
+      res.json({ message: "تم حذف المستخدم بنجاح" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء حذف المستخدم" });
+    }
+  });
+
+  app.get("/api/admin/policies", async (req, res) => {
+    try {
+      const policies = await storage.getAllClientPolicies();
+      res.json(policies);
+    } catch (error) {
+      console.error("Error fetching policies:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء جلب السياسات" });
+    }
+  });
+
+  app.get("/api/admin/requests", async (req, res) => {
+    try {
+      const requests = await storage.getAllClientRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching requests:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء جلب الطلبات" });
+    }
+  });
+
+  app.patch("/api/admin/requests/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const updated = await storage.updateClientRequest(id, updates);
+      if (!updated) {
+        return res.status(404).json({ message: "الطلب غير موجود" });
+      }
+
+      if (req.body.adminUserId) {
+        await storage.createAuditLog({
+          adminUserId: req.body.adminUserId,
+          action: "update_request",
+          entityType: "client_request",
+          entityId: id,
+          details: JSON.stringify(updates),
+        });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating request:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء تحديث الطلب" });
+    }
+  });
+
+  app.get("/api/admin/audit-logs", async (req, res) => {
+    try {
+      const logs = await storage.getAllAuditLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء جلب سجلات التدقيق" });
+    }
+  });
+
+  app.get("/api/admin/admins", async (req, res) => {
+    try {
+      const admins = await storage.getAllAdminUsers();
+      const adminsWithoutPasswords = admins.map(({ password, ...admin }) => admin);
+      res.json(adminsWithoutPasswords);
+    } catch (error) {
+      console.error("Error fetching admins:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء جلب المشرفين" });
+    }
+  });
+
+  app.patch("/api/admin/admins/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      delete updates.password;
+
+      const updated = await storage.updateAdminUser(id, updates);
+      if (!updated) {
+        return res.status(404).json({ message: "المشرف غير موجود" });
+      }
+
+      if (req.body.adminUserId) {
+        await storage.createAuditLog({
+          adminUserId: req.body.adminUserId,
+          action: "update_admin",
+          entityType: "admin_user",
+          entityId: id,
+          details: JSON.stringify(updates),
+        });
+      }
+
+      const { password: _, ...adminWithoutPassword } = updated;
+      res.json(adminWithoutPassword);
+    } catch (error) {
+      console.error("Error updating admin:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء تحديث المشرف" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

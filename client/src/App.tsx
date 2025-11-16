@@ -25,11 +25,21 @@ import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import MyPoliciesPage from "@/pages/MyPoliciesPage";
 import MyRequestsPage from "@/pages/MyRequestsPage";
+import AdminLoginPage from "@/pages/admin/AdminLoginPage";
+import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
+import AdminUsersPage from "@/pages/admin/AdminUsersPage";
+import AdminRequestsPage from "@/pages/admin/AdminRequestsPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
+      {/* Admin Portal */}
+      <Route path="/admin/login" component={AdminLoginPage} />
+      <Route path="/admin/dashboard" component={AdminDashboardPage} />
+      <Route path="/admin/users" component={AdminUsersPage} />
+      <Route path="/admin/requests" component={AdminRequestsPage} />
+      
       {/* Auth pages */}
       <Route path="/signup" component={SignUpPage} />
       <Route path="/login" component={LoginPage} />
