@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
+import { BackButton } from "@/components/BackButton";
 
 const formSchema = z.object({
   // القسم الأول: هوية الجهة والمسؤولية
@@ -630,6 +631,7 @@ export default function PrivacyGeneratorPage() {
   return (
     <div className="container py-8" dir="rtl">
       <div className="mx-auto max-w-5xl">
+        <BackButton />
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold mb-3 text-primary">أداة الذكاء الاصطناعي لتوليد سياسة الخصوصية</h1>
           <p className="text-muted-foreground text-lg">

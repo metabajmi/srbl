@@ -18,6 +18,7 @@ import {
   MessageSquare,
   BookOpen
 } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 
 interface Message {
   id: string;
@@ -165,6 +166,7 @@ export default function SmartAssistantPage() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8" dir="rtl">
       <div className="max-w-6xl mx-auto">
+        <BackButton />
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">

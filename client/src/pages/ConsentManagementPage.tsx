@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { BackButton } from "@/components/BackButton";
 
 type CmpSettings = {
   id: string;
@@ -273,6 +274,7 @@ export default function ConsentManagementPage() {
   return (
     <div className="container py-8" dir="rtl">
       <div className="mx-auto max-w-6xl space-y-8">
+        <BackButton />
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold mb-2">منصة إدارة الموافقة (CMP)</h1>

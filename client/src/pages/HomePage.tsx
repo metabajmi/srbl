@@ -1,21 +1,58 @@
+import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
-import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { insertComplianceScanSchema } from "@shared/schema";
+import { useLocation, Link } from "wouter";
+import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe } from "lucide-react";
+import { z } from "zod";
 
 export default function HomePage() {
-  const mainServices = [
-    {
-      icon: <FileSearch className="w-10 h-10" />,
-      title: "فحص موقعك للامتثال",
-      description: "تحليل شامل لموقعك الإلكتروني باستخدام الذكاء الاصطناعي لاكتشاف مخالفات حماية البيانات الشخصية",
-      href: "/scans",
-      color: "text-blue-600 dark:text-blue-400",
-      bgColor: "bg-blue-500/10",
-      badge: "AI مدعوم بـ",
-      testId: "card-service-scanner"
+  const [url, setUrl] = useState("");
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const scanMutation = useMutation({
+    mutationFn: async (data: { url: string }) => {
+      const response = await apiRequest("POST", "/api/scans", data);
+      return await response.json();
     },
+    onSuccess: (data) => {
+      toast({
+        title: "بدأ الفحص بنجاح",
+        description: "جاري تحليل الموقع الإلكتروني...",
+      });
+      setLocation(`/scan/${data.id}`);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ في بدء الفحص",
+        description: error.message || "حدث خطأ أثناء محاولة فحص الموقع",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleScan = () => {
+    try {
+      const validatedData = insertComplianceScanSchema.parse({ url });
+      scanMutation.mutate(validatedData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "خطأ في البيانات المدخلة",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const additionalServices = [
     {
       icon: <FileText className="w-10 h-10" />,
       title: "مُولّد سياسة الخصوصية",
@@ -94,7 +131,64 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Features */}
+        {/* Compliance Checker Tool - PROMINENT & FREE */}
+        <div className="mx-auto max-w-4xl mb-16">
+          <Card className="border-2 border-primary/20 shadow-lg">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                <FileSearch className="h-8 w-8 text-primary" />
+              </div>
+              <CardTitle className="text-2xl md:text-3xl">
+                افحص موقعك للامتثال - مجاناً
+              </CardTitle>
+              <CardDescription className="text-base mt-2">
+                تحليل شامل باستخدام الذكاء الاصطناعي لاكتشاف مخالفات حماية البيانات الشخصية
+              </CardDescription>
+              <Badge variant="secondary" className="mt-3 mx-auto">
+                مجاني بالكامل - بدون تسجيل
+              </Badge>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
+                <div className="flex-1">
+                  <Input
+                    placeholder="https://example.com"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    className="text-left h-12 text-base"
+                    dir="ltr"
+                    disabled={scanMutation.isPending}
+                    data-testid="input-scan-url"
+                  />
+                </div>
+                <Button 
+                  onClick={handleScan}
+                  disabled={!url || scanMutation.isPending}
+                  size="lg"
+                  className="px-8 h-12 text-base"
+                  data-testid="button-start-scan"
+                >
+                  {scanMutation.isPending ? (
+                    <>
+                      <Globe className="ml-2 h-5 w-5 animate-spin" />
+                      جاري الفحص...
+                    </>
+                  ) : (
+                    <>
+                      <FileSearch className="ml-2 h-5 w-5" />
+                      ابدأ الفحص
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground text-center mt-4">
+                ✓ فحص فوري  •  ✓ تقرير شامل  •  ✓ توصيات عملية
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Features - Ordered as requested */}
         <div className="mx-auto max-w-5xl mb-16">
           <div className="grid gap-6 md:grid-cols-3">
             {features.map((feature, index) => (
@@ -113,11 +207,11 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Main Services Grid */}
+        {/* Additional Services */}
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-2xl font-bold text-center mb-8">الخدمات والأدوات المتاحة</h2>
+          <h2 className="text-2xl font-bold text-center mb-8">أدوات إضافية لحماية بياناتك</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            {mainServices.map((service) => (
+            {additionalServices.map((service) => (
               <Link key={service.testId} href={service.href}>
                 <Card 
                   className="hover-elevate active-elevate-2 cursor-pointer h-full transition-all duration-200"
