@@ -355,6 +355,8 @@ ${htmlContent.substring(0, 30000)}
       ],
       response_format: { type: "json_object" },
       max_tokens: 4096,
+      temperature: 0,
+      top_p: 0.1,
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -395,19 +397,32 @@ ${htmlContent.substring(0, 30000)}
       console.log("Removed cookies issues (cookie banner found via direct detection)");
     }
     
-    // Recalculate score based on merged findings
-    let adjustedScore = result.overallScore || 0;
-    if (mergedFindings.hasPrivacyPolicy && !result.findings?.hasPrivacyPolicy) {
-      adjustedScore += 25; // Boost score if direct detection found privacy policy
-    }
-    if (mergedFindings.hasTermsAndConditions && !result.findings?.hasTermsAndConditions) {
-      adjustedScore += 25; // Boost score if direct detection found terms
-    }
-    const finalScore = Math.max(0, Math.min(100, adjustedScore));
+    // Calculate deterministic score based on findings and issues (not OpenAI's score)
+    let deterministicScore = 0;
+    
+    // Base score from findings (60 points total)
+    if (mergedFindings.hasPrivacyPolicy) deterministicScore += 25;
+    if (mergedFindings.hasTermsAndConditions) deterministicScore += 25;
+    if (mergedFindings.hasCookieBanner) deterministicScore += 5;
+    if (mergedFindings.hasContactInfo) deterministicScore += 5;
+    
+    // Deduct points based on issue severity (up to -40 points)
+    const criticalCount = issues.filter((i: any) => i.severity === "critical").length;
+    const warningCount = issues.filter((i: any) => i.severity === "warning").length;
+    const suggestionCount = issues.filter((i: any) => i.severity === "suggestion").length;
+    
+    deterministicScore -= (criticalCount * 15); // -15 per critical
+    deterministicScore -= (warningCount * 5);   // -5 per warning
+    deterministicScore -= (suggestionCount * 2); // -2 per suggestion
+    
+    const finalScore = Math.max(0, Math.min(100, deterministicScore));
+    const finalLevel = finalScore >= 70 ? "high" : finalScore >= 40 ? "medium" : "low";
+    
+    console.log(`Deterministic score calculation: base=${60 - (criticalCount * 15) - (warningCount * 5) - (suggestionCount * 2)}, critical=${criticalCount}, warnings=${warningCount}, suggestions=${suggestionCount}, final=${finalScore}`);
     
     return {
       overallScore: finalScore,
-      complianceLevel: finalScore >= 70 ? "high" : finalScore >= 40 ? "medium" : "low",
+      complianceLevel: finalLevel,
       findings: mergedFindings,
       issues
     };
