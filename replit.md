@@ -45,11 +45,13 @@ This project is a web application assisting organizations in complying with Saud
 - ✅ E2E Testing: Full admin flow tested and working (login → navigation → CRUD → logout)
 
 **Homepage Redesign (Production Ready - Nov 16, 2025):**
-- ✅ New Design: Unified landing page displaying all 5 core services without navigation
-- ✅ Services: Website Scanner, Privacy Generator, Terms Generator, Consent Management, Smart Assistant
-- ✅ Layout: Hero section, feature highlights, services grid, credibility section, footer
+- ✅ New Design: Scanner Tool prominently at top (free, no signup), followed by features and services
+- ✅ Scanner Card: Large, distinct border-2 border-primary/20 with "مجاني بالكامل" badge at top
+- ✅ Section Order: Scanner Tool → متوافق 100% → ذكاء اصطناعي متقدم → وثائق جاهزة → 4 Service Cards
+- ✅ Services: Website Scanner (top), Privacy Generator, Terms Generator, Consent Management, Smart Assistant
+- ✅ Navigation: BackButton component added to all service pages (Privacy, Terms, Consent, Assistant, ScanResults)
 - ✅ Removed: Internal Compliance section per user requirement
-- ✅ E2E Testing: Homepage verified - all services accessible, no IC references found
+- ✅ E2E Testing: Full navigation flow verified - Scanner at top, correct ordering, all BackButtons working
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

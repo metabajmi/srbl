@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Shield, AlertCircle, AlertTriangle, Info, FileText, Download, ArrowRight, CheckCircle, XCircle, Globe, Home, RefreshCw } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
 import { useState, useEffect } from "react";
+import { BackButton } from "@/components/BackButton";
 
 export default function ScanResultsPage() {
   const [, params] = useRoute("/scan/:id");
@@ -191,6 +192,7 @@ export default function ScanResultsPage() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
+            <BackButton label="رجوع" />
             <Shield className="w-8 h-8 text-primary" />
             <h1 className="text-xl font-bold">نتائج فحص الامتثال</h1>
           </div>
