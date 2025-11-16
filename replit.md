@@ -5,11 +5,12 @@ This project is a web application assisting organizations in complying with Saud
 
 ## Current Status (Nov 16, 2025)
 **Completed & Tested:**
+- ✅ HomePage Redesign: Unified dashboard displaying all 5 core services (Scanner, Privacy Generator, Terms Generator, Consent Management, Smart Assistant)
 - ✅ Terms & Conditions Generator: Full E2E flow working (form → generation → download)
-- ✅ Internal Compliance Module: ROPA, DSAR, DPIA all tested and functional
 - ✅ Privacy Generator: Form accessible with 3-section navigation
 - ✅ Smart Customer Assistant: Complete RAG-based chatbot with vector search, feedback system, and E2E tested
 - ✅ Database schema & backend APIs operational
+- ⚠️ Internal Compliance Module: Removed from UI per user request (backend APIs still exist for ROPA, DSAR, DPIA)
 
 **Smart Customer Assistant (Production Ready - Nov 16, 2025):**
 - ✅ Backend: 8 API endpoints (embeddings, search, chat, conversations CRUD, feedback, knowledge)
@@ -27,31 +28,28 @@ This project is a web application assisting organizations in complying with Saud
 - ✅ E2E Testing: Full flow working (signup → login → dashboard → logout)
 - ⏳ TODO: Frontend migration to session endpoints (/api/auth/me instead of localStorage)
 
-**Admin Portal (Backend Complete - Nov 16, 2025):**
+**Admin Portal (Production Ready - Nov 16, 2025):**
 - ✅ Database: 2 tables (adminUsers with roles, auditLogs for activity tracking)
-- ✅ Backend: 13 admin API endpoints fully secured:
-  - Auth: POST /login, GET /me, POST /logout (session-based)
-  - Stats: GET /stats (all admin roles)
-  - Users: GET /users, PATCH /users/:id, DELETE /users/:id (admin + legal)
-  - Policies: GET /policies (admin + legal)
-  - Requests: GET /requests, PATCH /requests/:id (admin + legal)
-  - Audit: GET /audit-logs (admin only)
-  - Admins: GET /admins, PATCH /admins/:id (admin only)
+- ✅ Backend: 13 admin API endpoints fully secured with session-based authentication
 - ✅ Security Implementation:
   - Express-session with PostgreSQL store
   - Session regeneration on login (prevents session fixation)
   - Four-tier middleware: requireAuth, requireAdminAuth, requireAdminRole, requireAdminOrLegal
   - Zod validation schemas for all update endpoints (strict whitelisting)
   - Audit logging uses session.adminId (no client-supplied IDs)
-- ✅ Frontend: 4 admin pages (login, dashboard, users management, requests management)
+- ✅ Frontend: Complete admin portal with 7 pages:
+  - AdminLoginPage, AdminDashboardPage, AdminUsersPage, AdminRequestsPage
+  - AdminPoliciesPage, AdminAuditLogsPage, AdminManagementPage
 - ✅ Features: Role-based access (admin/legal/support), audit logging, statistics dashboard
-- ⚠️ Missing Pages: Policies management page, Audit logs page, Admin users management page
-- ⏳ TODO: Frontend migration to session endpoints, complete remaining admin pages
+- ✅ Owner Account: m.alajmi2211@gmail.com with full admin privileges
+- ✅ E2E Testing: Full admin flow tested and working (login → navigation → CRUD → logout)
 
-**Pending Verification:**
-- Cookie Consent Management pages
-- Home page dashboard  
-- Website scanner functionality
+**Homepage Redesign (Production Ready - Nov 16, 2025):**
+- ✅ New Design: Unified landing page displaying all 5 core services without navigation
+- ✅ Services: Website Scanner, Privacy Generator, Terms Generator, Consent Management, Smart Assistant
+- ✅ Layout: Hero section, feature highlights, services grid, credibility section, footer
+- ✅ Removed: Internal Compliance section per user requirement
+- ✅ E2E Testing: Homepage verified - all services accessible, no IC references found
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -59,7 +57,7 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### UI/UX Decisions
-The application features an Arabic-first design with full RTL support, employing a hybrid Fluent Design and Material Design aesthetic. Typography utilizes the Cairo font. UI components are designed for clarity, including professional cookie banners, clear consent management dialogs, and a preferences center. Downloaded documents are securely generated as professionally formatted HTML files with Cairo font, RTL layout, and responsive design, ensuring XSS protection and print-readiness.
+The application features an Arabic-first design with full RTL support, employing a hybrid Fluent Design and Material Design aesthetic. Typography utilizes the Cairo font. The homepage serves as a unified dashboard presenting all 5 core services (Website Scanner, Privacy Policy Generator, Terms Generator, Consent Management, Smart Assistant) directly without requiring navigation. UI components are designed for clarity, including professional cookie banners, clear consent management dialogs, and a preferences center. Downloaded documents are securely generated as professionally formatted HTML files with Cairo font, RTL layout, and responsive design, ensuring XSS protection and print-readiness.
 
 ### Frontend
 The frontend is built with React and TypeScript using Vite, incorporating shadcn/ui components (Radix UI primitives) and Tailwind CSS. State management is handled by TanStack Query, client-side routing by wouter, and form handling by react-hook-form with Zod validation. Key features include a professional Cookie Banner with granular consent management and a Consent Management Platform (CMP) Dashboard.
@@ -74,7 +72,7 @@ PostgreSQL serves as the primary database, managed with Drizzle ORM for type-saf
 The Smart Customer Assistant uses a Retrieval Augmented Generation (RAG) architecture built on PostgreSQL with pgvector extension for semantic search. Vector embeddings are generated using OpenAI's `text-embedding-3-small` model (1536 dimensions), supporting both Arabic and English content. The knowledge base stores PDPL articles, FAQs, service guides, and glossary terms with HNSW vector indexes for efficient cosine similarity search. Chat conversations and messages are tracked with references to retrieved context, enabling audit trails and feedback collection. This unified database approach eliminates the need for separate vector databases while maintaining performance.
 
 ### Technical Implementations & Feature Specifications
-The application includes a fully functional Internal Compliance Management module with ROPA, DSAR, and DPIA tools. The ROPA management supports dynamic multi-recipient management and various data types. The DPIA tool handles complex compliance assessments with dynamic fields for data types, identified risks, and mitigation measures.
+**Note:** Internal Compliance pages (ROPA, DSAR, DPIA) have been removed from the frontend interface per user request, though backend APIs remain functional for potential future use.
 
 **Terms & Conditions Generator (Hybrid System - Production Ready):**
 Backend architecture complete and verified: junction tables (termsTemplateSections, termsSectionSources), seed data (6 templates × 8 sections, 6 legal sources), storage layer with SQL aggregation, OpenAI integration. Generation pipeline (`processTermsGeneration`) successfully creates 3,300+ character HTML documents with Cairo font, RTL layout, and professional formatting. Frontend UI built with 4-section multi-step form (Company Info → Service Details → Legal Info → Contact), react-hook-form validation, generating/completed states, and HTML content preview with download functionality. Full E2E testing passed: form submission, document generation polling, status transitions, and download functionality all working correctly. Architect confirmed production-readiness with no blocking defects.
