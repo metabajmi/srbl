@@ -3,12 +3,20 @@
 ## Overview
 This project is a web application assisting organizations in complying with Saudi Arabia's Personal Data Protection Law (PDPL). It provides AI-powered tools for website scanning, generating privacy policies and terms & conditions, managing consent, and handling internal compliance. The application features an Arabic-first design with RTL support and professional legal/compliance styling, utilizing OpenAI's GPT models for intelligent document generation and compliance analysis. The project aims to be a robust solution for PDPL adherence, targeting organizations interacting with Saudi Arabian data subjects.
 
-## Current Status (Nov 15, 2025)
+## Current Status (Nov 16, 2025)
 **Completed & Tested:**
 - ✅ Terms & Conditions Generator: Full E2E flow working (form → generation → download)
 - ✅ Internal Compliance Module: ROPA, DSAR, DPIA all tested and functional
 - ✅ Privacy Generator: Form accessible with 3-section navigation
 - ✅ Database schema & backend APIs operational
+
+**Smart Customer Assistant (In Progress):**
+- ✅ pgvector extension enabled in PostgreSQL
+- ✅ Vector indexes (HNSW) created for semantic search
+- ✅ Knowledge Base schema designed (3 tables: knowledgeArticles, chatConversations, chatMessages)
+- ✅ Seed data created: 9 PDPL articles in Arabic/English
+- ⏳ Backend API (embeddings generation, semantic search, chat endpoints)
+- ⏳ Chat UI component with RTL support
 
 **Pending Verification:**
 - Cookie Consent Management pages
@@ -31,6 +39,9 @@ The backend utilizes Express.js on Node.js, implementing a RESTful API. It integ
 
 ### Data Storage
 PostgreSQL serves as the primary database, managed with Drizzle ORM for type-safe operations. The schema includes tables for compliance scans, issues, reports, remediation templates, policy/terms documents, consent records, and internal compliance tasks (ROPA, DSAR, DPIA), with appropriate relationships. Session management is handled by `connect-pg-simple`.
+
+**AI Assistant / RAG Architecture:**
+The Smart Customer Assistant uses a Retrieval Augmented Generation (RAG) architecture built on PostgreSQL with pgvector extension for semantic search. Vector embeddings are generated using OpenAI's `text-embedding-3-small` model (1536 dimensions), supporting both Arabic and English content. The knowledge base stores PDPL articles, FAQs, service guides, and glossary terms with HNSW vector indexes for efficient cosine similarity search. Chat conversations and messages are tracked with references to retrieved context, enabling audit trails and feedback collection. This unified database approach eliminates the need for separate vector databases while maintaining performance.
 
 ### Technical Implementations & Feature Specifications
 The application includes a fully functional Internal Compliance Management module with ROPA, DSAR, and DPIA tools. The ROPA management supports dynamic multi-recipient management and various data types. The DPIA tool handles complex compliance assessments with dynamic fields for data types, identified risks, and mitigation measures.
