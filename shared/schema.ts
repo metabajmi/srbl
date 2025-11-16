@@ -1,7 +1,20 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, integer, boolean, customType } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Custom type for pgvector
+const vector = customType<{ data: number[]; driverData: string }>({
+  dataType(config) {
+    return `vector(${config?.dimensions ?? 1536})`;
+  },
+  toDriver(value: number[]): string {
+    return JSON.stringify(value);
+  },
+  fromDriver(value: string): number[] {
+    return JSON.parse(value);
+  },
+});
 
 // Compliance Scans - فحوصات الامتثال
 export const complianceScans = pgTable("compliance_scans", {
@@ -965,3 +978,109 @@ export const updateDpiaAssessmentSchema = insertDpiaAssessmentSchema.partial().e
   reviewedBy: z.string().optional(),
   approvedBy: z.string().optional(),
 }).strict();
+
+// ==================== AI ASSISTANT / KNOWLEDGE BASE ====================
+
+// Knowledge Base Articles - قاعدة المعرفة
+export const knowledgeArticles = pgTable("knowledge_articles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  titleEn: text("title_en"),
+  content: text("content").notNull(),
+  contentEn: text("content_en"),
+  summary: text("summary"),
+  category: text("category").notNull(), // pdpl_law, faq, service_guide, tutorial, glossary
+  type: text("type").notNull(), // article, regulation, definition, howto
+  language: text("language").notNull().default("ar"), // ar, en, both
+  tags: text("tags").array(), // Array of tags for filtering
+  keywords: text("keywords").array(), // Search keywords
+  relatedArticles: text("related_articles").array(), // Array of article IDs
+  viewCount: integer("view_count").default(0),
+  helpfulCount: integer("helpful_count").default(0),
+  notHelpfulCount: integer("not_helpful_count").default(0),
+  isPublished: boolean("is_published").default(true),
+  priority: integer("priority").default(0), // For ordering results
+  // Vector embedding for semantic search (1536 dimensions for OpenAI text-embedding-3-small)
+  embedding: vector("embedding", { dimensions: 1536 }),
+  embeddingEn: vector("embedding_en", { dimensions: 1536 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertKnowledgeArticleSchema = createInsertSchema(knowledgeArticles).omit({
+  id: true,
+  viewCount: true,
+  helpfulCount: true,
+  notHelpfulCount: true,
+  createdAt: true,
+  updatedAt: true,
+  embedding: true,
+  embeddingEn: true,
+}).extend({
+  title: z.string().min(3, "يجب إدخال عنوان المقالة"),
+  content: z.string().min(10, "يجب إدخال محتوى المقالة"),
+  category: z.enum(["pdpl_law", "faq", "service_guide", "tutorial", "glossary"]),
+  type: z.enum(["article", "regulation", "definition", "howto"]),
+  language: z.enum(["ar", "en", "both"]).default("ar"),
+});
+
+export type InsertKnowledgeArticle = z.infer<typeof insertKnowledgeArticleSchema>;
+export type KnowledgeArticle = typeof knowledgeArticles.$inferSelect;
+
+// Chat Conversations - محادثات المساعد الذكي
+export const chatConversations = pgTable("chat_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"), // Optional: link to user if auth is added
+  title: text("title"), // Auto-generated from first question
+  language: text("language").default("ar"), // ar, en
+  status: text("status").default("active"), // active, archived
+  lastMessageAt: timestamp("last_message_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+export type ChatConversation = typeof chatConversations.$inferSelect;
+
+// Chat Messages - رسائل المحادثة
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // user, assistant, system
+  content: text("content").notNull(),
+  // Context used for generating the response
+  retrievedContext: jsonb("retrieved_context"), // Array of relevant KB articles
+  // Feedback
+  wasHelpful: boolean("was_helpful"),
+  feedbackText: text("feedback_text"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  role: z.enum(["user", "assistant", "system"]),
+  content: z.string().min(1, "يجب إدخال محتوى الرسالة"),
+});
+
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+
+// Relations for AI Assistant
+export const chatConversationsRelations = relations(chatConversations, ({ many }) => ({
+  messages: many(chatMessages),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatMessages.conversationId],
+    references: [chatConversations.id],
+  }),
+}));
