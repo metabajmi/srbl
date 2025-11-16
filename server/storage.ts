@@ -1066,14 +1066,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateArticleEmbedding(id: string, embedding: number[], embeddingEn?: number[]): Promise<void> {
-    const updates: any = { 
-      embedding: JSON.stringify(embedding),
-      updatedAt: new Date()
-    };
-    if (embeddingEn) {
-      updates.embeddingEn = JSON.stringify(embeddingEn);
+    const embeddingStr = JSON.stringify(embedding);
+    const embeddingEnStr = embeddingEn ? JSON.stringify(embeddingEn) : null;
+    
+    if (embeddingEnStr) {
+      await db.execute(drizzleSql`
+        UPDATE knowledge_articles 
+        SET embedding = ${embeddingStr}::vector,
+            embedding_en = ${embeddingEnStr}::vector,
+            updated_at = NOW()
+        WHERE id = ${id}
+      `);
+    } else {
+      await db.execute(drizzleSql`
+        UPDATE knowledge_articles 
+        SET embedding = ${embeddingStr}::vector,
+            updated_at = NOW()
+        WHERE id = ${id}
+      `);
     }
-    await db.update(knowledgeArticles).set(updates).where(eq(knowledgeArticles.id, id));
   }
 
   async searchKnowledgeByVector(

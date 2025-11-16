@@ -17,6 +17,7 @@ import InternalCompliancePage from "@/pages/InternalCompliancePage";
 import RopaManagementPage from "@/pages/RopaManagementPage";
 import DsarManagementPage from "@/pages/DsarManagementPage";
 import DpiaManagementPage from "@/pages/DpiaManagementPage";
+import SmartAssistantPage from "@/pages/SmartAssistantPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/consent-management" component={ConsentManagementPage} />
       <Route path="/preferences-center" component={PreferencesCenterPage} />
       <Route path="/internal-compliance" component={InternalCompliancePage} />
+      <Route path="/smart-assistant" component={SmartAssistantPage} />
       
       {/* Internal Compliance Sub-modules */}
       <Route path="/internal-compliance/ropa" component={RopaManagementPage} />
