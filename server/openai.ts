@@ -47,20 +47,37 @@ interface DetectedLinks {
 function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks {
   const lowerHTML = htmlContent.toLowerCase();
   
-  const privacyPatterns = [
+  // Helper to check if a string is a valid URL path
+  const isValidUrl = (url: string): boolean => {
+    if (!url || typeof url !== 'string') return false;
+    // Valid if starts with http/https or is a relative path starting with /
+    return url.startsWith('http') || url.startsWith('/') || url.startsWith('./');
+  };
+  
+  // Privacy Policy Detection (href-based patterns ONLY)
+  const privacyHrefPatterns = [
     /href=["']([^"']*privacy[^"']*)["']/gi,
     /href=["']([^"']*خصوصية[^"']*)["']/gi,
     /href=["']([^"']*\/privacy-policy[^"']*)["']/gi,
     /href=["']([^"']*سياسة-الخصوصية[^"']*)["']/gi,
-    /<a[^>]*>.*?(privacy policy|سياسة الخصوصية).*?<\/a>/gis,
   ];
   
-  const termsPatterns = [
+  // Anchor text patterns WITH href extraction
+  const privacyAnchorPatterns = [
+    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(privacy policy|سياسة الخصوصية).*?<\/a>/gis,
+  ];
+  
+  // Terms Detection (href-based patterns ONLY)
+  const termsHrefPatterns = [
     /href=["']([^"']*terms[^"']*)["']/gi,
     /href=["']([^"']*شروط[^"']*)["']/gi,
     /href=["']([^"']*\/terms-and-conditions[^"']*)["']/gi,
     /href=["']([^"']*الشروط-والأحكام[^"']*)["']/gi,
-    /<a[^>]*>.*?(terms|terms & conditions|شروط الاستخدام|الشروط والأحكام).*?<\/a>/gis,
+  ];
+  
+  // Anchor text patterns WITH href extraction
+  const termsAnchorPatterns = [
+    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(terms|terms & conditions|شروط الاستخدام|الشروط والأحكام).*?<\/a>/gis,
   ];
   
   const cookiePatterns = [
@@ -82,28 +99,60 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
   let privacyPolicyUrl: string | undefined;
   let termsUrl: string | undefined;
   
-  for (const pattern of privacyPatterns) {
+  // Try privacy href patterns first
+  for (const pattern of privacyHrefPatterns) {
+    pattern.lastIndex = 0;
     const match = pattern.exec(htmlContent);
-    if (match && match[1]) {
+    if (match && match[1] && isValidUrl(match[1])) {
       privacyPolicyUrl = match[1];
       break;
     }
   }
   
-  for (const pattern of termsPatterns) {
+  // If no href pattern matched, try anchor text patterns
+  if (!privacyPolicyUrl) {
+    for (const pattern of privacyAnchorPatterns) {
+      pattern.lastIndex = 0;
+      const match = pattern.exec(htmlContent);
+      if (match && match[1] && isValidUrl(match[1])) {
+        privacyPolicyUrl = match[1];
+        break;
+      }
+    }
+  }
+  
+  // Try terms href patterns first
+  for (const pattern of termsHrefPatterns) {
+    pattern.lastIndex = 0;
     const match = pattern.exec(htmlContent);
-    if (match && match[1]) {
+    if (match && match[1] && isValidUrl(match[1])) {
       termsUrl = match[1];
       break;
     }
   }
   
-  const hasPrivacyPolicy = privacyPatterns.some(pattern => {
+  // If no href pattern matched, try anchor text patterns
+  if (!termsUrl) {
+    for (const pattern of termsAnchorPatterns) {
+      pattern.lastIndex = 0;
+      const match = pattern.exec(htmlContent);
+      if (match && match[1] && isValidUrl(match[1])) {
+        termsUrl = match[1];
+        break;
+      }
+    }
+  }
+  
+  // Check if privacy/terms exist (even if URL extraction failed)
+  const allPrivacyPatterns = [...privacyHrefPatterns, ...privacyAnchorPatterns];
+  const allTermsPatterns = [...termsHrefPatterns, ...termsAnchorPatterns];
+  
+  const hasPrivacyPolicy = allPrivacyPatterns.some(pattern => {
     pattern.lastIndex = 0;
     return pattern.test(htmlContent);
   });
   
-  const hasTermsAndConditions = termsPatterns.some(pattern => {
+  const hasTermsAndConditions = allTermsPatterns.some(pattern => {
     pattern.lastIndex = 0;
     return pattern.test(htmlContent);
   });
@@ -129,9 +178,9 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
   
   return {
     hasPrivacyPolicy,
-    privacyPolicyUrl,
+    privacyPolicyUrl: privacyPolicyUrl && isValidUrl(privacyPolicyUrl) ? privacyPolicyUrl : undefined,
     hasTermsAndConditions,
-    termsAndConditionsUrl: termsUrl,
+    termsAndConditionsUrl: termsUrl && isValidUrl(termsUrl) ? termsUrl : undefined,
     hasCookieBanner,
     hasContactInfo,
   };
@@ -320,16 +369,26 @@ ${htmlContent.substring(0, 30000)}
     
     console.log("Merged findings (direct + OpenAI):", mergedFindings);
     
-    // Filter out issues for elements that were found by direct detection
+    // Filter out issues ONLY when we have valid URLs from direct detection
+    // This prevents removing legitimate OpenAI issues when we only detected anchor text
     let issues = Array.isArray(result.issues) ? result.issues : [];
-    if (mergedFindings.hasPrivacyPolicy) {
+    
+    // Only remove privacy_policy issues if we have a valid URL from direct detection
+    if (directDetection.privacyPolicyUrl) {
       issues = issues.filter((issue: any) => issue.category !== "privacy_policy");
+      console.log("Removed privacy_policy issues (valid URL found via direct detection)");
     }
-    if (mergedFindings.hasTermsAndConditions) {
+    
+    // Only remove terms issues if we have a valid URL from direct detection
+    if (directDetection.termsAndConditionsUrl) {
       issues = issues.filter((issue: any) => issue.category !== "terms_and_conditions");
+      console.log("Removed terms_and_conditions issues (valid URL found via direct detection)");
     }
-    if (mergedFindings.hasCookieBanner) {
+    
+    // Only remove cookie issues if detected via direct detection
+    if (directDetection.hasCookieBanner) {
       issues = issues.filter((issue: any) => issue.category !== "cookies");
+      console.log("Removed cookies issues (cookie banner found via direct detection)");
     }
     
     // Recalculate score based on merged findings
