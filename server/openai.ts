@@ -397,34 +397,37 @@ ${htmlContent.substring(0, 30000)}
       console.log("Removed cookies issues (cookie banner found via direct detection)");
     }
     
-    // Calculate deterministic score based on findings and issues (not OpenAI's score)
-    let deterministicScore = 0;
+    // Calculate deterministic score based on findings and issues
+    // Start from 100 and deduct for missing elements and issues
+    let deterministicScore = 100;
     
-    // Base score from findings (60 points total)
-    if (mergedFindings.hasPrivacyPolicy) deterministicScore += 25;
-    if (mergedFindings.hasTermsAndConditions) deterministicScore += 25;
-    if (mergedFindings.hasCookieBanner) deterministicScore += 5;
-    if (mergedFindings.hasContactInfo) deterministicScore += 5;
-    
-    // Deduct points directly for missing mandatory elements (deterministic penalties)
-    if (!mergedFindings.hasPrivacyPolicy) deterministicScore -= 25;
-    if (!mergedFindings.hasTermsAndConditions) deterministicScore -= 25;
-    if (!mergedFindings.hasCookieBanner) deterministicScore -= 5;
-    if (!mergedFindings.hasContactInfo) deterministicScore -= 5;
+    // Deduct for missing mandatory compliance elements
+    if (!mergedFindings.hasPrivacyPolicy) {
+      deterministicScore -= 30; // Privacy Policy is critical
+    }
+    if (!mergedFindings.hasTermsAndConditions) {
+      deterministicScore -= 30; // Terms & Conditions is critical
+    }
+    if (!mergedFindings.hasCookieBanner) {
+      deterministicScore -= 10; // Cookie Banner is important
+    }
+    if (!mergedFindings.hasContactInfo) {
+      deterministicScore -= 10; // Contact Info is important
+    }
     
     // Additional deductions based on issue severity (from OpenAI analysis)
     const criticalCount = issues.filter((i: any) => i.severity === "critical").length;
     const warningCount = issues.filter((i: any) => i.severity === "warning").length;
     const suggestionCount = issues.filter((i: any) => i.severity === "suggestion").length;
     
-    deterministicScore -= (criticalCount * 15); // -15 per critical
-    deterministicScore -= (warningCount * 5);   // -5 per warning
-    deterministicScore -= (suggestionCount * 2); // -2 per suggestion
+    deterministicScore -= (criticalCount * 5); // -5 per critical issue
+    deterministicScore -= (warningCount * 3);   // -3 per warning
+    deterministicScore -= (suggestionCount * 1); // -1 per suggestion
     
     const finalScore = Math.max(0, Math.min(100, deterministicScore));
     const finalLevel = finalScore >= 70 ? "high" : finalScore >= 40 ? "medium" : "low";
     
-    console.log(`Deterministic score: privacy=${mergedFindings.hasPrivacyPolicy?'+25':'-25'}, terms=${mergedFindings.hasTermsAndConditions?'+25':'-25'}, cookie=${mergedFindings.hasCookieBanner?'+5':'-5'}, contact=${mergedFindings.hasContactInfo?'+5':'-5'}, issues=(critical:${criticalCount}, warnings:${warningCount}, suggestions:${suggestionCount}), final=${finalScore}`);
+    console.log(`Deterministic score: privacy=${mergedFindings.hasPrivacyPolicy?'✓':'-30'}, terms=${mergedFindings.hasTermsAndConditions?'✓':'-30'}, cookie=${mergedFindings.hasCookieBanner?'✓':'-10'}, contact=${mergedFindings.hasContactInfo?'✓':'-10'}, issues=(critical:${criticalCount}×-5, warnings:${warningCount}×-3, suggestions:${suggestionCount}×-1), final=${finalScore}`);
     
     return {
       overallScore: finalScore,
