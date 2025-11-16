@@ -24,10 +24,20 @@ export const complianceScans = pgTable("compliance_scans", {
   scanDate: timestamp("scan_date").defaultNow(),
   completedAt: timestamp("completed_at"),
   overallScore: integer("overall_score"), // 0-100
+  complianceLevel: text("compliance_level"), // low, medium, high
   issuesCount: integer("issues_count").default(0),
   criticalCount: integer("critical_count").default(0),
   warningCount: integer("warning_count").default(0),
   suggestionCount: integer("suggestion_count").default(0),
+  // Compliance findings
+  hasPrivacyPolicy: boolean("has_privacy_policy"),
+  privacyPolicyUrl: text("privacy_policy_url"),
+  hasTermsAndConditions: boolean("has_terms_and_conditions"),
+  termsAndConditionsUrl: text("terms_and_conditions_url"),
+  hasCookieBanner: boolean("has_cookie_banner"),
+  hasDataCollectionForms: boolean("has_data_collection_forms"),
+  hasContactInfo: boolean("has_contact_info"),
+  // Technical data
   pageContent: text("page_content"), // HTML content of the scanned page
   analysisResult: jsonb("analysis_result"), // AI analysis result
   errorMessage: text("error_message"),
