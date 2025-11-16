@@ -21,6 +21,8 @@ import SmartAssistantPage from "@/pages/SmartAssistantPage";
 import SignUpPage from "@/pages/SignUpPage";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
+import MyPoliciesPage from "@/pages/MyPoliciesPage";
+import MyRequestsPage from "@/pages/MyRequestsPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -30,8 +32,10 @@ function Router() {
       <Route path="/signup" component={SignUpPage} />
       <Route path="/login" component={LoginPage} />
       
-      {/* Dashboard */}
+      {/* Client Dashboard & Pages */}
       <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/my-policies" component={MyPoliciesPage} />
+      <Route path="/my-requests" component={MyRequestsPage} />
       
       {/* Main pages */}
       <Route path="/" component={HomePage} />
