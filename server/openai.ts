@@ -50,8 +50,12 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
   // Helper to check if a string is a valid URL path
   const isValidUrl = (url: string): boolean => {
     if (!url || typeof url !== 'string') return false;
-    // Valid if starts with http/https or is a relative path starting with /
-    return url.startsWith('http') || url.startsWith('/') || url.startsWith('./');
+    // Valid if starts with http/https, relative path starting with /, ./, or looks like a file/query
+    return url.startsWith('http') || 
+           url.startsWith('/') || 
+           url.startsWith('./') ||
+           url.startsWith('?') || // Query parameters
+           /^[a-zA-Z0-9_-]+\.(html?|php|asp)$/i.test(url); // File names like privacy.html
   };
   
   // Privacy Policy Detection (href-based patterns ONLY)
