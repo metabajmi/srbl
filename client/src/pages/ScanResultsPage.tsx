@@ -435,6 +435,7 @@ export default function ScanResultsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => generateReportMutation.mutate("pdf")}
+                      disabled={generateReportMutation.isPending}
                       data-testid="button-export-pdf"
                     >
                       {generateReportMutation.isPending ? (
@@ -448,6 +449,7 @@ export default function ScanResultsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => generateReportMutation.mutate("html")}
+                      disabled={generateReportMutation.isPending}
                       data-testid="button-export-html"
                     >
                       {generateReportMutation.isPending ? (
@@ -461,6 +463,7 @@ export default function ScanResultsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => generateReportMutation.mutate("json")}
+                      disabled={generateReportMutation.isPending}
                       data-testid="button-export-json"
                     >
                       {generateReportMutation.isPending ? (
