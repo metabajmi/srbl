@@ -13,6 +13,16 @@ const openai = new OpenAI({
 
 export interface ComplianceAnalysisResult {
   overallScore: number;
+  complianceLevel: "low" | "medium" | "high";
+  findings: {
+    hasPrivacyPolicy: boolean;
+    privacyPolicyUrl?: string;
+    hasTermsAndConditions: boolean;
+    termsAndConditionsUrl?: string;
+    hasCookieBanner: boolean;
+    hasDataCollectionForms: boolean;
+    hasContactInfo: boolean;
+  };
   issues: Array<{
     severity: "critical" | "warning" | "suggestion";
     category: string;
@@ -35,21 +45,41 @@ export async function analyzeWebsiteCompliance(
     console.warn("OpenAI API key not configured, using mock analysis");
     // Return mock data for testing
     return {
-      overallScore: 45,
+      overallScore: 35,
+      complianceLevel: "low",
+      findings: {
+        hasPrivacyPolicy: false,
+        privacyPolicyUrl: undefined,
+        hasTermsAndConditions: false,
+        termsAndConditionsUrl: undefined,
+        hasCookieBanner: false,
+        hasDataCollectionForms: true,
+        hasContactInfo: true,
+      },
       issues: [
         {
           severity: "critical",
-          category: "سياسة الخصوصية",
-          title: "سياسة خصوصية غير موجودة أو غير واضحة",
-          description: "لم يتم العثور على سياسة خصوصية واضحة في الموقع. يجب أن تحتوي جميع المواقع على سياسة خصوصية مفصلة.",
+          category: "privacy_policy",
+          title: "سياسة الخصوصية غير موجودة",
+          description: "لم يتم العثور على سياسة خصوصية في الموقع. يجب أن تحتوي جميع المواقع التي تجمع بيانات شخصية على سياسة خصوصية مفصلة.",
           articleReference: "المادة الثالثة عشرة",
           regulation: "نظام حماية البيانات الشخصية",
           remediation: "أضف صفحة سياسة خصوصية شاملة تشرح كيفية جمع واستخدام البيانات الشخصية",
           affectedElement: "الموقع بالكامل"
         },
         {
+          severity: "critical",
+          category: "terms_and_conditions",
+          title: "شروط الاستخدام غير موجودة",
+          description: "لم يتم العثور على صفحة شروط وأحكام الاستخدام في الموقع.",
+          articleReference: "المادة الرابعة عشرة",
+          regulation: "نظام حماية البيانات الشخصية",
+          remediation: "أضف صفحة شروط وأحكام واضحة تحدد حقوق والتزامات المستخدمين",
+          affectedElement: "الموقع بالكامل"
+        },
+        {
           severity: "warning",
-          category: "الموافقة",
+          category: "consent",
           title: "آلية موافقة غير واضحة",
           description: "لا توجد آلية واضحة للحصول على موافقة المستخدم قبل جمع البيانات",
           articleReference: "المادة السادسة",
@@ -59,28 +89,35 @@ export async function analyzeWebsiteCompliance(
         },
         {
           severity: "suggestion",
-          category: "الشفافية",
-          title: "تحسين وضوح المعلومات",
-          description: "يمكن تحسين طريقة عرض المعلومات حول استخدام البيانات",
+          category: "cookies",
+          title: "لافتة الكوكيز غير موجودة",
+          description: "يفضل إضافة لافتة لإعلام المستخدمين باستخدام ملفات تعريف الارتباط",
           articleReference: "المادة الثالثة عشرة",
           regulation: "نظام حماية البيانات الشخصية",
-          remediation: "استخدم لغة واضحة وبسيطة في شرح كيفية استخدام البيانات",
-          affectedElement: "صفحات المعلومات"
+          remediation: "أضف لافتة كوكيز تسمح للمستخدمين بالتحكم في تفضيلاتهم",
+          affectedElement: "الموقع بالكامل"
         }
       ]
     };
   }
-  const systemPrompt = `أنت خبير في قانون حماية البيانات الشخصية السعودي ولوائحه. مهمتك هي تحليل محتوى المواقع الإلكترونية وتحديد مخالفات الامتثال.
+  const systemPrompt = `أنت خبير في قانون حماية البيانات الشخصية السعودي ولوائحه. مهمتك هي تحليل محتوى المواقع الإلكترونية بدقة شديدة وتحديد مخالفات الامتثال.
 
 عند التحليل، ركز على:
-1. وجود وشمولية سياسة الخصوصية
-2. آليات الحصول على الموافقة
-3. شفافية جمع البيانات
-4. حقوق أصحاب البيانات
-5. أمن البيانات والتشفير
-6. مشاركة البيانات مع أطراف ثالثة
-7. فترة الاحتفاظ بالبيانات
-8. ملفات تعريف الارتباط والتتبع
+1. **سياسة الخصوصية (Privacy Policy)**: هل موجودة؟ هل الرابط واضح ويعمل؟
+2. **شروط الاستخدام (Terms & Conditions)**: هل موجودة؟ هل الرابط واضح ويعمل؟
+3. **لافتة الكوكيز (Cookie Banner)**: هل موجودة؟ هل تحتوي على آلية موافقة واضحة؟
+4. **النماذج (Forms)**: هل توجد نماذج تجمع بيانات شخصية؟
+5. **معلومات الاتصال**: هل يوجد معلومات واضحة للاتصال بالمسؤول عن البيانات؟
+6. **الموافقة (Consent)**: آليات الحصول على الموافقة قبل جمع البيانات
+7. **حقوق المستخدم**: هل الحقوق موضحة بوضوح؟
+8. **الأمان**: مؤشرات أمان البيانات والتشفير
+
+ابحث بدقة عن:
+- روابط "Privacy Policy", "سياسة الخصوصية", "الخصوصية"
+- روابط "Terms", "Terms & Conditions", "شروط الاستخدام", "الشروط والأحكام"
+- عناصر مثل <a href="/privacy">, <a href="/terms">, إلخ.
+- نماذج <form> تحتوي على حقول بيانات شخصية
+- معلومات اتصال: email, phone, address
 
 استخدم المواد التالية من نظام حماية البيانات الشخصية:
 - المادة السادسة: الموافقة
@@ -89,7 +126,7 @@ export async function analyzeWebsiteCompliance(
 - المادة الرابعة عشرة: الإفصاح
 - المادة التاسعة عشرة: أمن البيانات
 
-قدم النتائج بصيغة JSON مع التقييم الشامل والمخالفات المحددة.`;
+قدم النتائج بصيغة JSON دقيقة مع جميع النتائج.`;
 
   const userPrompt = `حلل الموقع التالي للتحقق من الامتثال لقانون حماية البيانات الشخصية السعودي:
 
@@ -98,25 +135,48 @@ URL: ${url}
 محتوى HTML (مختصر):
 ${htmlContent.substring(0, 30000)}
 
-قدم تحليلاً شاملاً يتضمن:
+قدم تحليلاً شاملاً ودقيقاً يتضمن:
+
+**القسم الأول - النتائج (Findings):**
+افحص بدقة ما يلي:
+1. **سياسة الخصوصية**: ابحث عن روابط تحتوي على "privacy", "خصوصية", "/privacy", "/privacy-policy" أو صفحات مخصصة
+2. **شروط الاستخدام**: ابحث عن روابط تحتوي على "terms", "شروط", "/terms", "/terms-and-conditions"
+3. **لافتة الكوكيز**: ابحث عن عناصر Cookie Banner أو إشعارات الكوكيز
+4. **نماذج جمع البيانات**: عدد عناصر <form> التي تحتوي على حقول بيانات شخصية (name, email, phone, إلخ)
+5. **معلومات الاتصال**: وجود email, phone, address واضحة للتواصل
+
+**القسم الثاني - التقييم:**
 1. نسبة الامتثال الإجمالية (0-100)
-2. قائمة بجميع المخالفات مع:
+2. مستوى الامتثال: "low" إذا كان أقل من 40، "medium" إذا بين 40-70، "high" إذا أكثر من 70
+
+**القسم الثالث - المخالفات:**
+قائمة بجميع المخالفات مع:
    - درجة الخطورة (critical/warning/suggestion)
-   - الفئة
+   - الفئة (privacy_policy/terms_and_conditions/consent/cookies/data_collection/security)
    - العنوان بالعربية
    - الوصف التفصيلي
    - المادة المخالفة من القانون
    - طريقة المعالجة
-   - العنصر المتأثر في الموقع إن وجد
+   - العنصر المتأثر في الموقع
 
 أجب بصيغة JSON فقط بالتنسيق التالي:
 {
-  "overallScore": number,
+  "overallScore": number (0-100),
+  "complianceLevel": "low" | "medium" | "high",
+  "findings": {
+    "hasPrivacyPolicy": boolean,
+    "privacyPolicyUrl": "string or null",
+    "hasTermsAndConditions": boolean,
+    "termsAndConditionsUrl": "string or null",
+    "hasCookieBanner": boolean,
+    "hasDataCollectionForms": boolean,
+    "hasContactInfo": boolean
+  },
   "issues": [
     {
       "severity": "critical|warning|suggestion",
-      "category": "privacy_policy|data_collection|consent|security|user_rights|cookies|third_party|data_retention|general",
-      "title": "عنوان المشكلة",
+      "category": "privacy_policy|terms_and_conditions|data_collection|consent|security|user_rights|cookies|third_party|data_retention|general",
+      "title": "عنوان المشكلة بالعربية",
       "description": "وصف تفصيلي",
       "articleReference": "المادة X من النظام",
       "regulation": "نص اللائحة المخالفة",
@@ -140,8 +200,19 @@ ${htmlContent.substring(0, 30000)}
     const result = JSON.parse(response.choices[0].message.content || "{}");
     
     // Validate and ensure proper structure
+    const overallScore = Math.max(0, Math.min(100, result.overallScore || 0));
     return {
-      overallScore: Math.max(0, Math.min(100, result.overallScore || 0)),
+      overallScore,
+      complianceLevel: overallScore >= 70 ? "high" : overallScore >= 40 ? "medium" : "low",
+      findings: {
+        hasPrivacyPolicy: result.findings?.hasPrivacyPolicy || false,
+        privacyPolicyUrl: result.findings?.privacyPolicyUrl || undefined,
+        hasTermsAndConditions: result.findings?.hasTermsAndConditions || false,
+        termsAndConditionsUrl: result.findings?.termsAndConditionsUrl || undefined,
+        hasCookieBanner: result.findings?.hasCookieBanner || false,
+        hasDataCollectionForms: result.findings?.hasDataCollectionForms || false,
+        hasContactInfo: result.findings?.hasContactInfo || false,
+      },
       issues: Array.isArray(result.issues) ? result.issues : []
     };
   } catch (error: any) {
@@ -151,12 +222,22 @@ ${htmlContent.substring(0, 30000)}
     // Return mock data on API error for testing
     console.warn("Using fallback mock data due to OpenAI API error");
     return {
-      overallScore: 45,
+      overallScore: 35,
+      complianceLevel: "low",
+      findings: {
+        hasPrivacyPolicy: false,
+        privacyPolicyUrl: undefined,
+        hasTermsAndConditions: false,
+        termsAndConditionsUrl: undefined,
+        hasCookieBanner: false,
+        hasDataCollectionForms: true,
+        hasContactInfo: true,
+      },
       issues: [
         {
           severity: "critical",
-          category: "سياسة الخصوصية",
-          title: "سياسة خصوصية غير موجودة أو غير واضحة",
+          category: "privacy_policy",
+          title: "سياسة الخصوصية غير موجودة",
           description: "لم يتم العثور على سياسة خصوصية واضحة في الموقع.",
           articleReference: "المادة الثالثة عشرة",
           regulation: "نظام حماية البيانات الشخصية",
@@ -164,8 +245,18 @@ ${htmlContent.substring(0, 30000)}
           affectedElement: "الموقع بالكامل"
         },
         {
+          severity: "critical",
+          category: "terms_and_conditions",
+          title: "شروط الاستخدام غير موجودة",
+          description: "لم يتم العثور على صفحة شروط وأحكام الاستخدام.",
+          articleReference: "المادة الرابعة عشرة",
+          regulation: "نظام حماية البيانات الشخصية",
+          remediation: "أضف صفحة شروط وأحكام واضحة",
+          affectedElement: "الموقع بالكامل"
+        },
+        {
           severity: "warning",
-          category: "الموافقة",
+          category: "consent",
           title: "آلية موافقة غير واضحة",
           description: "لا توجد آلية واضحة للحصول على موافقة المستخدم",
           articleReference: "المادة السادسة",
