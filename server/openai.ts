@@ -891,3 +891,140 @@ ${data.disputeResolution || 'يتم حل أي نزاعات وفقاً للإجر
 للاستفسارات:
 البريد الإلكتروني: ${data.contactEmail}`;
 }
+
+// ==================== AI ASSISTANT FUNCTIONS ====================
+
+/**
+ * Generate embeddings for text using OpenAI's text-embedding-3-small model
+ * Returns 1536-dimensional vector for semantic search
+ */
+export async function generateEmbedding(text: string): Promise<number[]> {
+  // Check if API key is available
+  if (!apiKey || apiKey === "missing-key") {
+    console.warn("OpenAI API key not configured, returning zero vector");
+    // Return zero vector for testing (1536 dimensions)
+    return new Array(1536).fill(0);
+  }
+
+  try {
+    const response = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: text,
+      encoding_format: "float",
+    });
+
+    return response.data[0].embedding;
+  } catch (error: any) {
+    console.error("Error generating embedding:", error.message);
+    // Return zero vector on error
+    return new Array(1536).fill(0);
+  }
+}
+
+/**
+ * Generate embeddings for multiple texts in batch
+ */
+export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
+  // Check if API key is available
+  if (!apiKey || apiKey === "missing-key") {
+    console.warn("OpenAI API key not configured, returning zero vectors");
+    return texts.map(() => new Array(1536).fill(0));
+  }
+
+  try {
+    const response = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: texts,
+      encoding_format: "float",
+    });
+
+    return response.data.map(item => item.embedding);
+  } catch (error: any) {
+    console.error("Error generating embeddings:", error.message);
+    return texts.map(() => new Array(1536).fill(0));
+  }
+}
+
+export interface RetrievedContext {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  similarity: number;
+}
+
+export interface ChatAssistantResponse {
+  message: string;
+  retrievedContext: RetrievedContext[];
+}
+
+/**
+ * Generate chat response using RAG (Retrieval Augmented Generation)
+ * @param userMessage - User's question
+ * @param retrievedContext - Relevant knowledge base articles
+ * @param conversationHistory - Previous messages for context
+ */
+export async function generateChatResponse(
+  userMessage: string,
+  retrievedContext: RetrievedContext[],
+  conversationHistory: Array<{ role: string; content: string }> = []
+): Promise<string> {
+  // Check if API key is available
+  if (!apiKey || apiKey === "missing-key") {
+    console.warn("OpenAI API key not configured, using mock response");
+    return `شكراً لسؤالك! للأسف، لم يتم تكوين مفتاح OpenAI API. هذا رد تجريبي.
+
+بناءً على المعلومات المتاحة في قاعدة المعرفة، يمكنني مساعدتك بشأن:
+- نظام حماية البيانات الشخصية (PDPL)
+- إدارة الامتثال الداخلي
+- توليد سياسات الخصوصية والشروط والأحكام
+
+كيف يمكنني مساعدتك اليوم؟`;
+  }
+
+  // Prepare context from retrieved articles
+  const contextText = retrievedContext
+    .map((ctx, index) => {
+      return `[${index + 1}] ${ctx.title}\n${ctx.content.substring(0, 500)}...\n`;
+    })
+    .join("\n");
+
+  const systemPrompt = `أنت مساعد ذكي متخصص في نظام حماية البيانات الشخصية السعودي (PDPL). مهمتك هي مساعدة المستخدمين بالإجابة على أسئلتهم بناءً على قاعدة المعرفة المتوفرة.
+
+**قواعد الإجابة:**
+1. استخدم فقط المعلومات من السياق المُقدم (قاعدة المعرفة)
+2. إذا لم تكن المعلومات متوفرة، أخبر المستخدم بذلك بوضوح
+3. استخدم لغة واضحة وبسيطة بالعربية
+4. كن مهذباً ومحترماً
+5. إذا كان السؤال معقداً، قسم الإجابة إلى نقاط
+6. أشر إلى المصادر عند الاقتباس من مقالات محددة
+
+**السياق المتاح من قاعدة المعرفة:**
+${contextText}
+
+إذا لم يحتوي السياق على المعلومات الكافية للإجابة، أخبر المستخدم بذلك وانصحه بزيارة الهيئة السعودية للبيانات والذكاء الاصطناعي (SDAIA) للحصول على معلومات رسمية.`;
+
+  try {
+    // Build messages array with conversation history
+    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      { role: "system", content: systemPrompt },
+      ...conversationHistory.slice(-6).map(msg => ({ // Keep last 3 exchanges (6 messages)
+        role: msg.role as "user" | "assistant",
+        content: msg.content
+      })),
+      { role: "user", content: userMessage }
+    ];
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages,
+      max_tokens: 1500,
+      temperature: 0.7,
+    });
+
+    return response.choices[0].message.content || "عذراً، لم أتمكن من توليد إجابة.";
+  } catch (error: any) {
+    console.error("Error generating chat response:", error.message);
+    throw new Error("فشل في توليد الرد. يرجى المحاولة مرة أخرى.");
+  }
+}
