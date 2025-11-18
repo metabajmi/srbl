@@ -28,6 +28,9 @@ import AdminRequestsPage from "@/pages/admin/AdminRequestsPage";
 import AdminPoliciesPage from "@/pages/admin/AdminPoliciesPage";
 import AdminAuditLogsPage from "@/pages/admin/AdminAuditLogsPage";
 import AdminManagementPage from "@/pages/admin/AdminManagementPage";
+import RopaPage from "@/pages/RopaPage";
+import DsarPage from "@/pages/DsarPage";
+import DpiaPage from "@/pages/DpiaPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -62,6 +65,11 @@ function Router() {
       <Route path="/consent-management" component={ConsentManagementPage} />
       <Route path="/preferences-center" component={PreferencesCenterPage} />
       <Route path="/smart-assistant" component={SmartAssistantPage} />
+      
+      {/* Internal Compliance */}
+      <Route path="/ropa" component={RopaPage} />
+      <Route path="/dsar" component={DsarPage} />
+      <Route path="/dpia" component={DpiaPage} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />

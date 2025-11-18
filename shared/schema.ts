@@ -788,7 +788,7 @@ export const insertRopaEntrySchema = createInsertSchema(ropaEntries).omit({
     name: z.string(),
     category: z.string(), // personal, sensitive, special
     isSensitive: z.boolean(),
-  })).min(1, "يجب إدخال نوع واحد على الأقل من البيانات"),
+  })).optional().default([]),
   processingPurpose: z.string().min(5, "يجب توضيح الغرض من المعالجة"),
   legalBasis: z.enum(["consent", "contract", "legal_obligation", "legitimate_interest"], {
     required_error: "يجب تحديد الأساس النظامي"
@@ -955,7 +955,7 @@ export const insertDpiaAssessmentSchema = createInsertSchema(dpiaAssessments).om
     category: z.string(),
     volume: z.string().optional(),
     sensitivity: z.enum(["low", "medium", "high"]),
-  })).min(1, "يجب إدخال نوع واحد على الأقل من البيانات"),
+  })).optional().default([]),
   dataSubjects: z.string().min(3, "يجب تحديد الفئات المستهدفة"),
   necessityJustification: z.string().min(10, "يجب توضيح ضرورة المعالجة"),
   proportionalityAssessment: z.string().min(10, "يجب تقييم التناسب"),
@@ -964,12 +964,12 @@ export const insertDpiaAssessmentSchema = createInsertSchema(dpiaAssessments).om
     likelihood: z.enum(["low", "medium", "high"]),
     impact: z.enum(["low", "medium", "high"]),
     severity: z.enum(["low", "medium", "high", "critical"]),
-  })).min(1, "يجب تحديد مخاطرة واحدة على الأقل"),
+  })).optional().default([]),
   mitigationMeasures: z.array(z.object({
     measure: z.string(),
     effectiveness: z.enum(["low", "medium", "high"]),
     status: z.enum(["planned", "implemented", "ongoing"]),
-  })).min(1, "يجب تحديد تدبير وقائي واحد على الأقل"),
+  })).optional().default([]),
   individualImpact: z.enum(["low", "medium", "high"], {
     required_error: "يجب تقييم التأثير على الأفراد"
   }),

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Shield, FileText, CheckSquare, ScrollText, Home, FileSearch, Cookie, Sparkles } from "lucide-react";
+import { Shield, FileText, CheckSquare, ScrollText, Home, FileSearch, Cookie, Sparkles, FileEdit, Users, ShieldAlert } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -53,6 +53,24 @@ const toolsItems = [
   },
 ];
 
+const complianceItems = [
+  {
+    title: "سجل أنشطة المعالجة",
+    url: "/ropa",
+    icon: FileEdit,
+  },
+  {
+    title: "طلبات أصحاب البيانات",
+    url: "/dsar",
+    icon: Users,
+  },
+  {
+    title: "تقييم تأثير حماية البيانات",
+    url: "/dpia",
+    icon: ShieldAlert,
+  },
+];
+
 export function AppSidebar() {
   const [location] = useLocation();
 
@@ -91,6 +109,27 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {toolsItems.map((item) => {
+                const isActive = location === item.url;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link href={item.url} data-testid={`link-${item.url.replace('/', '')}`}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>الامتثال الداخلي</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {complianceItems.map((item) => {
                 const isActive = location === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
