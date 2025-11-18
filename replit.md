@@ -10,7 +10,7 @@ This project is a web application assisting organizations in complying with Saud
 - ✅ Privacy Generator: Form accessible with 3-section navigation
 - ✅ Smart Customer Assistant: Complete RAG-based chatbot with vector search, feedback system, and E2E tested
 - ✅ Database schema & backend APIs operational
-- ⚠️ Internal Compliance Module: Removed from UI per user request (backend APIs still exist for ROPA, DSAR, DPIA)
+- ✅ Internal Compliance Module: ROPA, DSAR, DPIA pages fully restored and tested (Nov 18, 2025)
 
 **Smart Customer Assistant (Production Ready - Nov 16, 2025):**
 - ✅ Backend: 8 API endpoints (embeddings, search, chat, conversations CRUD, feedback, knowledge)
@@ -116,7 +116,20 @@ PostgreSQL serves as the primary database, managed with Drizzle ORM for type-saf
 The Smart Customer Assistant uses a Retrieval Augmented Generation (RAG) architecture built on PostgreSQL with pgvector extension for semantic search. Vector embeddings are generated using OpenAI's `text-embedding-3-small` model (1536 dimensions), supporting both Arabic and English content. The knowledge base stores PDPL articles, FAQs, service guides, and glossary terms with HNSW vector indexes for efficient cosine similarity search. Chat conversations and messages are tracked with references to retrieved context, enabling audit trails and feedback collection. This unified database approach eliminates the need for separate vector databases while maintaining performance.
 
 ### Technical Implementations & Feature Specifications
-**Note:** Internal Compliance pages (ROPA, DSAR, DPIA) have been removed from the frontend interface per user request, though backend APIs remain functional for potential future use.
+
+**Internal Compliance Module (Production Ready - Nov 18, 2025):**
+- ✅ **Three Complete Pages:** RopaPage (/ropa), DsarPage (/dsar), DpiaPage (/dpia)
+- ✅ **Database Schema:** ropaEntries, dsarRequests, dpiaAssessments tables with Drizzle ORM
+- ✅ **Backend APIs:** Full CRUD operations (POST/GET/PUT/DELETE) for all three modules
+- ✅ **Schema Fix (Nov 18, 2025):** Made complex array fields optional (dataTypes, dataRecipients, identifiedRisks, mitigationMeasures) to enable basic form submissions without requiring multi-select inputs
+- ✅ **Frontend UI Features:**
+  - ROPA: Department, processing purpose, legal basis selection, retention period tracking
+  - DSAR: Request type selection, status tracking (new/in_progress/completed/rejected), due date calculation (30 days from submission per PDPL)
+  - DPIA: Project assessment with impact levels, department tracking, risk evaluation
+  - All pages: RTL Arabic support, BackButton navigation, TanStack Query for data fetching, Toast notifications
+- ✅ **Sidebar Navigation:** "الامتثال الداخلي" section with three links (link-ropa, link-dsar, link-dpia)
+- ✅ **E2E Testing:** Full CRUD flows tested and verified (create → display → persist)
+- 📝 **Future Enhancement:** Add multi-select/checkbox controls for optional array fields (dataTypes, identifiedRisks, mitigationMeasures) for comprehensive compliance tracking
 
 **Terms & Conditions Generator (Hybrid System - Production Ready):**
 Backend architecture complete and verified: junction tables (termsTemplateSections, termsSectionSources), seed data (6 templates × 8 sections, 6 legal sources), storage layer with SQL aggregation, OpenAI integration. Generation pipeline (`processTermsGeneration`) successfully creates 3,300+ character HTML documents with Cairo font, RTL layout, and professional formatting. Frontend UI built with 4-section multi-step form (Company Info → Service Details → Legal Info → Contact), react-hook-form validation, generating/completed states, and HTML content preview with download functionality. Full E2E testing passed: form submission, document generation polling, status transitions, and download functionality all working correctly. Architect confirmed production-readiness with no blocking defects.
