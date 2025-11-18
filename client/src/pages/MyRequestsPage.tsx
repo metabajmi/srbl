@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 type ClientRequest = {
   id: number;
@@ -42,6 +43,7 @@ type CreateRequestData = z.infer<typeof createRequestSchema>;
 export default function MyRequestsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   
   // Get user from localStorage (temporary)
   let user = { id: "" };
@@ -56,7 +58,7 @@ export default function MyRequestsPage() {
   const userId = user.id;
 
   const { data: requests, isLoading } = useQuery<ClientRequest[]>({
-    queryKey: ["/api/client/requests", { userId }],
+    queryKey: ["/api/client/requests", userId],
   });
 
   const form = useForm<CreateRequestData>({
@@ -77,7 +79,7 @@ export default function MyRequestsPage() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/client/requests", { userId }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/client/requests", userId] });
       toast({
         title: "✅ تم إنشاء الطلب بنجاح",
         description: "سيتم الرد على طلبك في أقرب وقت ممكن",
@@ -85,12 +87,23 @@ export default function MyRequestsPage() {
       setDialogOpen(false);
       form.reset();
     },
-    onError: () => {
-      toast({
-        variant: "destructive",
-        title: "❌ حدث خطأ",
-        description: "فشل إنشاء الطلب. يرجى المحاولة مرة أخرى",
-      });
+    onError: (error: any) => {
+      // Check if session expired (401)
+      if (error.message?.includes("401") || error.message?.includes("غير مصرح")) {
+        localStorage.removeItem("user");
+        toast({
+          variant: "destructive",
+          title: "انتهت الجلسة",
+          description: "يرجى تسجيل الدخول مرة أخرى",
+        });
+        navigate("/login");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "❌ حدث خطأ",
+          description: "فشل إنشاء الطلب. يرجى المحاولة مرة أخرى",
+        });
+      }
     },
   });
 
