@@ -282,9 +282,22 @@ export default function HomePage() {
               هذه المنصة مصممة للمساعدة في تحقيق الامتثال لنظام حماية البيانات الشخصية السعودي
               ولا تغني عن الاستشارة القانونية المتخصصة
             </p>
-            <p className="text-xs text-muted-foreground">
-              © 2024 منصة حماية البيانات - جميع الحقوق محفوظة
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-xs text-muted-foreground">
+                © 2024 منصة حماية البيانات - جميع الحقوق محفوظة
+              </p>
+              <Link href="/admin/login">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  data-testid="link-admin-login"
+                >
+                  <Shield className="w-3 h-3 ml-1" />
+                  لوحة التحكم
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </footer>
