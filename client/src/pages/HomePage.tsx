@@ -117,16 +117,18 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       {/* Brand Header */}
       <section className="bg-primary/5 border-b">
-        <div className="container py-6">
-          <div className="flex items-center justify-center gap-3">
-            <Shield className="w-10 h-10 text-primary" />
-            <h1 className="text-5xl md:text-6xl font-bold text-primary" data-testid="text-brand-sirbal">
-              سِرْبَال
-            </h1>
+        <div className="container py-8">
+          <div className="flex flex-col items-center justify-center gap-1">
+            <div className="flex items-center justify-center gap-3">
+              <Shield className="w-10 h-10 text-primary" />
+              <h1 className="text-5xl md:text-6xl font-bold text-primary" data-testid="text-brand-sirbal">
+                سِرْبَال
+              </h1>
+            </div>
+            <p className="text-center text-base font-semibold text-primary/80 tracking-wide">
+              درع الامتثال
+            </p>
           </div>
-          <p className="text-center text-lg font-semibold text-primary mt-2">
-            درع الامتثال
-          </p>
         </div>
       </section>
 
