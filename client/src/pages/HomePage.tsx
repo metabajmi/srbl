@@ -279,8 +279,8 @@ export default function HomePage() {
               data-testid="card-internal-compliance"
             >
               <CardHeader className="text-center pb-6 pt-8">
-                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-accent/15 shadow-md">
-                  <Lock className="h-10 w-10 text-accent" />
+                <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-orange-500/20 to-amber-500/20 shadow-lg ring-2 ring-orange-500/30">
+                  <Lock className="h-12 w-12 text-orange-600 dark:text-orange-400" />
                 </div>
                 <Badge variant="secondary" className="mx-auto mb-4">
                   إدارة شاملة
@@ -303,11 +303,11 @@ export default function HomePage() {
                     DSAR
                   </Badge>
                   <Badge variant="outline" className="text-xs px-3 py-1.5">
-                    <Lock className="w-3 h-3 ml-1" />
+                    <Lock className="w-3 h-3 ml-1 text-orange-600 dark:text-orange-400" />
                     DPIA
                   </Badge>
                 </div>
-                <Button size="lg" className="px-10 h-11 text-base font-semibold">
+                <Button size="lg" className="px-10 h-11 text-base font-semibold bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white">
                   <Lock className="ml-2 h-5 w-5" />
                   ابدأ الآن
                 </Button>
