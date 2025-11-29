@@ -19,7 +19,7 @@ const menuItems = [
     icon: Home,
   },
   {
-    title: "فحص الامتثال",
+    title: "فحص سِرْبَال",
     url: "/scans",
     icon: FileSearch,
   },

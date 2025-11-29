@@ -211,7 +211,7 @@ export default function ScanResultsPage() {
           <div className="flex items-center gap-3">
             <BackButton label="رجوع" />
             <Shield className="w-8 h-8 text-primary" />
-            <h1 className="text-xl font-bold">نتائج فحص الامتثال</h1>
+            <h1 className="text-xl font-bold">نتائج فحص سِرْبَال</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button 
