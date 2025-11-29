@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useToast } from "@/hooks/use-toast";
 import { Shield, AlertCircle, AlertTriangle, Info, FileText, Download, ArrowRight, CheckCircle, XCircle, Globe, Home, RefreshCw, Wrench, ScrollText, Cookie, Settings } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BackButton } from "@/components/BackButton";
 import { useScanContext, extractScanData } from "@/contexts/ScanContext";
 
@@ -53,20 +53,18 @@ export default function ScanResultsPage() {
     enabled: !!scanId && scan?.status === "completed",
   });
 
-  // Refetch issues when scan completes
+  // Track last processed scan to avoid duplicate processing
+  const lastProcessedScanRef = useRef<number | null>(null);
+
+  // Refetch issues and save scan data when scan completes (only once per scan)
   useEffect(() => {
-    if (scan?.status === "completed") {
+    if (scan?.status === "completed" && scan.id && lastProcessedScanRef.current !== scan.id) {
+      lastProcessedScanRef.current = scan.id;
       refetchIssues();
-    }
-  }, [scan?.status, refetchIssues]);
-  
-  // Save scan data for use in tools (only when scan ID changes or scan completes)
-  useEffect(() => {
-    if (scan?.status === "completed" && scan.id) {
       const extractedData = extractScanData(scan);
       setScanData(extractedData);
     }
-  }, [scan?.id, scan?.status]);
+  }, [scan?.status, scan?.id, refetchIssues, setScanData]);
 
   // Navigate to tool with scan data
   const navigateToTool = (tool: "privacy" | "terms" | "consent") => {
