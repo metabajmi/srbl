@@ -118,16 +118,16 @@ export default function HomePage() {
       {/* Brand Header */}
       <section className="bg-gradient-to-b from-primary/10 to-primary/5 border-b">
         <div className="container py-12">
-          <div className="flex flex-col items-center justify-center gap-6">
-            <div className="flex items-center justify-center gap-4">
-              <Shield className="w-12 h-12 text-primary" />
-              <h1 className="text-6xl md:text-7xl font-bold text-primary" data-testid="text-brand-sirbal">
+          <div className="flex items-center justify-center gap-6">
+            <Shield className="w-14 h-14 text-primary" />
+            <div className="flex flex-col justify-center">
+              <h1 className="text-6xl md:text-7xl font-bold text-primary leading-none" data-testid="text-brand-sirbal">
                 سِرْبَال
               </h1>
+              <p className="text-xl font-semibold text-primary mt-1 tracking-wide">
+                درع الامتثال
+              </p>
             </div>
-            <p className="text-lg font-semibold text-primary/70 tracking-wide">
-              درع الامتثال
-            </p>
           </div>
         </div>
       </section>
