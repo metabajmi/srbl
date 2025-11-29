@@ -47,19 +47,59 @@ interface DetectedLinks {
 function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks {
   const lowerHTML = htmlContent.toLowerCase();
   
-  // Helper to check if a string is a valid URL path
+  // Helper to check if a URL is valid (not mailto, fragment-only, or javascript)
   const isValidUrl = (url: string): boolean => {
     if (!url || typeof url !== 'string') return false;
-    // Valid if starts with http/https, relative path starting with /, ./, or looks like a file/query
-    return url.startsWith('http') || 
-           url.startsWith('/') || 
-           url.startsWith('./') ||
-           url.startsWith('?') || // Query parameters
-           /^[a-zA-Z0-9_-]+\.(html?|php|asp)$/i.test(url); // File names like privacy.html
+    const trimmed = url.trim();
+    // Reject invalid patterns
+    if (trimmed.startsWith('mailto:') || 
+        trimmed.startsWith('tel:') || 
+        trimmed.startsWith('javascript:') ||
+        trimmed === '#' ||
+        (trimmed.startsWith('#') && !trimmed.includes('/'))) {
+      return false;
+    }
+    // Valid patterns: http/https, relative paths, file names
+    return trimmed.startsWith('http') || 
+           trimmed.startsWith('/') || 
+           trimmed.startsWith('./') ||
+           trimmed.startsWith('?') ||
+           /^[a-zA-Z0-9_-]+\.(html?|php|aspx?|jsp)$/i.test(trimmed) ||
+           /^[a-zA-Z0-9_\/-]+$/.test(trimmed); // Path-like strings
   };
-  
-  // Privacy Policy Detection (expanded patterns)
-  const privacyHrefPatterns = [
+
+  // Helper to find ALL matches using while loop (not just first match)
+  const findAllMatches = (pattern: RegExp, content: string): string[] => {
+    const matches: string[] = [];
+    const regex = new RegExp(pattern.source, pattern.flags);
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      if (match[1]) {
+        matches.push(match[1]);
+      }
+      // Prevent infinite loops with zero-width matches
+      if (match.index === regex.lastIndex) {
+        regex.lastIndex++;
+      }
+    }
+    return matches;
+  };
+
+  // Find first valid URL from pattern matches
+  const findFirstValidUrl = (patterns: RegExp[], content: string): string | undefined => {
+    for (const pattern of patterns) {
+      const allMatches = findAllMatches(pattern, content);
+      for (const url of allMatches) {
+        if (isValidUrl(url)) {
+          return url;
+        }
+      }
+    }
+    return undefined;
+  };
+
+  // Privacy Policy Detection patterns (comprehensive - using .*? with s flag for nested tags)
+  const privacyPatterns = [
     /href=["']([^"']*privacy[^"']*)["']/gi,
     /href=["']([^"']*خصوصية[^"']*)["']/gi,
     /href=["']([^"']*\/privacy-policy[^"']*)["']/gi,
@@ -69,15 +109,13 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
     /href=["']([^"']*confidentiality[^"']*)["']/gi,
     /href=["']([^"']*data-protection[^"']*)["']/gi,
     /href=["']([^"']*حماية-البيانات[^"']*)["']/gi,
+    /href=["']([^"']*datenschutz[^"']*)["']/gi,
+    /href=["']([^"']*privacidad[^"']*)["']/gi,
+    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(privacy|سياسة الخصوصية|خصوصية|privacy policy|الخصوصية).*?<\/a>/gis,
   ];
   
-  // Anchor text patterns WITH href extraction (MORE COMPREHENSIVE)
-  const privacyAnchorPatterns = [
-    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(privacy policy|سياسة الخصوصية|سياسة خصوصيتنا|privacy|خصوصيتك|حماية البيانات).*?<\/a>/gis,
-  ];
-  
-  // Terms Detection (expanded patterns)
-  const termsHrefPatterns = [
+  // Terms Detection patterns (comprehensive - using .*? with s flag for nested tags)
+  const termsPatterns = [
     /href=["']([^"']*terms[^"']*)["']/gi,
     /href=["']([^"']*شروط[^"']*)["']/gi,
     /href=["']([^"']*\/terms-and-conditions[^"']*)["']/gi,
@@ -88,89 +126,43 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
     /href=["']([^"']*\/tos[^"']*)["']/gi,
     /href=["']([^"']*أحكام[^"']*)["']/gi,
     /href=["']([^"']*شروط-الاستخدام[^"']*)["']/gi,
-  ];
-  
-  // Anchor text patterns WITH href extraction (MORE COMPREHENSIVE)
-  const termsAnchorPatterns = [
-    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(terms|terms & conditions|terms of service|شروط الاستخدام|الشروط والأحكام|الشروط|أحكام الاستخدام).*?<\/a>/gis,
+    /href=["']([^"']*\/use-policy[^"']*)["']/gi,
+    /href=["']([^"']*\/user-agreement[^"']*)["']/gi,
+    /href=["']([^"']*\/service-agreement[^"']*)["']/gi,
+    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(terms|شروط|الشروط|terms of service|terms & conditions|terms of use).*?<\/a>/gis,
   ];
   
   const cookiePatterns = [
-    /cookie.*?(banner|consent|notice|popup)/gi,
+    /cookie.*?(banner|consent|notice|popup|modal)/gi,
     /\bcookie.*?accept/gi,
     /gdpr.*?cookie/gi,
     /class=["'][^"']*cookie[^"']*["']/gi,
     /id=["'][^"']*cookie[^"']*["']/gi,
     /كوكيز|ملفات تعريف الارتباط/gi,
+    /consent.*?manager/gi,
+    /cookie.*?policy/gi,
   ];
   
   const contactPatterns = [
-    /mailto:/gi,
+    /mailto:[^"'\s]+/gi,
     /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
-    /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/g,
-    /(contact|اتصل|تواصل|للتواصل)/gi,
+    /\b\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}\b/g,
+    /(contact|اتصل|تواصل|للتواصل|contact us)/gi,
+    /href=["'][^"']*contact[^"']*["']/gi,
   ];
   
-  let privacyPolicyUrl: string | undefined;
-  let termsUrl: string | undefined;
+  // Find privacy URL using comprehensive search
+  const privacyPolicyUrl = findFirstValidUrl(privacyPatterns, htmlContent);
   
-  // Try privacy href patterns first
-  for (const pattern of privacyHrefPatterns) {
-    pattern.lastIndex = 0;
-    const match = pattern.exec(htmlContent);
-    if (match && match[1] && isValidUrl(match[1])) {
-      privacyPolicyUrl = match[1];
-      break;
-    }
-  }
+  // Find terms URL using comprehensive search  
+  const termsUrl = findFirstValidUrl(termsPatterns, htmlContent);
   
-  // If no href pattern matched, try anchor text patterns
-  if (!privacyPolicyUrl) {
-    for (const pattern of privacyAnchorPatterns) {
-      pattern.lastIndex = 0;
-      const match = pattern.exec(htmlContent);
-      if (match && match[1] && isValidUrl(match[1])) {
-        privacyPolicyUrl = match[1];
-        break;
-      }
-    }
-  }
+  // Check existence using simple text search as fallback
+  const hasPrivacyPolicy = !!privacyPolicyUrl || 
+    /privacy\s*policy|سياسة\s*(ال)?خصوصية|privacy-policy|\/privacy/i.test(lowerHTML);
   
-  // Try terms href patterns first
-  for (const pattern of termsHrefPatterns) {
-    pattern.lastIndex = 0;
-    const match = pattern.exec(htmlContent);
-    if (match && match[1] && isValidUrl(match[1])) {
-      termsUrl = match[1];
-      break;
-    }
-  }
-  
-  // If no href pattern matched, try anchor text patterns
-  if (!termsUrl) {
-    for (const pattern of termsAnchorPatterns) {
-      pattern.lastIndex = 0;
-      const match = pattern.exec(htmlContent);
-      if (match && match[1] && isValidUrl(match[1])) {
-        termsUrl = match[1];
-        break;
-      }
-    }
-  }
-  
-  // Check if privacy/terms exist (even if URL extraction failed)
-  const allPrivacyPatterns = [...privacyHrefPatterns, ...privacyAnchorPatterns];
-  const allTermsPatterns = [...termsHrefPatterns, ...termsAnchorPatterns];
-  
-  const hasPrivacyPolicy = allPrivacyPatterns.some(pattern => {
-    pattern.lastIndex = 0;
-    return pattern.test(htmlContent);
-  });
-  
-  const hasTermsAndConditions = allTermsPatterns.some(pattern => {
-    pattern.lastIndex = 0;
-    return pattern.test(htmlContent);
-  });
+  const hasTermsAndConditions = !!termsUrl || 
+    /terms\s*(of\s*service|and\s*conditions|of\s*use)?|شروط\s*(ال)?(استخدام|خدمة)|الشروط\s*و(ال)?أحكام|\/terms|\/legal|\/tos/i.test(lowerHTML);
   
   const hasCookieBanner = cookiePatterns.some(pattern => {
     pattern.lastIndex = 0;
@@ -193,9 +185,9 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
   
   return {
     hasPrivacyPolicy,
-    privacyPolicyUrl: privacyPolicyUrl && isValidUrl(privacyPolicyUrl) ? privacyPolicyUrl : undefined,
+    privacyPolicyUrl,
     hasTermsAndConditions,
-    termsAndConditionsUrl: termsUrl && isValidUrl(termsUrl) ? termsUrl : undefined,
+    termsAndConditionsUrl: termsUrl,
     hasCookieBanner,
     hasContactInfo,
   };
@@ -298,12 +290,24 @@ export async function analyzeWebsiteCompliance(
 
 قدم النتائج بصيغة JSON دقيقة مع جميع النتائج.`;
 
+  // Prepare HTML content: first 15KB + last 15KB to ensure footer is included
+  const prepareHtmlForAnalysis = (html: string): string => {
+    const maxChars = 30000;
+    if (html.length <= maxChars) {
+      return html;
+    }
+    const halfSize = 15000;
+    const firstPart = html.substring(0, halfSize);
+    const lastPart = html.substring(html.length - halfSize);
+    return `${firstPart}\n\n... [محتوى مختصر] ...\n\n${lastPart}`;
+  };
+  
   const userPrompt = `حلل الموقع التالي للتحقق من الامتثال لقانون حماية البيانات الشخصية السعودي:
 
 URL: ${url}
 
-محتوى HTML (مختصر):
-${htmlContent.substring(0, 30000)}
+محتوى HTML (يتضمن بداية ونهاية الصفحة للتأكد من تضمين الهيدر والفوتر):
+${prepareHtmlForAnalysis(htmlContent)}
 
 قدم تحليلاً شاملاً ودقيقاً يتضمن:
 
