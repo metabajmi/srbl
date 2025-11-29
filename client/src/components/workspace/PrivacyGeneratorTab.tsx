@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CheckCircle2, Info, Globe } from "lucide-react";
 import { insertPolicyDocumentSchema, type PolicyDocument } from "@shared/schema";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
+import { useScanContext } from "@/contexts/ScanContext";
 
 const formSchema = z.object({
   companyName: z.string().min(2, "يجب إدخال اسم الجهة"),
@@ -52,6 +53,8 @@ type FormValues = z.infer<typeof formSchema>;
 export default function PrivacyGeneratorTab() {
   const { toast } = useToast();
   const [currentSection, setCurrentSection] = useState(1);
+  const { scanData, hasScanData } = useScanContext();
+  const [dataPreFilled, setDataPreFilled] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -76,6 +79,30 @@ export default function PrivacyGeneratorTab() {
       usesCookies: undefined,
     },
   });
+
+  // Pre-fill form with scan data
+  useEffect(() => {
+    if (hasScanData && scanData && !dataPreFilled) {
+      form.setValue("companyName", scanData.companyName || "");
+      form.setValue("contactEmail", scanData.contactEmail || "");
+      form.setValue("contactPhone", scanData.contactPhone || "");
+      
+      if (scanData.businessType) {
+        form.setValue("businessType", scanData.businessType);
+      }
+      
+      if (scanData.hasCookieBanner) {
+        form.setValue("usesCookies", "yes");
+      }
+      
+      setDataPreFilled(true);
+      
+      toast({
+        title: "تم تعبئة البيانات تلقائياً",
+        description: `تم تعبئة بيانات من فحص ${scanData.websiteUrl} - راجع وأكمل البيانات المتبقية`,
+      });
+    }
+  }, [hasScanData, scanData, dataPreFilled, form, toast]);
 
   const { fields: dataFields, append: appendData, remove: removeData } = useFieldArray({
     control: form.control,

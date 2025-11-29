@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { FileText, Loader2, Download, AlertCircle, CheckCircle2, ArrowRight, ArrowLeft } from "lucide-react";
+import { FileText, Loader2, Download, AlertCircle, CheckCircle2, ArrowRight, ArrowLeft, Info, Globe } from "lucide-react";
 import { insertTermsDocumentSchema, type TermsDocument } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,7 @@ import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useScanContext } from "@/contexts/ScanContext";
 
 const formSchema = insertTermsDocumentSchema;
 type FormValues = z.infer<typeof formSchema>;
@@ -28,6 +29,8 @@ export default function TermsGeneratorTab() {
   const [currentSection, setCurrentSection] = useState(1);
   const [generatedDocId, setGeneratedDocId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const { scanData, hasScanData } = useScanContext();
+  const [dataPreFilled, setDataPreFilled] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -45,6 +48,27 @@ export default function TermsGeneratorTab() {
       commercialRegistration: "",
     },
   });
+
+  // Pre-fill form with scan data
+  useEffect(() => {
+    if (hasScanData && scanData && !dataPreFilled) {
+      form.setValue("companyName", scanData.companyName || "");
+      form.setValue("websiteUrl", scanData.websiteUrl || "");
+      form.setValue("contactEmail", scanData.contactEmail || "");
+      form.setValue("contactPhone", scanData.contactPhone || "");
+      
+      if (scanData.businessType) {
+        form.setValue("businessType", scanData.businessType);
+      }
+      
+      setDataPreFilled(true);
+      
+      toast({
+        title: "تم تعبئة البيانات تلقائياً",
+        description: `تم تعبئة بيانات من فحص ${scanData.websiteUrl} - راجع وأكمل البيانات المتبقية`,
+      });
+    }
+  }, [hasScanData, scanData, dataPreFilled, form, toast]);
 
   const { data: generatedDoc } = useQuery({
     queryKey: ['/api/terms', generatedDocId],

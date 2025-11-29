@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
@@ -12,8 +12,11 @@ import {
   Edit, 
   Save,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Info,
+  Globe
 } from "lucide-react";
+import { useScanContext } from "@/contexts/ScanContext";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,9 +90,22 @@ export default function ConsentManagementTab() {
   const [editingScript, setEditingScript] = useState<CmpScript | null>(null);
   const [isScriptDialogOpen, setIsScriptDialogOpen] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
+  const { scanData, hasScanData } = useScanContext();
+  const [dataPreFilled, setDataPreFilled] = useState(false);
 
   const { data: settings } = useQuery<CmpSettings>({ queryKey: ["/api/cmp/settings"] });
   const { data: scriptsAPI = [] } = useQuery<CmpScriptAPI[]>({ queryKey: ["/api/cmp/scripts"] });
+
+  // Show notification when scan data is available
+  useEffect(() => {
+    if (hasScanData && scanData && !dataPreFilled) {
+      setDataPreFilled(true);
+      toast({
+        title: "بيانات الفحص متاحة",
+        description: `تم تحميل بيانات من فحص ${scanData.websiteUrl} - ${scanData.hasCookieBanner ? "لافتة كوكيز موجودة" : "لافتة كوكيز مفقودة"}`,
+      });
+    }
+  }, [hasScanData, scanData, dataPreFilled, toast]);
 
   const scripts: CmpScript[] = scriptsAPI.map(script => ({
     ...script,
