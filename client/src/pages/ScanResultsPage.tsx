@@ -8,10 +8,11 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertCircle, AlertTriangle, Info, FileText, Download, ArrowRight, CheckCircle, XCircle, Globe, Home, RefreshCw } from "lucide-react";
+import { Shield, AlertCircle, AlertTriangle, Info, FileText, Download, ArrowRight, CheckCircle, XCircle, Globe, Home, RefreshCw, Wrench, ScrollText, Cookie, Settings } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
 import { useState, useEffect } from "react";
 import { BackButton } from "@/components/BackButton";
+import { useScanContext, extractScanData } from "@/contexts/ScanContext";
 
 export default function ScanResultsPage() {
   const [, params] = useRoute("/scan/:id");
@@ -19,6 +20,7 @@ export default function ScanResultsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const { setScanData } = useScanContext();
 
   // Fetch scan data
   const { data: scan, isLoading: scanLoading, refetch } = useQuery({
@@ -51,12 +53,25 @@ export default function ScanResultsPage() {
     enabled: !!scanId && scan?.status === "completed",
   });
 
-  // Refetch issues when scan completes
+  // Refetch issues when scan completes and save scan data
   useEffect(() => {
     if (scan?.status === "completed") {
       refetchIssues();
+      // Save scan data for use in tools
+      const extractedData = extractScanData(scan);
+      setScanData(extractedData);
     }
-  }, [scan?.status, refetchIssues]);
+  }, [scan?.status, refetchIssues, scan, setScanData]);
+
+  // Navigate to tool with scan data
+  const navigateToTool = (tool: "privacy" | "terms" | "consent") => {
+    const routes = {
+      privacy: "/workspace?tab=privacy&from=scan",
+      terms: "/workspace?tab=terms&from=scan",
+      consent: "/workspace?tab=consent&from=scan",
+    };
+    setLocation(routes[tool]);
+  };
 
   // Generate report mutation
   const generateReportMutation = useMutation({
@@ -417,25 +432,150 @@ export default function ScanResultsPage() {
               </Card>
             </div>
 
-            {/* Call-to-Action for Low/Medium Compliance */}
-            {(scan.complianceLevel === "low" || scan.complianceLevel === "medium") && (
-              <Card className="mb-6 border-primary bg-primary/5">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold mb-1">هل تريد تحسين امتثال موقعك؟</h3>
-                      <p className="text-sm text-muted-foreground">
-                        احصل على وثائق قانونية احترافية (سياسة الخصوصية + شروط الاستخدام) بالذكاء الاصطناعي خلال دقائق
-                      </p>
-                    </div>
-                    <Button size="lg" className="gap-2" onClick={() => setLocation("/")}>
-                      <ArrowRight className="w-5 h-5" />
-                      استكشف خدماتنا
-                    </Button>
+            {/* Smart Remediation Tools Section */}
+            <Card className="mb-6 border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-background">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Wrench className="w-6 h-6 text-primary" />
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <div>
+                    <CardTitle className="text-xl">أدوات الإصلاح الذكية</CardTitle>
+                    <CardDescription>
+                      استخدم أدواتنا المدعومة بالذكاء الاصطناعي لإصلاح المخالفات - بياناتك محفوظة تلقائياً
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {/* Privacy Policy Tool */}
+                  <Card className={`hover-elevate cursor-pointer transition-all ${!scan.hasPrivacyPolicy ? 'border-destructive/50 bg-destructive/5' : 'border-green-500/50 bg-green-50/50 dark:bg-green-950/30'}`}
+                    onClick={() => navigateToTool("privacy")}
+                    data-testid="card-tool-privacy"
+                  >
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${!scan.hasPrivacyPolicy ? 'bg-destructive/10' : 'bg-green-100 dark:bg-green-900'}`}>
+                          <FileText className={`w-5 h-5 ${!scan.hasPrivacyPolicy ? 'text-destructive' : 'text-green-600'}`} />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1">سياسة الخصوصية</h4>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {scan.hasPrivacyPolicy 
+                              ? "موجودة - يمكنك تحسينها أو إنشاء نسخة جديدة"
+                              : "مفقودة - أنشئ سياسة متوافقة مع PDPL"}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            {!scan.hasPrivacyPolicy ? (
+                              <Badge variant="destructive" className="gap-1">
+                                <XCircle className="w-3 h-3" />
+                                مطلوب
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                متوفر
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Button className="w-full mt-4" variant={!scan.hasPrivacyPolicy ? "default" : "outline"}>
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                        {scan.hasPrivacyPolicy ? "تحسين السياسة" : "إنشاء سياسة جديدة"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Terms & Conditions Tool */}
+                  <Card className={`hover-elevate cursor-pointer transition-all ${!scan.hasTermsAndConditions ? 'border-destructive/50 bg-destructive/5' : 'border-green-500/50 bg-green-50/50 dark:bg-green-950/30'}`}
+                    onClick={() => navigateToTool("terms")}
+                    data-testid="card-tool-terms"
+                  >
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${!scan.hasTermsAndConditions ? 'bg-destructive/10' : 'bg-green-100 dark:bg-green-900'}`}>
+                          <ScrollText className={`w-5 h-5 ${!scan.hasTermsAndConditions ? 'text-destructive' : 'text-green-600'}`} />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1">الشروط والأحكام</h4>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {scan.hasTermsAndConditions 
+                              ? "موجودة - يمكنك تحسينها أو إنشاء نسخة جديدة"
+                              : "مفقودة - أنشئ شروط متوافقة مع الأنظمة"}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            {!scan.hasTermsAndConditions ? (
+                              <Badge variant="destructive" className="gap-1">
+                                <XCircle className="w-3 h-3" />
+                                مطلوب
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                متوفر
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Button className="w-full mt-4" variant={!scan.hasTermsAndConditions ? "default" : "outline"}>
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                        {scan.hasTermsAndConditions ? "تحسين الشروط" : "إنشاء شروط جديدة"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Cookie Banner Tool */}
+                  <Card className={`hover-elevate cursor-pointer transition-all ${!scan.hasCookieBanner ? 'border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/30' : 'border-green-500/50 bg-green-50/50 dark:bg-green-950/30'}`}
+                    onClick={() => navigateToTool("consent")}
+                    data-testid="card-tool-consent"
+                  >
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg ${!scan.hasCookieBanner ? 'bg-orange-100 dark:bg-orange-900' : 'bg-green-100 dark:bg-green-900'}`}>
+                          <Cookie className={`w-5 h-5 ${!scan.hasCookieBanner ? 'text-orange-600' : 'text-green-600'}`} />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold mb-1">إدارة الموافقة</h4>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {scan.hasCookieBanner 
+                              ? "لافتة موجودة - يمكنك إدارة إعداداتها"
+                              : "لافتة مفقودة - أنشئ نظام موافقة متكامل"}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            {!scan.hasCookieBanner ? (
+                              <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300 gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                مُوصى به
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                متوفر
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Button className="w-full mt-4" variant={!scan.hasCookieBanner ? "default" : "outline"}>
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                        {scan.hasCookieBanner ? "إدارة الموافقة" : "إنشاء لافتة جديدة"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="mt-4 p-3 bg-muted/50 rounded-lg flex items-center gap-3">
+                  <Info className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  <p className="text-sm text-muted-foreground">
+                    <strong>ملاحظة:</strong> تم حفظ بيانات موقعك ({scan.url}) تلقائياً. 
+                    عند استخدام أي أداة، ستجد البيانات المتاحة معبأة مسبقاً للمراجعة والتأكيد.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Issues Tabs */}
             <Card>

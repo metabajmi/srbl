@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import CookieBanner from "@/components/CookieBanner";
 import { useConsent } from "@/hooks/useConsent";
+import { ScanProvider } from "@/contexts/ScanContext";
 import { LogIn, UserPlus } from "lucide-react";
 import HomePage from "@/pages/HomePage";
 import ScanResultsPage from "@/pages/ScanResultsPage";
@@ -183,7 +184,9 @@ function AppContent() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <ScanProvider>
+        <AppContent />
+      </ScanProvider>
     </QueryClientProvider>
   );
 }
