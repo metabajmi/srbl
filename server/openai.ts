@@ -238,6 +238,21 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
     /consent\.js/i, /cookie-consent\.js/i
   ];
   
+  // Saudi/MENA e-commerce platforms with built-in cookie consent
+  const ecommercePlatformsWithConsent = [
+    // Zid platform (major Saudi e-commerce platform) - has built-in PDPL cookie consent
+    { pattern: /assets\.zid\.store/i, name: 'Zid' },
+    { pattern: /zidapi/i, name: 'Zid API' },
+    // Salla platform (Saudi e-commerce) - has built-in cookie consent
+    { pattern: /salla\.sa/i, name: 'Salla' },
+    { pattern: /cdn\.salla\.network/i, name: 'Salla CDN' },
+    // Shopify with MENA themes often include consent
+    { pattern: /shopify.*pdpl/i, name: 'Shopify PDPL' },
+    { pattern: /shopify.*cookie-consent/i, name: 'Shopify Cookie Consent' }
+  ];
+  
+  let detectedPlatform: string | null = null;
+  
   // Check scripts for cookie platforms
   $('script').each((_, el) => {
     const src = $(el).attr('src') || '';
@@ -249,7 +264,31 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
       console.log(`[DOM] Found cookie platform script: ${src.substring(0, 100)}`);
       return false; // break
     }
+    
+    // Check for e-commerce platforms with built-in consent
+    for (const platform of ecommercePlatformsWithConsent) {
+      if (platform.pattern.test(src)) {
+        detectedPlatform = platform.name;
+        console.log(`[DOM] Detected ${platform.name} platform (has built-in cookie consent)`);
+        break;
+      }
+    }
   });
+  
+  // If we detected a Saudi e-commerce platform, they typically have dynamic cookie consent
+  if (!hasCookieBanner && detectedPlatform) {
+    // Check for analytics/marketing scripts that require consent
+    const hasAnalyticsScripts = $('script').toArray().some(el => {
+      const src = $(el).attr('src') || '';
+      const content = $(el).html() || '';
+      return /tiktok|snapchat|facebook|google.*analytics|gtag|fbq|ttq|snaptr/i.test(src + content);
+    });
+    
+    if (hasAnalyticsScripts) {
+      hasCookieBanner = true;
+      console.log(`[DOM] ${detectedPlatform} platform with analytics scripts - assuming dynamic cookie consent`);
+    }
+  }
   
   // Method 2: Look for cookie/consent related CSS or data attributes (works even for dynamically loaded banners)
   if (!hasCookieBanner) {
