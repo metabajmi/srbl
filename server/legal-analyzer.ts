@@ -128,11 +128,22 @@ function getRelevantRequirements(documentType: "privacy_policy" | "terms"): Lega
       a.category === "cookies"
     );
   } else {
-    return kb.filter(a => 
+    // For terms: Only check requirements that can actually be verified by reading the page
+    // Exclude invoice-related requirements (ecom9-18) - these can't be verified from website scanning
+    // Exclude commercial registration/tax ID - these require specific verification
+    const termsReqs = kb.filter(a => 
       a.category === "terms" ||
-      a.category === "return_policy" ||
-      a.category === "legal_info"
+      a.category === "return_policy"
     );
+    
+    // Filter out non-verifiable requirements from terms analysis
+    const excludedIds = [
+      'ecom9', 'ecom10', 'ecom11', 'ecom12', 'ecom13', 'ecom14', 'ecom15', 
+      'ecom16', 'ecom17', 'ecom18', 'ecom19', 'ecom20', // Invoice items
+      'tc4', 'tc5' // Commercial registration and tax ID - need specific documents
+    ];
+    
+    return termsReqs.filter(req => !excludedIds.includes(req.id));
   }
 }
 
@@ -247,10 +258,60 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
       textLower.includes('سجلات المتصفح') ||
       textLower.includes('cookies') ||
       textLower.includes('cookie');
-    // Only reject if claiming cookies info is missing but it exists
-    if ((title.includes('عدم توضيح أنواع') || title.includes('لا توضح')) && hasCookieInfo) {
+    // If cookies are mentioned in privacy policy, it shows some level of disclosure
+    if (hasCookieInfo) {
+      // Cookie refusal/consent issues should be suppressed when analyzing policy text
+      // because the cookie banner check is done at homepage level, not policy level
+      // If cookie banner is missing, we already report that issue separately
+      console.log(`[RAG_VERIFY] Skipping cookie-related issue (handled at homepage level): ${title}`);
       return false;
     }
+  }
+  
+  // Skip cookie-related issues entirely when analyzing policy documents
+  // The cookie banner is checked at the homepage level, not in the privacy policy
+  if (title.includes('ملفات تعريف الارتباط') || title.includes('كوكيز') || 
+      title.includes('رفض') && title.includes('ملفات') ||
+      title.includes('سحب الموافقة')) {
+    // Check if text mentions any way to control cookies
+    const hasCookieControl = 
+      textLower.includes('إعدادات المتصفح') ||
+      textLower.includes('browser settings') ||
+      textLower.includes('تعطيل') ||
+      textLower.includes('حذف') ||
+      textLower.includes('إزالة') ||
+      textLower.includes('رفض') ||
+      textLower.includes('disable') ||
+      textLower.includes('delete');
+    if (hasCookieControl) {
+      console.log(`[RAG_VERIFY] Skipping cookie control issue (browser settings mentioned): ${title}`);
+      return false;
+    }
+  }
+  
+  // Check for account deletion - ecom6
+  if (reqId === 'ecom6' || title.includes('إلغاء حساب') || title.includes('حذف حساب')) {
+    const hasAccountDeletion = 
+      textLower.includes('إلغاء') ||
+      textLower.includes('حذف') ||
+      textLower.includes('إزالة') ||
+      textLower.includes('delete account') ||
+      textLower.includes('حسابك') ||
+      textLower.includes('إلغاء اشتراك') ||
+      textLower.includes('إلغاء أو حذف');
+    if (hasAccountDeletion) return false;
+  }
+  
+  // Check for consent withdrawal - c3
+  if (reqId === 'c3' || title.includes('سحب الموافقة')) {
+    const hasConsentWithdrawal = 
+      textLower.includes('سحب') ||
+      textLower.includes('إلغاء') ||
+      textLower.includes('تراجع') ||
+      textLower.includes('withdraw') ||
+      textLower.includes('opt-out') ||
+      textLower.includes('إلغاء اشتراك');
+    if (hasConsentWithdrawal) return false;
   }
   
   // Check for complaints/grievances - pp9
@@ -263,6 +324,30 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
       textLower.includes('للتواصل') ||
       textLower.includes('contact');
     if (hasComplaintsInfo) return false;
+  }
+  
+  // Check for return policy - tc2, ecom4, ecom5
+  if (reqId?.includes('tc2') || reqId?.includes('ecom4') || reqId?.includes('ecom5') || 
+      title.includes('استبدال') || title.includes('استرجاع') || title.includes('إرجاع')) {
+    const hasReturnPolicy = 
+      textLower.includes('استبدال') ||
+      textLower.includes('استرجاع') ||
+      textLower.includes('إرجاع') ||
+      textLower.includes('ارجاع') ||
+      textLower.includes('إعادة') ||
+      textLower.includes('return') ||
+      textLower.includes('refund') ||
+      textLower.includes('exchange');
+    if (hasReturnPolicy) return false;
+  }
+  
+  // Check for commercial registration / tax ID - these shouldn't be flagged from website scanning
+  // as they require specific document verification, not page content analysis
+  if (reqId?.includes('tc4') || reqId?.includes('tc5') || 
+      title.includes('سجل تجاري') || title.includes('رقم ضريبي') ||
+      title.includes('السجل التجاري') || title.includes('الرقم الضريبي')) {
+    console.log(`[RAG_VERIFY] Skipping non-verifiable requirement: ${title}`);
+    return false; // These can't be reliably verified from page content alone
   }
   
   // If none of the above checks caught it, keep the violation

@@ -1055,14 +1055,22 @@ ${prepareHtmlForAnalysis(htmlContent)}
     // IMPORTANT: Filter out content-analysis issues from OpenAI detection
     // These will be handled more accurately by RAG-based deep analysis
     // Keep only structural/detection issues (missing elements, not content quality)
-    const detectionOnlyCategories = ["cookies", "data_collection", "consent"];
     issues = issues.filter((issue: any) => {
-      // Keep cookie banner issues (structural)
-      if (!hasCookieBanner && issue.category === "cookies") return true;
-      // Keep data collection form issues (structural)
-      if (issue.category === "data_collection") return true;
-      // Keep consent mechanism issues (structural)
-      if (issue.category === "consent" && issue.title?.includes("آلية")) return true;
+      // Keep cookie banner missing issues (structural) - this is a VALID check
+      // Cookie banner is a homepage element that can be reliably detected
+      if (!hasCookieBanner && 
+          (issue.category === "cookies" || issue.title?.includes("كوكيز") || issue.title?.includes("لافتة"))) {
+        console.log(`[FILTER] Keeping cookie banner issue (valid detection): ${issue.title}`);
+        return true;
+      }
+      
+      // Filter out data collection form issues - these are not true violations
+      // Most websites don't have visible forms on the homepage
+      if (issue.category === "data_collection" || issue.title?.includes("نماذج جمع")) {
+        console.log(`[FILTER] Removed data_collection issue (not a true violation): ${issue.title}`);
+        return false;
+      }
+      
       // Filter out content analysis issues - these are better handled by RAG
       if (issue.title?.includes("عدم توضيح") || 
           issue.title?.includes("عدم ذكر") || 
