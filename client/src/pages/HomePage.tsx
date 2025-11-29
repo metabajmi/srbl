@@ -8,7 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertComplianceScanSchema } from "@shared/schema";
 import { useLocation, Link } from "wouter";
-import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers } from "lucide-react";
+import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers, Lock, Users } from "lucide-react";
 import { z } from "zod";
 
 export default function HomePage() {
@@ -249,6 +249,51 @@ export default function HomePage() {
                 </div>
                 <Button size="lg" className="px-8">
                   <Layers className="ml-2 h-5 w-5" />
+                  ابدأ الآن
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Internal Compliance Workspace - Prominent CTA */}
+        <div className="mx-auto max-w-4xl mb-16">
+          <Link href="/internal-compliance">
+            <Card 
+              className="hover-elevate active-elevate-2 cursor-pointer border-2 border-accent/30 bg-gradient-to-br from-accent/5 via-transparent to-accent/5"
+              data-testid="card-internal-compliance"
+            >
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
+                  <Lock className="h-8 w-8 text-accent" />
+                </div>
+                <Badge variant="secondary" className="mx-auto mb-3">
+                  إدارة شاملة
+                </Badge>
+                <CardTitle className="text-2xl md:text-3xl">
+                  مساحة العمل الموحدة للامتثال الداخلي
+                </CardTitle>
+                <CardDescription className="text-base mt-2 max-w-xl mx-auto">
+                  إدارة سجل المعالجة (ROPA) وطلبات الوصول (DSAR) وتقييمات التأثير (DPIA) - كلها في مكان واحد
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 text-center">
+                <div className="flex flex-wrap justify-center gap-2 mb-4">
+                  <Badge variant="outline" className="text-xs">
+                    <FileText className="w-3 h-3 ml-1" />
+                    ROPA
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <Users className="w-3 h-3 ml-1" />
+                    DSAR
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <Lock className="w-3 h-3 ml-1" />
+                    DPIA
+                  </Badge>
+                </div>
+                <Button size="lg" className="px-8">
+                  <Lock className="ml-2 h-5 w-5" />
                   ابدأ الآن
                 </Button>
               </CardContent>

@@ -5,11 +5,15 @@ This project is a web application assisting organizations in complying with Saud
 
 ## Current Status (Nov 29, 2025)
 **Completed & Tested:**
+- ✅ Unified Internal Compliance Workspace: Single page (/internal-compliance) with 3 tools in tabs (Nov 29, 2025)
+  - ROPA (Records of Processing Activity), DSAR (Data Subject Access Requests), DPIA (Data Protection Impact Assessments)
+  - Tab-based navigation with RTL support
+  - E2E tested: all tabs accessible and functional
 - ✅ Unified Compliance Workspace: Single page (/workspace) with 4 tools in tabs (Nov 29, 2025)
   - Privacy Policy Generator, Terms Generator, Consent Management, Preferences Center
   - Tab-based navigation with RTL support
   - E2E tested: all tabs accessible and functional
-- ✅ HomePage Redesign: Unified dashboard with prominent workspace card + 5 core services
+- ✅ HomePage Redesign: Unified dashboard with 2 prominent workspace cards + 5 core services
 - ✅ Terms & Conditions Generator: Full E2E flow working (form → generation → download)
 - ✅ Privacy Generator: Form accessible with 3-section navigation
 - ✅ Smart Customer Assistant: Complete RAG-based chatbot with vector search, feedback system, and E2E tested
