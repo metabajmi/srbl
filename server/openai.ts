@@ -220,15 +220,24 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
     }
   });
   
-  // Cookie banner detection - look for specific elements
+  // Cookie banner detection - look for specific elements with broader patterns
   const cookieSelectors = [
+    // Standard patterns
     '[class*="cookie"]', '[id*="cookie"]',
     '[class*="consent"]', '[id*="consent"]',
     '[class*="gdpr"]', '[id*="gdpr"]',
     '[class*="privacy-banner"]', '[id*="privacy-banner"]',
     '[class*="cookie-banner"]', '[id*="cookie-banner"]',
     '[class*="cookie-notice"]', '[id*="cookie-notice"]',
-    '[data-cookieconsent]', '[data-consent]'
+    '[data-cookieconsent]', '[data-consent]',
+    // Additional patterns for different implementations
+    '[class*="cookie-widget"]', '[id*="cookie-widget"]',
+    '[class*="cookie-modal"]', '[id*="cookie-modal"]',
+    '[class*="gdpr-banner"]', '[id*="gdpr-banner"]',
+    '[class*="notice"]', '[id*="notice"]',
+    '[class*="alert"]', '[id*="alert"]',
+    '[role="dialog"][aria-label*="cookie"]',
+    '[role="dialog"][aria-label*="consent"]'
   ];
   
   for (const selector of cookieSelectors) {
@@ -239,18 +248,48 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
     }
   }
   
-  // Also check for cookie-related text in specific containers
+  // Check for cookie-related text/buttons in body with expanded patterns
   if (!hasCookieBanner) {
     const bodyText = $('body').text().toLowerCase();
+    // Expanded patterns including Arabic variants and common phrasing
     const cookieTextPatterns = [
       /نستخدم ملفات تعريف الارتباط/,
       /ملفات الكوكيز/,
+      /ملفات تعريف/,
+      /الموافقة على استخدام/,
+      /نحترم خصوصيتك/,
+      /نستخدم بيانات/,
       /we use cookies/i,
       /this website uses cookies/i,
       /accept cookies/i,
-      /cookie preferences/i
+      /accept all/i,
+      /cookie preferences/i,
+      /cookie policy/i,
+      /accept and continue/i
     ];
-    hasCookieBanner = cookieTextPatterns.some(p => p.test(bodyText));
+    
+    // Check for buttons with accept/decline text
+    const hasAcceptButton = $('button, [role="button"]').text().toLowerCase().match(
+      /(accept|agree|ok|موافق|أوافق|قبول|تقبل|استمرار)/i
+    );
+    
+    hasCookieBanner = cookieTextPatterns.some(p => p.test(bodyText)) || !!hasAcceptButton;
+  }
+  
+  // Additional fallback: check for common cookie popup containers
+  if (!hasCookieBanner) {
+    const commonContainers = $('div, section, footer').filter(function() {
+      const text = $(this).text().toLowerCase();
+      const classes = $(this).attr('class')?.toLowerCase() || '';
+      return (text.includes('cookie') || text.includes('كوكيز') || text.includes('consent') || 
+              classes.includes('bottom') || classes.includes('notification')) &&
+             text.length > 50 && text.length < 1000; // Likely a banner/notice
+    });
+    
+    if (commonContainers.length > 0) {
+      hasCookieBanner = true;
+      console.log(`[DOM] Found cookie banner via container analysis`);
+    }
   }
   
   // Contact info detection
