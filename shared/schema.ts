@@ -66,6 +66,9 @@ export const complianceIssues = pgTable("compliance_issues", {
   regulation: text("regulation"), // Which regulation/article is violated
   remediation: text("remediation").notNull(), // How to fix the issue
   articleReference: text("article_reference"), // Specific article number from the law
+  documentType: text("document_type"), // privacy_policy, terms, cookie_banner, consent, contact_info
+  violatingText: text("violating_text"), // Quoted text from the document that violates PDPL
+  requirementId: text("requirement_id"), // Reference to requirement in compliance-requirements.json
   remediationTemplateId: varchar("remediation_template_id").references(() => remediationTemplates.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
