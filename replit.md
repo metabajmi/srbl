@@ -61,10 +61,15 @@ This project is a web application assisting organizations in complying with Saud
 - ✅ Removed: Internal Compliance section per user requirement
 - ✅ E2E Testing: Full navigation flow verified - Scanner at top, correct ordering, all BackButtons working
 
-**Enhanced Website Scanner (Production Ready - Nov 16, 2025):**
+**Enhanced Website Scanner (Production Ready - Nov 29, 2025):**
 - ✅ Comprehensive Compliance Checking: Privacy Policy, Terms & Conditions, Cookie Banner, Contact Info
 - ✅ Database Schema: Enhanced with compliance fields (hasPrivacyPolicy, hasTermsAndConditions, hasCookieBanner, hasContactInfo, complianceLevel)
-- ✅ OpenAI Integration: Improved analysis prompt for accurate detection of legal documents and compliance elements
+- ✅ **OpenAI-First Architecture (Nov 29, 2025 - CRITICAL FIX):**
+  - OpenAI is now the SOLE SOURCE OF TRUTH for compliance detection
+  - DOM detection (using cheerio) is SUPPLEMENTARY only - provides URLs when OpenAI confirms presence
+  - DOM heuristics can NEVER flip hasPrivacyPolicy/hasTermsAndConditions to true
+  - Issues are only removed when OpenAI explicitly confirms element exists
+  - This eliminates false positives from masking real compliance gaps
 - ✅ **Deterministic Scoring System (Nov 16, 2025 - FINAL FIX):** Fixed critical double-counting bug causing zero scores
   - **Critical Bug Fixed:** System added +25 AND subtracted -25 for same element, resulting in zero net score for all websites
   - **Root Cause:** Flawed logic that both rewarded presence AND penalized absence of same compliance elements
