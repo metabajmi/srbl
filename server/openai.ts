@@ -515,51 +515,71 @@ ${prepareHtmlForAnalysis(htmlContent)}
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
     console.log("OpenAI analysis results:", result.findings);
+    console.log("DOM detection results:", directDetection);
     
-    // OPENAI IS THE SOLE SOURCE OF TRUTH for compliance detection
-    // DOM detection ONLY provides supplementary URL information, never overrides OpenAI
+    // HYBRID DETECTION: Combine OpenAI intelligence with reliable DOM detection
+    // DOM detection is highly reliable for finding explicit links - trust it when found
+    // OpenAI provides deeper content analysis and catches elements DOM might miss
     
-    // Use OpenAI findings exclusively - DOM detection cannot flip these to true
-    const hasPrivacyPolicy = result.findings?.hasPrivacyPolicy || false;
-    const hasTermsAndConditions = result.findings?.hasTermsAndConditions || false;
-    const hasCookieBanner = result.findings?.hasCookieBanner || false;
-    const hasContactInfo = result.findings?.hasContactInfo || false;
+    // Privacy Policy: Trust EITHER source - if DOM found a link, it definitely exists
+    const hasPrivacyPolicy = directDetection.hasPrivacyPolicy || result.findings?.hasPrivacyPolicy || false;
     
-    // DOM detection only adds URLs if OpenAI already confirmed the element exists
+    // Terms & Conditions: Trust EITHER source - if DOM found a link, it definitely exists  
+    const hasTermsAndConditions = directDetection.hasTermsAndConditions || result.findings?.hasTermsAndConditions || false;
+    
+    // Cookie Banner: Trust EITHER source
+    const hasCookieBanner = directDetection.hasCookieBanner || result.findings?.hasCookieBanner || false;
+    
+    // Contact Info: Trust EITHER source
+    const hasContactInfo = directDetection.hasContactInfo || result.findings?.hasContactInfo || false;
+    
+    // Merge findings - prefer DOM-detected URLs when available (more reliable)
     const mergedFindings = {
       hasPrivacyPolicy,
-      privacyPolicyUrl: hasPrivacyPolicy ? (result.findings?.privacyPolicyUrl || directDetection.privacyPolicyUrl) : undefined,
+      privacyPolicyUrl: directDetection.privacyPolicyUrl || result.findings?.privacyPolicyUrl,
       hasTermsAndConditions,
-      termsAndConditionsUrl: hasTermsAndConditions ? (result.findings?.termsAndConditionsUrl || directDetection.termsAndConditionsUrl) : undefined,
+      termsAndConditionsUrl: directDetection.termsAndConditionsUrl || result.findings?.termsAndConditionsUrl,
       hasCookieBanner,
       hasDataCollectionForms: result.findings?.hasDataCollectionForms || false,
       hasContactInfo,
     };
     
-    console.log("OpenAI findings (sole source of truth):", result.findings);
-    console.log("DOM supplementary detection:", directDetection);
+    console.log("Hybrid detection - DOM found:", { 
+      privacy: directDetection.hasPrivacyPolicy, 
+      terms: directDetection.hasTermsAndConditions,
+      cookie: directDetection.hasCookieBanner,
+      contact: directDetection.hasContactInfo
+    });
+    console.log("Hybrid detection - OpenAI found:", result.findings);
     console.log("Final merged findings:", mergedFindings);
     
-    // NEVER remove OpenAI issues - they are the authoritative source
-    // Only remove issues if OpenAI explicitly said the element exists
+    // Remove issues for elements confirmed by EITHER DOM or OpenAI
     let issues = Array.isArray(result.issues) ? result.issues : [];
     
-    // Remove privacy issues only if OpenAI said hasPrivacyPolicy is true
+    // Remove privacy issues if privacy policy was found by either detection method
     if (hasPrivacyPolicy) {
       issues = issues.filter((issue: any) => issue.category !== "privacy_policy");
-      console.log("Removed privacy_policy issues (OpenAI confirmed policy exists)");
+      console.log("Removed privacy_policy issues (element confirmed by hybrid detection)");
     }
     
-    // Remove terms issues only if OpenAI said hasTermsAndConditions is true
+    // Remove terms issues if terms were found by either detection method
     if (hasTermsAndConditions) {
       issues = issues.filter((issue: any) => issue.category !== "terms_and_conditions");
-      console.log("Removed terms_and_conditions issues (OpenAI confirmed terms exist)");
+      console.log("Removed terms_and_conditions issues (element confirmed by hybrid detection)");
     }
     
-    // Remove cookie issues only if OpenAI said hasCookieBanner is true
+    // Remove cookie issues if cookie banner was found by either detection method
     if (hasCookieBanner) {
       issues = issues.filter((issue: any) => issue.category !== "cookies");
-      console.log("Removed cookies issues (OpenAI confirmed cookie banner exists)");
+      console.log("Removed cookies issues (element confirmed by hybrid detection)");
+    }
+    
+    // Remove contact info issues if contact was found by either detection method
+    if (hasContactInfo) {
+      issues = issues.filter((issue: any) => 
+        !issue.category?.includes("contact") && !issue.title?.includes("معلومات الاتصال")
+      );
+      console.log("Removed contact info issues (element confirmed by hybrid detection)");
     }
     
     // Calculate deterministic score based on findings and issues
