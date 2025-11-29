@@ -222,7 +222,6 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
   
   // Cookie banner detection - comprehensive multi-method approach
   const htmlLowerContent = $.html().toLowerCase();
-  const fullHtml = $.html(); // Keep original case for script detection
   
   // Method 1: Look for cookie management platform scripts (most reliable for dynamic banners)
   const cookieScriptPatterns = [
