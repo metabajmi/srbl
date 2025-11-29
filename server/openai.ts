@@ -306,35 +306,83 @@ export interface PolicyContentViolation {
   requirementId?: string;
 }
 
-// Fetch policy page content with error handling
-async function fetchPolicyContent(policyUrl: string): Promise<string | null> {
-  try {
-    console.log(`[FETCH] Fetching policy content from: ${policyUrl}`);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    
-    const response = await fetch(policyUrl, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; PDPLScanner/1.0; +https://sirbal.com)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'ar,en;q=0.5',
-      },
-    });
-    clearTimeout(timeout);
-    
-    if (!response.ok) {
-      console.log(`[FETCH] Failed to fetch ${policyUrl}: ${response.status}`);
-      return null;
+// List of realistic user agents for rotation
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+];
+
+// Fetch policy page content with retry logic and better headers
+async function fetchPolicyContent(policyUrl: string, retries = 3): Promise<string | null> {
+  const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`[FETCH] Attempt ${attempt}/${retries} - Fetching: ${policyUrl}`);
+      const controller = new AbortController();
+      // Increase timeout: 30 seconds for first attempt, 45 for subsequent
+      const timeoutMs = attempt === 1 ? 30000 : 45000;
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      
+      const response = await fetch(policyUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': userAgent,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'ar-SA,ar;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Cache-Control': 'max-age=0',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1',
+        },
+        redirect: 'follow',
+      });
+      clearTimeout(timeout);
+      
+      if (!response.ok) {
+        console.log(`[FETCH] HTTP ${response.status} for ${policyUrl}`);
+        // Retry on 403/429/5xx errors
+        if ((response.status === 403 || response.status === 429 || response.status >= 500) && attempt < retries) {
+          const delay = attempt * 2000; // Exponential backoff
+          console.log(`[FETCH] Retrying in ${delay}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        return null;
+      }
+      
+      const html = await response.text();
+      if (html.length < 500) {
+        console.log(`[FETCH] Response too short (${html.length} chars), might be blocked`);
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
+        }
+      }
+      
+      console.log(`[FETCH] Successfully fetched ${policyUrl}: ${html.length} chars`);
+      return html;
+    } catch (error: any) {
+      console.log(`[FETCH] Attempt ${attempt} error: ${error.message}`);
+      if (error.name === 'AbortError' && attempt < retries) {
+        const delay = attempt * 3000;
+        console.log(`[FETCH] Timeout, retrying in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      if (attempt === retries) {
+        console.log(`[FETCH] All ${retries} attempts failed for ${policyUrl}`);
+        return null;
+      }
     }
-    
-    const html = await response.text();
-    console.log(`[FETCH] Successfully fetched ${policyUrl}: ${html.length} chars`);
-    return html;
-  } catch (error: any) {
-    console.log(`[FETCH] Error fetching ${policyUrl}: ${error.message}`);
-    return null;
   }
+  return null;
 }
 
 // Extract clean text from HTML for policy analysis
@@ -1326,7 +1374,8 @@ export async function generatePrivacyPolicy(data: Partial<PolicyDocument>): Prom
     : new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
 
   // تنسيق فئات البيانات
-  const dataCategoriesText = data.dataCategories?.map((cat: any, index: number) => 
+  const dataCategories = Array.isArray(data.dataCategories) ? data.dataCategories : [];
+  const dataCategoriesText = dataCategories.map((cat: any, index: number) => 
     `${index + 1}. ${cat.name} (${cat.required ? 'إلزامي' : 'اختياري'})
    - الغرض: ${cat.purpose}
    - المسوغ النظامي: ${cat.legalBasis === 'consent' ? 'موافقة العميل الصريحة' : 
@@ -1336,19 +1385,22 @@ export async function generatePrivacyPolicy(data: Partial<PolicyDocument>): Prom
   ).join('\n\n') || 'غير محدد';
 
   // تنسيق الأطراف الخارجية
-  const thirdPartyText = data.thirdPartyDetails?.map((party: any, index: number) =>
+  const thirdPartyDetails = Array.isArray(data.thirdPartyDetails) ? data.thirdPartyDetails : [];
+  const thirdPartyText = thirdPartyDetails.map((party: any, index: number) =>
     `${index + 1}. ${party.party}
    - الغرض: ${party.purpose}
    ${party.safeguards ? `- الضمانات: ${party.safeguards}` : ''}`
   ).join('\n\n') || '';
 
   // تنسيق الإجراءات الأمنية
-  const securityMeasuresText = data.securityMeasures?.map((measure: any, index: number) =>
+  const securityMeasures = Array.isArray(data.securityMeasures) ? data.securityMeasures : [];
+  const securityMeasuresText = securityMeasures.map((measure: any, index: number) =>
     `${index + 1}. ${measure.description} (${measure.type === 'technical' ? 'تقني' : measure.type === 'organizational' ? 'تنظيمي' : 'مادي'})`
   ).join('\n') || '';
 
   // تنسيق الكوكيز
-  const cookieTypesText = data.cookieTypes?.map((cookie: any, index: number) =>
+  const cookieTypes = Array.isArray(data.cookieTypes) ? data.cookieTypes : [];
+  const cookieTypesText = cookieTypes.map((cookie: any, index: number) =>
     `${index + 1}. ${cookie.type}
    - الغرض: ${cookie.purpose}
    - المدة: ${cookie.duration}`
@@ -1564,8 +1616,9 @@ function generateMockPrivacyPolicy(data: Partial<PolicyDocument>): string {
   const formattedDate = data.lastUpdatedDate 
     ? new Date(data.lastUpdatedDate).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })
     : new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-    
-  const dataCategoriesText = data.dataCategories?.map((cat: any) => `- ${cat.name}: ${cat.purpose}`).join('\n') || 'غير محدد';
+  
+  const mockDataCategories = Array.isArray(data.dataCategories) ? data.dataCategories : [];
+  const dataCategoriesText = mockDataCategories.map((cat: any) => `- ${cat.name}: ${cat.purpose}`).join('\n') || 'غير محدد';
     
   return `سياسة الخصوصية
 
@@ -1591,18 +1644,15 @@ ${data.indirectDataSources}` : ''}
 3. كيف نستخدم بياناتك الشخصية؟
 نستخدم بياناتك للأغراض المحددة في كل فئة من فئات البيانات أعلاه.
 
-${data.dataUsageDetails ? `\nتفاصيل الاستخدام:
-${data.dataUsageDetails}` : ''}
+${data.processingMethods ? `\nتفاصيل الاستخدام:
+${data.processingMethods}` : ''}
 
 4. كيف نفصح عن بياناتك الشخصية؟
-مشاركة مع جهات خارجية: ${data.hasThirdPartySharing === 'yes' ? 'نعم' : 'لا'}
-${data.hasThirdPartySharing === 'yes' ? 'قد نشارك بياناتك مع أطراف ثالثة موثوقة لتحسين خدماتنا.' : 'لا نشارك بياناتك مع أطراف ثالثة إلا بموافقتك الصريحة.'}
+مشاركة مع جهات خارجية: ${data.sharesWithThirdParties === 'yes' ? 'نعم' : 'لا'}
+${data.sharesWithThirdParties === 'yes' ? 'قد نشارك بياناتك مع أطراف ثالثة موثوقة لتحسين خدماتنا.' : 'لا نشارك بياناتك مع أطراف ثالثة إلا بموافقتك الصريحة.'}
 
-${data.thirdPartyCategories && data.hasThirdPartySharing === 'yes' ? `فئات الجهات الخارجية:
-${data.thirdPartyCategories}` : ''}
-
-${data.disclosureDetails ? `تفاصيل الإفصاح:
-${data.disclosureDetails}` : ''}
+${data.thirdPartyDetails && data.sharesWithThirdParties === 'yes' ? `الجهات الخارجية:
+${Array.isArray(data.thirdPartyDetails) ? (data.thirdPartyDetails as any[]).map((p: any) => `- ${p.party}: ${p.purpose}`).join('\n') : ''}` : ''}
 
 5. المسوغات النظامية لجمع ومعالجة بياناتك الشخصية
 نقوم بجمع ومعالجة بياناتك الشخصية بناءً على المسوغات النظامية التالية:
@@ -1617,7 +1667,7 @@ ${data.storageLocation ? `موقع التخزين: ${data.storageLocation}` : '�
 
 مدة الاحتفاظ: ${data.retentionPeriod}
 
-${data.securityMeasures ? `إجراءات الحماية: ${data.securityMeasures}` : 'نطبق إجراءات أمنية متقدمة بما في ذلك التشفير والمراقبة المستمرة.'}
+${data.securityMeasures ? `إجراءات الحماية: ${Array.isArray(data.securityMeasures) ? (data.securityMeasures as any[]).map((m: any) => m.description).join('، ') : ''}` : 'نطبق إجراءات أمنية متقدمة بما في ذلك التشفير والمراقبة المستمرة.'}
 
 7. حقوقك فيما يتعلق بمعالجة بياناتك الشخصية
 بموجب نظام حماية البيانات الشخصية السعودي، لديك الحقوق التالية:
@@ -1641,7 +1691,7 @@ ${data.dpoAddress ? `العنوان: ${data.dpoAddress}` : ''}
 إذا كانت لديك أي شكاوى أو اعتراضات بخصوص معالجة بياناتك الشخصية، يمكنك التواصل معنا عبر:
 - البريد الإلكتروني: ${data.contactEmail}
 ${data.contactPhone ? `- الهاتف: ${data.contactPhone}` : ''}
-${data.address ? `- العنوان: ${data.address}` : ''}
+${data.contactAddress ? `- العنوان: ${data.contactAddress}` : ''}
 
 سنقوم بالرد على شكواك في أقرب وقت ممكن وبما لا يتجاوز 30 يوماً.
 
@@ -1659,8 +1709,7 @@ ${data.address ? `- العنوان: ${data.address}` : ''}
 - الجهة: ${data.companyName}
 - البريد الإلكتروني: ${data.contactEmail}
 ${data.contactPhone ? `- الهاتف: ${data.contactPhone}` : ''}
-${data.address ? `- العنوان: ${data.address}` : ''}
-${data.websiteUrl ? `- الموقع الإلكتروني: ${data.websiteUrl}` : ''}`;
+${data.contactAddress ? `- العنوان: ${data.contactAddress}` : ''}`;
 }
 
 export interface TermsDocumentData {
