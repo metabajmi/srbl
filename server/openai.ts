@@ -108,31 +108,44 @@ function isExcludedUrl(url: string, excludeList: string[]): boolean {
 function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks {
   const $ = cheerio.load(htmlContent);
   
-  // Privacy policy - STRICT text matching (exact phrases, not partial matches)
+  // Privacy policy - text matching (includes compound Arabic phrases)
   const privacyExactPhrases = [
     'privacy policy', 'privacy statement', 'privacy notice', 'data protection policy',
     'datenschutzerklärung', 'política de privacidad', 'politique de confidentialité',
-    'سياسة الخصوصية', 'سياسه الخصوصيه', 'بيان الخصوصية', 'سياسة حماية البيانات'
+    'سياسة الخصوصية', 'سياسه الخصوصيه', 'بيان الخصوصية', 'سياسة حماية البيانات',
+    // Compound Arabic phrases (common on Saudi e-commerce sites)
+    'سياسة الاستخدام والخصوصية', 'الخصوصية وشروط الاستخدام', 'سياسة الخصوصية وحماية البيانات',
+    'إشعار الخصوصية', 'سياسة خصوصية', 'privacy & terms', 'privacy and terms'
   ];
   
   // Privacy - URL patterns that definitively indicate a policy page
   const privacyStrongUrlPatterns = [
     '/privacy-policy', '/privacypolicy', '/privacy-statement', '/privacy-notice',
-    '/data-protection', '/datenschutz', '/سياسة-الخصوصية', '/privacy'
+    '/data-protection', '/datenschutz', '/سياسة-الخصوصية', '/privacy',
+    // Shopify and e-commerce patterns
+    '/policies/privacy-policy', '/policies/privacy', '/pages/privacy',
+    '/ar/privacy', '/en/privacy', 'privacy-policy.html'
   ];
   
-  // Terms - STRICT text matching (exact phrases)
+  // Terms - text matching (includes compound Arabic phrases)
   const termsExactPhrases = [
     'terms of service', 'terms and conditions', 'terms & conditions', 'terms of use',
     'user agreement', 'service agreement', 'legal terms', 'terms and conditions of use',
-    'شروط الاستخدام', 'الشروط والأحكام', 'شروط الخدمة', 'اتفاقية المستخدم'
+    'شروط الاستخدام', 'الشروط والأحكام', 'شروط الخدمة', 'اتفاقية المستخدم',
+    // Compound Arabic phrases
+    'سياسة الاستخدام والخصوصية', 'شروط وأحكام', 'الاستخدام والخصوصية',
+    'سياسة الاستبدال والاسترجاع', 'سياسة الإرجاع', 'سياسة الاستبدال'
   ];
   
   // Terms - URL patterns that definitively indicate a terms page
   const termsStrongUrlPatterns = [
     '/terms-of-service', '/terms-and-conditions', '/tos', '/terms-of-use',
     '/terms', '/legal', '/user-agreement', '/service-agreement',
-    '/الشروط-والأحكام', '/شروط-الاستخدام'
+    '/الشروط-والأحكام', '/شروط-الاستخدام',
+    // Shopify and e-commerce patterns
+    '/policies/terms-of-service', '/policies/terms', '/pages/terms',
+    '/policies/refund-policy', '/policies/shipping-policy',
+    '/ar/terms', '/en/terms', 'terms.html'
   ];
   
   let privacyPolicyUrl: string | undefined;
@@ -405,16 +418,19 @@ export async function analyzeWebsiteCompliance(
 - إذا لم تجد سياسة خصوصية واضحة = hasPrivacyPolicy: false
 - إذا لم تجد شروط واضحة = hasTermsAndConditions: false`;
 
-  // Prepare HTML content: first 15KB + last 15KB to ensure footer is included
+  // Prepare HTML content: sample beginning, middle, and end for comprehensive analysis
   const prepareHtmlForAnalysis = (html: string): string => {
-    const maxChars = 30000;
+    const maxChars = 45000; // Increased for better coverage
     if (html.length <= maxChars) {
       return html;
     }
-    const halfSize = 15000;
-    const firstPart = html.substring(0, halfSize);
-    const lastPart = html.substring(html.length - halfSize);
-    return `${firstPart}\n\n... [محتوى مختصر] ...\n\n${lastPart}`;
+    // Sample three sections: beginning (header/nav), middle (content), end (footer)
+    const sectionSize = 15000;
+    const firstPart = html.substring(0, sectionSize);
+    const middleStart = Math.floor((html.length - sectionSize) / 2);
+    const middlePart = html.substring(middleStart, middleStart + sectionSize);
+    const lastPart = html.substring(html.length - sectionSize);
+    return `${firstPart}\n\n... [بداية المحتوى الأوسط] ...\n\n${middlePart}\n\n... [نهاية الصفحة] ...\n\n${lastPart}`;
   };
   
   const userPrompt = `## تحليل الامتثال لنظام حماية البيانات الشخصية السعودي (PDPL)
