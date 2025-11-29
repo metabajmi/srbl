@@ -220,9 +220,9 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
     }
   });
   
-  // Cookie banner detection - look for specific elements with broader patterns
+  // Cookie banner detection - comprehensive multi-method approach
+  // Method 1: Look for specific cookie/consent elements
   const cookieSelectors = [
-    // Standard patterns
     '[class*="cookie"]', '[id*="cookie"]',
     '[class*="consent"]', '[id*="consent"]',
     '[class*="gdpr"]', '[id*="gdpr"]',
@@ -230,28 +230,34 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
     '[class*="cookie-banner"]', '[id*="cookie-banner"]',
     '[class*="cookie-notice"]', '[id*="cookie-notice"]',
     '[data-cookieconsent]', '[data-consent]',
-    // Additional patterns for different implementations
     '[class*="cookie-widget"]', '[id*="cookie-widget"]',
     '[class*="cookie-modal"]', '[id*="cookie-modal"]',
     '[class*="gdpr-banner"]', '[id*="gdpr-banner"]',
     '[class*="notice"]', '[id*="notice"]',
-    '[class*="alert"]', '[id*="alert"]',
-    '[role="dialog"][aria-label*="cookie"]',
-    '[role="dialog"][aria-label*="consent"]'
+    '[class*="popup"]', '[id*="popup"]',
+    '[class*="modal"]', '[id*="modal"]',
+    '[role="dialog"]', '[role="alertdialog"]'
   ];
   
   for (const selector of cookieSelectors) {
-    if ($(selector).length > 0) {
-      hasCookieBanner = true;
-      console.log(`[DOM] Found cookie banner element: ${selector}`);
-      break;
+    const elements = $(selector);
+    if (elements.length > 0) {
+      // Double-check that it's actually a cookie-related element (not false positive)
+      const text = elements.text().toLowerCase();
+      if (text.includes('cookie') || text.includes('كوكيز') || text.includes('consent') || 
+          text.includes('موافق') || text.includes('قبول') || text.includes('أوافق')) {
+        hasCookieBanner = true;
+        console.log(`[DOM] Found cookie banner element: ${selector}`);
+        break;
+      }
     }
   }
   
-  // Check for cookie-related text/buttons in body with expanded patterns
+  // Method 2: Check for cookie-related text patterns in page
   if (!hasCookieBanner) {
     const bodyText = $('body').text().toLowerCase();
-    // Expanded patterns including Arabic variants and common phrasing
+    const htmlContent = $.html().toLowerCase();
+    
     const cookieTextPatterns = [
       /نستخدم ملفات تعريف الارتباط/,
       /ملفات الكوكيز/,
@@ -259,36 +265,53 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
       /الموافقة على استخدام/,
       /نحترم خصوصيتك/,
       /نستخدم بيانات/,
+      /قبول جميع ملفات/,
+      /رفض ملفات/,
+      /cookie consent/i,
       /we use cookies/i,
-      /this website uses cookies/i,
       /accept cookies/i,
       /accept all/i,
       /cookie preferences/i,
-      /cookie policy/i,
-      /accept and continue/i
+      /cookie policy/i
     ];
     
-    // Check for buttons with accept/decline text
-    const hasAcceptButton = $('button, [role="button"]').text().toLowerCase().match(
-      /(accept|agree|ok|موافق|أوافق|قبول|تقبل|استمرار)/i
-    );
-    
-    hasCookieBanner = cookieTextPatterns.some(p => p.test(bodyText)) || !!hasAcceptButton;
+    hasCookieBanner = cookieTextPatterns.some(p => p.test(bodyText) || p.test(htmlContent));
   }
   
-  // Additional fallback: check for common cookie popup containers
+  // Method 3: Check for accept/decline/agree buttons that suggest cookie banner
   if (!hasCookieBanner) {
-    const commonContainers = $('div, section, footer').filter(function() {
-      const text = $(this).text().toLowerCase();
-      const classes = $(this).attr('class')?.toLowerCase() || '';
-      return (text.includes('cookie') || text.includes('كوكيز') || text.includes('consent') || 
-              classes.includes('bottom') || classes.includes('notification')) &&
-             text.length > 50 && text.length < 1000; // Likely a banner/notice
+    const buttonTexts: string[] = [];
+    $('button, [role="button"], a[class*="accept"], a[class*="agree"]').each((_, el) => {
+      buttonTexts.push($(el).text().toLowerCase());
     });
     
-    if (commonContainers.length > 0) {
-      hasCookieBanner = true;
-      console.log(`[DOM] Found cookie banner via container analysis`);
+    // If we find both accept-like and decline-like buttons, or buttons with cookie-related text
+    const acceptPatterns = /(accept|agree|ok|yes|موافق|أوافق|قبول|تقبل|نعم)/i;
+    const declinePatterns = /(decline|no|refuse|reject|رفض|عدم الموافقة)/i;
+    const hasAcceptButton = buttonTexts.some((t: string) => acceptPatterns.test(t));
+    const hasDeclineButton = buttonTexts.some((t: string) => declinePatterns.test(t));
+    
+    hasCookieBanner = hasAcceptButton && hasDeclineButton;
+    
+    if (hasCookieBanner) {
+      console.log(`[DOM] Found cookie banner via accept/decline button pair`);
+    }
+  }
+  
+  // Method 4: Check HTML structure for common banner implementations
+  if (!hasCookieBanner) {
+    // Look for fixed/sticky positioned elements that might be cookie banners
+    const potentialBanners = $('[style*="position: fixed"], [style*="position: sticky"]').filter(function() {
+      const text = $(this).text().toLowerCase();
+      return text.length > 20 && text.length < 2000; // Typical banner length
+    });
+    
+    if (potentialBanners.length > 0) {
+      const bannerText = potentialBanners.text().toLowerCase();
+      if (bannerText.includes('cookie') || bannerText.includes('كوكيز') || bannerText.includes('consent')) {
+        hasCookieBanner = true;
+        console.log(`[DOM] Found cookie banner via fixed/sticky element`);
+      }
     }
   }
   
