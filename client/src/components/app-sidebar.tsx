@@ -18,11 +18,6 @@ const menuItems = [
     url: "/",
     icon: Home,
   },
-  {
-    title: "فحص سِرْبَال",
-    url: "/scans",
-    icon: FileSearch,
-  },
 ];
 
 const toolsItems = [
@@ -79,7 +74,7 @@ export function AppSidebar() {
       <SidebarHeader className="px-4 py-3 border-b">
         <Link href="/" className="flex items-center gap-3 no-underline hover-elevate rounded-md px-2 py-1.5" data-testid="link-home">
           <Shield className="w-6 h-6 text-primary" />
-          <h1 className="text-base font-bold text-foreground">أداة الامتثال</h1>
+          <h1 className="text-lg font-bold text-foreground">سِرْبَال</h1>
         </Link>
       </SidebarHeader>
       <SidebarContent>
