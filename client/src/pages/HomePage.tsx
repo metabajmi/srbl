@@ -137,10 +137,6 @@ export default function HomePage() {
             <Shield className="w-3 h-3 ml-1" />
             متوافق مع نظام حماية البيانات الشخصية السعودي
           </Badge>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-            منصة شاملة لحماية
-            <span className="text-primary"> البيانات الشخصية</span>
-          </h2>
           <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
             كل ما تحتاجه لضمان امتثال موقعك أو تطبيقك لنظام حماية البيانات الشخصية السعودي - في مكان واحد
           </p>
