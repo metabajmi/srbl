@@ -58,30 +58,41 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
            /^[a-zA-Z0-9_-]+\.(html?|php|asp)$/i.test(url); // File names like privacy.html
   };
   
-  // Privacy Policy Detection (href-based patterns ONLY)
+  // Privacy Policy Detection (expanded patterns)
   const privacyHrefPatterns = [
     /href=["']([^"']*privacy[^"']*)["']/gi,
     /href=["']([^"']*خصوصية[^"']*)["']/gi,
     /href=["']([^"']*\/privacy-policy[^"']*)["']/gi,
     /href=["']([^"']*سياسة-الخصوصية[^"']*)["']/gi,
+    /href=["']([^"']*\/privacy[^"']*)["']/gi,
+    /href=["']([^"']*\/policies[^"']*)["']/gi,
+    /href=["']([^"']*confidentiality[^"']*)["']/gi,
+    /href=["']([^"']*data-protection[^"']*)["']/gi,
+    /href=["']([^"']*حماية-البيانات[^"']*)["']/gi,
   ];
   
-  // Anchor text patterns WITH href extraction
+  // Anchor text patterns WITH href extraction (MORE COMPREHENSIVE)
   const privacyAnchorPatterns = [
-    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(privacy policy|سياسة الخصوصية).*?<\/a>/gis,
+    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(privacy policy|سياسة الخصوصية|سياسة خصوصيتنا|privacy|خصوصيتك|حماية البيانات).*?<\/a>/gis,
   ];
   
-  // Terms Detection (href-based patterns ONLY)
+  // Terms Detection (expanded patterns)
   const termsHrefPatterns = [
     /href=["']([^"']*terms[^"']*)["']/gi,
     /href=["']([^"']*شروط[^"']*)["']/gi,
     /href=["']([^"']*\/terms-and-conditions[^"']*)["']/gi,
     /href=["']([^"']*الشروط-والأحكام[^"']*)["']/gi,
+    /href=["']([^"']*\/terms[^"']*)["']/gi,
+    /href=["']([^"']*\/conditions[^"']*)["']/gi,
+    /href=["']([^"']*\/legal[^"']*)["']/gi,
+    /href=["']([^"']*\/tos[^"']*)["']/gi,
+    /href=["']([^"']*أحكام[^"']*)["']/gi,
+    /href=["']([^"']*شروط-الاستخدام[^"']*)["']/gi,
   ];
   
-  // Anchor text patterns WITH href extraction
+  // Anchor text patterns WITH href extraction (MORE COMPREHENSIVE)
   const termsAnchorPatterns = [
-    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(terms|terms & conditions|شروط الاستخدام|الشروط والأحكام).*?<\/a>/gis,
+    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(terms|terms & conditions|terms of service|شروط الاستخدام|الشروط والأحكام|الشروط|أحكام الاستخدام).*?<\/a>/gis,
   ];
   
   const cookiePatterns = [
