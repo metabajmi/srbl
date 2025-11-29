@@ -115,6 +115,21 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Brand Header */}
+      <section className="bg-primary/5 border-b">
+        <div className="container py-6">
+          <div className="flex items-center justify-center gap-3">
+            <Shield className="w-10 h-10 text-primary" />
+            <h1 className="text-5xl md:text-6xl font-bold text-primary" data-testid="text-brand-sirbal">
+              سِرْبَال
+            </h1>
+          </div>
+          <p className="text-center text-lg text-muted-foreground mt-2">
+            منصة شاملة لامتثال نظام حماية البيانات الشخصية السعودي
+          </p>
+        </div>
+      </section>
+
       {/* Hero Section */}
       <section className="container py-12 md:py-16">
         <div className="mx-auto max-w-4xl text-center mb-12">
@@ -122,10 +137,10 @@ export default function HomePage() {
             <Shield className="w-3 h-3 ml-1" />
             متوافق مع نظام حماية البيانات الشخصية السعودي
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
             منصة شاملة لحماية
             <span className="text-primary"> البيانات الشخصية</span>
-          </h1>
+          </h2>
           <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
             كل ما تحتاجه لضمان امتثال موقعك أو تطبيقك لنظام حماية البيانات الشخصية السعودي - في مكان واحد
           </p>
