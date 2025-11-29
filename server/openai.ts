@@ -33,6 +33,9 @@ export interface ComplianceAnalysisResult {
     regulation?: string;
     remediation: string;
     affectedElement?: string;
+    documentType?: "privacy_policy" | "terms" | "cookie_banner" | "consent";
+    violatingText?: string;
+    requirementId?: string;
   }>;
 }
 
@@ -287,6 +290,387 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
   console.log("[DOM] Detection results:", result);
   
   return result;
+}
+
+// Interface for deep policy content analysis results
+export interface PolicyContentViolation {
+  severity: "critical" | "warning" | "suggestion";
+  category: string;
+  title: string;
+  description: string;
+  articleReference: string;
+  regulation: string;
+  remediation: string;
+  documentType: "privacy_policy" | "terms" | "cookie_banner" | "consent";
+  violatingText?: string;
+  requirementId?: string;
+}
+
+// Fetch policy page content with error handling
+async function fetchPolicyContent(policyUrl: string): Promise<string | null> {
+  try {
+    console.log(`[FETCH] Fetching policy content from: ${policyUrl}`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    
+    const response = await fetch(policyUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; PDPLScanner/1.0; +https://sirbal.com)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ar,en;q=0.5',
+      },
+    });
+    clearTimeout(timeout);
+    
+    if (!response.ok) {
+      console.log(`[FETCH] Failed to fetch ${policyUrl}: ${response.status}`);
+      return null;
+    }
+    
+    const html = await response.text();
+    console.log(`[FETCH] Successfully fetched ${policyUrl}: ${html.length} chars`);
+    return html;
+  } catch (error: any) {
+    console.log(`[FETCH] Error fetching ${policyUrl}: ${error.message}`);
+    return null;
+  }
+}
+
+// Extract clean text from HTML for policy analysis
+function extractPolicyText(html: string): string {
+  const $ = cheerio.load(html);
+  
+  // Remove script, style, nav, header, footer elements
+  $('script, style, nav, header, footer, aside, [role="navigation"], [role="banner"]').remove();
+  
+  // Try to find main content area
+  let mainContent = $('main, article, [role="main"], .content, .policy-content, .privacy-policy, .terms-content').first();
+  
+  if (mainContent.length === 0) {
+    // Fallback to body
+    mainContent = $('body');
+  }
+  
+  // Get text and clean it
+  let text = mainContent.text()
+    .replace(/\s+/g, ' ')
+    .replace(/\n\s*\n/g, '\n')
+    .trim();
+  
+  // Limit to reasonable size for analysis
+  if (text.length > 30000) {
+    text = text.substring(0, 30000) + "\n... [تم اختصار المحتوى]";
+  }
+  
+  return text;
+}
+
+// Deep analysis of privacy policy content against PDPL requirements
+export async function analyzePrivacyPolicyContent(policyHtml: string, policyUrl: string): Promise<PolicyContentViolation[]> {
+  if (!apiKey || apiKey === "missing-key") {
+    console.warn("[POLICY_ANALYSIS] No API key, skipping deep privacy policy analysis");
+    return [];
+  }
+  
+  const policyText = extractPolicyText(policyHtml);
+  if (policyText.length < 100) {
+    console.log("[POLICY_ANALYSIS] Policy text too short for analysis");
+    return [{
+      severity: "critical",
+      category: "privacy_policy",
+      title: "محتوى سياسة الخصوصية غير كافٍ",
+      description: "سياسة الخصوصية المكتشفة لا تحتوي على محتوى كافٍ للتحليل. قد تكون الصفحة فارغة أو تستخدم تقنيات تحميل ديناميكية.",
+      articleReference: "المادة 12 من نظام حماية البيانات الشخصية",
+      regulation: "يجب أن تكون سياسة الخصوصية شاملة ومفصلة",
+      remediation: "تأكد من أن صفحة سياسة الخصوصية تحتوي على جميع العناصر المطلوبة قانونياً",
+      documentType: "privacy_policy",
+      requirementId: "pp_content"
+    }];
+  }
+  
+  console.log(`[POLICY_ANALYSIS] Analyzing privacy policy content (${policyText.length} chars)`);
+  
+  const systemPrompt = `أنت محلل قانوني متخصص في نظام حماية البيانات الشخصية السعودي (PDPL).
+مهمتك تحليل محتوى سياسة الخصوصية بدقة وتحديد المخالفات المحددة للقانون.
+
+## المتطلبات القانونية الإلزامية لسياسة الخصوصية (المادة 12 من PDPL):
+
+### العناصر الإلزامية التي يجب فحصها:
+1. **pp1: هوية جهة التحكم** - اسم الجهة الرسمي ونشاطها
+2. **pp2: بيانات التواصل** - بريد إلكتروني، هاتف، عنوان للتواصل بشأن البيانات
+3. **pp3: أنواع البيانات المجمعة** - تحديد واضح لفئات البيانات الشخصية
+4. **pp4: أغراض المعالجة** - توضيح الأسباب المحددة لجمع كل نوع من البيانات
+5. **pp5: المسوغ النظامي** - الأساس القانوني للمعالجة (موافقة، عقد، التزام نظامي)
+6. **pp6: مشاركة البيانات** - الجهات التي تُشارَك معها البيانات وأسباب المشاركة
+7. **pp7: النقل الدولي** - إذا كانت البيانات تُنقل خارج المملكة، يجب توضيح الدول والضمانات
+8. **pp8: مدة الاحتفاظ** - المدة الزمنية للاحتفاظ بالبيانات ومعايير تحديدها
+9. **pp9: حقوق صاحب البيانات** - يجب ذكر جميع الحقوق:
+   - حق العلم (المادة 4 فقرة 1)
+   - حق الوصول (المادة 4 فقرة 2)
+   - حق الحصول على نسخة (المادة 4 فقرة 3)
+   - حق التصحيح (المادة 4 فقرة 4)
+   - حق الإتلاف (المادة 4 فقرة 5)
+   - حق الاعتراض على المعالجة
+   - حق سحب الموافقة
+10. **pp10: آلية تقديم الشكاوى** - كيفية تقديم شكوى متعلقة بالخصوصية
+
+## تعليمات التحليل:
+- ابحث في النص عن كل عنصر من العناصر أعلاه
+- إذا كان العنصر مفقوداً تماماً = مخالفة حرجة (critical)
+- إذا كان العنصر موجوداً لكن غير واضح أو ناقص = تحذير (warning)
+- إذا كان يمكن تحسين الصياغة = اقتراح (suggestion)
+- اقتبس النص المخالف إن وجد (violatingText)
+- حدد المادة القانونية المخالفة بدقة`;
+
+  const userPrompt = `## تحليل سياسة الخصوصية
+
+**رابط السياسة:** ${policyUrl}
+
+**محتوى السياسة:**
+${policyText}
+
+---
+
+## المطلوب:
+حلل المحتوى أعلاه وحدد المخالفات لمتطلبات نظام حماية البيانات الشخصية السعودي.
+
+لكل مخالفة، قدم:
+- severity: critical/warning/suggestion
+- requirementId: معرف المتطلب المخالف (pp1, pp2, pp3, إلخ)
+- title: عنوان المخالفة بالعربية
+- description: وصف تفصيلي للمشكلة
+- violatingText: اقتباس من النص إذا كان هناك نص مخالف
+- articleReference: المادة القانونية المخالفة
+- remediation: كيفية إصلاح المخالفة
+
+أجب بصيغة JSON فقط:
+{
+  "violations": [
+    {
+      "severity": "critical|warning|suggestion",
+      "requirementId": "pp1|pp2|pp3|...",
+      "title": "عنوان المخالفة",
+      "description": "وصف تفصيلي",
+      "violatingText": "اقتباس من النص أو null",
+      "articleReference": "المادة X من PDPL",
+      "remediation": "كيفية الإصلاح"
+    }
+  ],
+  "summary": {
+    "compliantElements": ["قائمة العناصر المتوافقة"],
+    "partiallyCompliant": ["قائمة العناصر الجزئية"],
+    "missingElements": ["قائمة العناصر المفقودة"]
+  }
+}`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 4096,
+      temperature: 0,
+    });
+    
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    console.log("[POLICY_ANALYSIS] Privacy policy analysis complete:", result.summary);
+    
+    // Transform violations to our format
+    const violations: PolicyContentViolation[] = (result.violations || []).map((v: any) => ({
+      severity: v.severity || "warning",
+      category: "privacy_policy_content",
+      title: v.title,
+      description: v.description,
+      articleReference: v.articleReference,
+      regulation: "نظام حماية البيانات الشخصية",
+      remediation: v.remediation,
+      documentType: "privacy_policy" as const,
+      violatingText: v.violatingText || undefined,
+      requirementId: v.requirementId
+    }));
+    
+    return violations;
+  } catch (error: any) {
+    console.error("[POLICY_ANALYSIS] Error analyzing privacy policy:", error.message);
+    return [];
+  }
+}
+
+// Deep analysis of terms & conditions content
+export async function analyzeTermsContent(termsHtml: string, termsUrl: string): Promise<PolicyContentViolation[]> {
+  if (!apiKey || apiKey === "missing-key") {
+    console.warn("[TERMS_ANALYSIS] No API key, skipping deep terms analysis");
+    return [];
+  }
+  
+  const termsText = extractPolicyText(termsHtml);
+  if (termsText.length < 100) {
+    console.log("[TERMS_ANALYSIS] Terms text too short for analysis");
+    return [{
+      severity: "critical",
+      category: "terms_and_conditions",
+      title: "محتوى الشروط والأحكام غير كافٍ",
+      description: "صفحة الشروط والأحكام لا تحتوي على محتوى كافٍ للتحليل.",
+      articleReference: "نظام التجارة الإلكترونية - المادة 7",
+      regulation: "يجب أن تكون الشروط والأحكام واضحة ومفصلة",
+      remediation: "أضف محتوى شامل للشروط والأحكام",
+      documentType: "terms",
+      requirementId: "tc_content"
+    }];
+  }
+  
+  console.log(`[TERMS_ANALYSIS] Analyzing terms content (${termsText.length} chars)`);
+  
+  const systemPrompt = `أنت محلل قانوني متخصص في التجارة الإلكترونية والامتثال القانوني السعودي.
+مهمتك تحليل محتوى الشروط والأحكام بدقة وتحديد المخالفات.
+
+## المتطلبات الإلزامية للشروط والأحكام (نظام التجارة الإلكترونية ولوائحه):
+
+### العناصر الإلزامية:
+1. **tc1: سياسة الاستبدال والاسترجاع** - حق المستهلك في الاستبدال/الاسترجاع خلال 7 أيام (إلزامي)
+2. **tc2: شروط الاستخدام** - قواعد استخدام الموقع والخدمات
+3. **tc3: حدود المسؤولية** - توضيح مسؤولية كل طرف
+4. **tc4: القانون الحاكم** - يجب أن يكون القانون السعودي هو الحاكم
+5. **tc5: الاختصاص القضائي** - تحديد المحاكم المختصة
+6. **tc6: حقوق الملكية الفكرية** - حماية المحتوى والعلامات التجارية
+7. **tc7: الضمانات** - ضمان المنتجات والخدمات إن وجد
+8. **tc8: إجراءات الشكاوى** - آلية التظلم وتقديم الشكاوى
+
+### نقاط حرجة للمتاجر الإلكترونية (قائمة التقييم الذاتي):
+- إتاحة إلغاء حساب العميل (حق إتلاف البيانات)
+- إتاحة وقف الإعلانات الإلكترونية (إلغاء الاشتراك)
+- الإفصاح عن السجل التجاري والرقم الضريبي
+
+### شروط مخالفة للنظام (يجب الإبلاغ عنها):
+- شروط تعفي البائع من المسؤولية كلياً
+- شروط تحرم المستهلك من حق الاسترجاع
+- شروط تفرض اختصاص محاكم أجنبية
+- شروط تنتهك حقوق المستهلك`;
+
+  const userPrompt = `## تحليل الشروط والأحكام
+
+**رابط الصفحة:** ${termsUrl}
+
+**المحتوى:**
+${termsText}
+
+---
+
+## المطلوب:
+حلل المحتوى وحدد المخالفات لنظام التجارة الإلكترونية ونظام حماية البيانات الشخصية.
+
+أجب بصيغة JSON:
+{
+  "violations": [
+    {
+      "severity": "critical|warning|suggestion",
+      "requirementId": "tc1|tc2|tc3|...",
+      "title": "عنوان المخالفة",
+      "description": "وصف تفصيلي",
+      "violatingText": "اقتباس من النص أو null",
+      "articleReference": "المادة القانونية",
+      "remediation": "كيفية الإصلاح"
+    }
+  ],
+  "summary": {
+    "compliantElements": [],
+    "missingElements": []
+  }
+}`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 4096,
+      temperature: 0,
+    });
+    
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    console.log("[TERMS_ANALYSIS] Terms analysis complete:", result.summary);
+    
+    const violations: PolicyContentViolation[] = (result.violations || []).map((v: any) => ({
+      severity: v.severity || "warning",
+      category: "terms_content",
+      title: v.title,
+      description: v.description,
+      articleReference: v.articleReference,
+      regulation: "نظام التجارة الإلكترونية",
+      remediation: v.remediation,
+      documentType: "terms" as const,
+      violatingText: v.violatingText || undefined,
+      requirementId: v.requirementId
+    }));
+    
+    return violations;
+  } catch (error: any) {
+    console.error("[TERMS_ANALYSIS] Error analyzing terms:", error.message);
+    return [];
+  }
+}
+
+// Main function to perform deep content analysis on detected policies
+export async function performDeepContentAnalysis(
+  privacyPolicyUrl?: string,
+  termsUrl?: string
+): Promise<PolicyContentViolation[]> {
+  const allViolations: PolicyContentViolation[] = [];
+  
+  // Analyze privacy policy content if URL available
+  if (privacyPolicyUrl) {
+    console.log("[DEEP_ANALYSIS] Starting privacy policy content analysis...");
+    const privacyHtml = await fetchPolicyContent(privacyPolicyUrl);
+    if (privacyHtml) {
+      const privacyViolations = await analyzePrivacyPolicyContent(privacyHtml, privacyPolicyUrl);
+      allViolations.push(...privacyViolations);
+      console.log(`[DEEP_ANALYSIS] Found ${privacyViolations.length} privacy policy violations`);
+    } else {
+      allViolations.push({
+        severity: "warning",
+        category: "privacy_policy_content",
+        title: "تعذر الوصول إلى صفحة سياسة الخصوصية",
+        description: `لم نتمكن من جلب محتوى سياسة الخصوصية من الرابط: ${privacyPolicyUrl}`,
+        articleReference: "المادة 12 من PDPL",
+        regulation: "يجب أن تكون سياسة الخصوصية متاحة ويمكن الوصول إليها",
+        remediation: "تأكد من أن صفحة سياسة الخصوصية متاحة ويمكن الوصول إليها",
+        documentType: "privacy_policy",
+        requirementId: "pp_access"
+      });
+    }
+  }
+  
+  // Analyze terms content if URL available
+  if (termsUrl) {
+    console.log("[DEEP_ANALYSIS] Starting terms content analysis...");
+    const termsHtml = await fetchPolicyContent(termsUrl);
+    if (termsHtml) {
+      const termsViolations = await analyzeTermsContent(termsHtml, termsUrl);
+      allViolations.push(...termsViolations);
+      console.log(`[DEEP_ANALYSIS] Found ${termsViolations.length} terms violations`);
+    } else {
+      allViolations.push({
+        severity: "warning",
+        category: "terms_content",
+        title: "تعذر الوصول إلى صفحة الشروط والأحكام",
+        description: `لم نتمكن من جلب محتوى الشروط والأحكام من الرابط: ${termsUrl}`,
+        articleReference: "نظام التجارة الإلكترونية",
+        regulation: "يجب أن تكون الشروط والأحكام متاحة",
+        remediation: "تأكد من أن صفحة الشروط والأحكام متاحة",
+        documentType: "terms",
+        requirementId: "tc_access"
+      });
+    }
+  }
+  
+  return allViolations;
 }
 
 // Analyze website content for compliance issues
@@ -625,16 +1009,52 @@ ${prepareHtmlForAnalysis(htmlContent)}
     deterministicScore -= (warningCount * 3);   // -3 per warning
     deterministicScore -= (suggestionCount * 1); // -1 per suggestion
     
+    // DEEP CONTENT ANALYSIS: Fetch and analyze policy content for specific violations
+    console.log("[DEEP_ANALYSIS] Starting deep content analysis...");
+    const deepViolations = await performDeepContentAnalysis(
+      mergedFindings.privacyPolicyUrl,
+      mergedFindings.termsAndConditionsUrl
+    );
+    
+    // Add deep analysis violations to issues
+    const deepIssues = deepViolations.map(v => ({
+      severity: v.severity,
+      category: v.category,
+      title: v.title,
+      description: v.description,
+      articleReference: v.articleReference,
+      regulation: v.regulation,
+      remediation: v.remediation,
+      affectedElement: v.documentType === "privacy_policy" ? "سياسة الخصوصية" : "الشروط والأحكام",
+      documentType: v.documentType,
+      violatingText: v.violatingText,
+      requirementId: v.requirementId
+    }));
+    
+    // Combine all issues
+    const allIssues = [...issues, ...deepIssues];
+    console.log(`[DEEP_ANALYSIS] Added ${deepIssues.length} content violations to ${issues.length} detection issues`);
+    
+    // Recalculate score with deep violations
+    const deepCriticalCount = deepIssues.filter((i: any) => i.severity === "critical").length;
+    const deepWarningCount = deepIssues.filter((i: any) => i.severity === "warning").length;
+    const deepSuggestionCount = deepIssues.filter((i: any) => i.severity === "suggestion").length;
+    
+    // Adjust score for deep violations (less severe deductions since policy exists)
+    deterministicScore -= (deepCriticalCount * 3); // -3 per critical content violation
+    deterministicScore -= (deepWarningCount * 2);   // -2 per warning
+    deterministicScore -= (deepSuggestionCount * 1); // -1 per suggestion
+    
     const finalScore = Math.max(0, Math.min(100, deterministicScore));
     const finalLevel = finalScore >= 70 ? "high" : finalScore >= 40 ? "medium" : "low";
     
-    console.log(`Deterministic score: privacy=${mergedFindings.hasPrivacyPolicy?'✓':'-30'}, terms=${mergedFindings.hasTermsAndConditions?'✓':'-30'}, cookie=${mergedFindings.hasCookieBanner?'✓':'-10'}, contact=${mergedFindings.hasContactInfo?'✓':'-10'}, issues=(critical:${criticalCount}×-5, warnings:${warningCount}×-3, suggestions:${suggestionCount}×-1), final=${finalScore}`);
+    console.log(`Deterministic score: privacy=${mergedFindings.hasPrivacyPolicy?'✓':'-30'}, terms=${mergedFindings.hasTermsAndConditions?'✓':'-30'}, cookie=${mergedFindings.hasCookieBanner?'✓':'-10'}, contact=${mergedFindings.hasContactInfo?'✓':'-10'}, detection_issues=(critical:${criticalCount}×-5, warnings:${warningCount}×-3, suggestions:${suggestionCount}×-1), content_issues=(critical:${deepCriticalCount}×-3, warnings:${deepWarningCount}×-2, suggestions:${deepSuggestionCount}×-1), final=${finalScore}`);
     
     return {
       overallScore: finalScore,
       complianceLevel: finalLevel,
       findings: mergedFindings,
-      issues
+      issues: allIssues
     };
   } catch (error: any) {
     console.error("Error analyzing website compliance:", error);
