@@ -116,17 +116,17 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Brand Header */}
-      <section className="bg-gradient-to-b from-primary/15 via-primary/8 to-primary/3 border-b backdrop-blur-sm">
+      <section className="bg-gradient-to-b from-primary/15 via-primary/8 to-primary/3 border-b backdrop-blur-sm animate-fade-in">
         <div className="container py-16">
           <div className="flex items-center justify-center gap-5">
-            <div className="flex items-center justify-center">
-              <Shield className="w-16 h-16 text-primary drop-shadow-sm" />
+            <div className="flex items-center justify-center animate-scale-in">
+              <Shield className="w-16 h-16 text-primary drop-shadow-sm transition-smooth hover:drop-shadow-lg" />
             </div>
             <div className="flex flex-col items-center justify-center">
-              <h1 className="text-6xl md:text-7xl font-bold text-primary leading-tight" data-testid="text-brand-sirbal">
+              <h1 className="text-6xl md:text-7xl font-bold text-primary leading-tight animate-stagger-1" data-testid="text-brand-sirbal">
                 سِرْبَال
               </h1>
-              <p className="text-xl font-semibold text-primary/75 mt-3 tracking-widest text-center">
+              <p className="text-xl font-semibold text-primary/75 mt-3 tracking-widest text-center animate-stagger-2">
                 درع الامتثال
               </p>
             </div>
@@ -134,21 +134,24 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Section Divider */}
+      <div className="h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+
       {/* Hero Section */}
       <section className="container py-12 md:py-16">
-        <div className="mx-auto max-w-4xl text-center mb-12">
-          <Badge className="mb-4" variant="secondary">
+        <div className="mx-auto max-w-4xl text-center mb-12 animate-slide-up">
+          <Badge className="mb-4 animate-stagger-1 inline-block" variant="secondary">
             <Shield className="w-3 h-3 ml-1" />
             متوافق مع نظام حماية البيانات الشخصية السعودي
           </Badge>
-          <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto animate-stagger-2">
             كل ما تحتاجه لضمان امتثال موقعك أو تطبيقك لنظام حماية البيانات الشخصية السعودي - في مكان واحد
           </p>
         </div>
 
         {/* Compliance Checker Tool - PROMINENT & FREE */}
-        <div className="mx-auto max-w-4xl mb-20">
-          <Card className="border-2 border-primary/25 shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-gradient-to-br from-white dark:from-slate-950 to-primary/2 dark:to-primary/5">
+        <div className="mx-auto max-w-4xl mb-20 animate-stagger-2">
+          <Card className="border-2 border-primary/25 shadow-xl hover:shadow-2xl transition-smooth duration-300 bg-gradient-to-br from-white dark:from-slate-950 to-primary/2 dark:to-primary/5">
             <CardHeader className="text-center pb-6 pt-8">
               <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/12 shadow-md">
                 <FileSearch className="h-10 w-10 text-primary" />
@@ -203,13 +206,16 @@ export default function HomePage() {
           </Card>
         </div>
 
+        {/* Section Divider */}
+        <div className="h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent my-12"></div>
+
         {/* Features - Ordered as requested */}
         <div className="mx-auto max-w-5xl mb-20">
           <div className="grid gap-8 md:grid-cols-3">
             {features.map((feature, index) => (
-              <Card key={index} className="text-center border border-primary/10 shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-primary/5 to-transparent">
+              <Card key={index} className={`text-center border border-primary/10 shadow-md hover:shadow-xl transition-smooth duration-300 bg-gradient-to-br from-primary/5 to-transparent hover:scale-105 animate-stagger-${(index % 3) + 1}`}>
                 <CardContent className="pt-8 pb-6">
-                  <div className="mb-5 inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary shadow-sm">
+                  <div className="mb-5 inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary shadow-sm transition-smooth hover:bg-primary/25 hover:shadow-md">
                     {feature.icon}
                   </div>
                   <h3 className="mb-3 font-bold text-lg">{feature.title}</h3>
@@ -222,11 +228,14 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Section Divider */}
+        <div className="h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent my-12"></div>
+
         {/* Unified Compliance Workspace - Prominent CTA */}
-        <div className="mx-auto max-w-4xl mb-20">
+        <div className="mx-auto max-w-4xl mb-20 animate-stagger-3">
           <Link href="/workspace">
             <Card 
-              className="hover-elevate active-elevate-2 cursor-pointer border-2 border-primary/25 shadow-xl bg-gradient-to-br from-primary/8 via-transparent to-primary/4 transition-all duration-300"
+              className="hover-elevate active-elevate-2 cursor-pointer border-2 border-primary/25 shadow-xl bg-gradient-to-br from-primary/8 via-transparent to-primary/4 transition-smooth duration-300 hover:scale-105"
               data-testid="card-workspace"
             >
               <CardHeader className="text-center pb-6 pt-8">
@@ -272,10 +281,10 @@ export default function HomePage() {
         </div>
 
         {/* Internal Compliance Workspace - Prominent CTA */}
-        <div className="mx-auto max-w-4xl mb-20">
+        <div className="mx-auto max-w-4xl mb-20 animate-stagger-4">
           <Link href="/internal-compliance">
             <Card 
-              className="hover-elevate active-elevate-2 cursor-pointer border-2 border-accent/25 shadow-xl bg-gradient-to-br from-accent/8 via-transparent to-accent/4 transition-all duration-300"
+              className="hover-elevate active-elevate-2 cursor-pointer border-2 border-accent/25 shadow-xl bg-gradient-to-br from-accent/8 via-transparent to-accent/4 transition-smooth duration-300 hover:scale-105"
               data-testid="card-internal-compliance"
             >
               <CardHeader className="text-center pb-6 pt-8">
@@ -316,14 +325,17 @@ export default function HomePage() {
           </Link>
         </div>
 
+        {/* Section Divider */}
+        <div className="h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent my-12"></div>
+
         {/* Additional Services */}
         <div className="mx-auto max-w-6xl mb-20">
-          <h2 className="text-3xl font-bold text-center mb-12">أدوات إضافية</h2>
+          <h2 className="text-3xl font-bold text-center mb-12 animate-slide-up">أدوات إضافية</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            {additionalServices.map((service) => (
+            {additionalServices.map((service, index) => (
               <Link key={service.testId} href={service.href}>
                 <Card 
-                  className="hover-elevate active-elevate-2 cursor-pointer h-full transition-all duration-300 shadow-md hover:shadow-lg border-l-4"
+                  className={`hover-elevate active-elevate-2 cursor-pointer h-full transition-smooth duration-300 shadow-md hover:shadow-lg border-l-4 hover:scale-105 animate-stagger-${(index % 4) + 1}`}
                   style={{ borderLeftColor: 'hsl(142 76% 36%)' }}
                   data-testid={service.testId}
                 >
@@ -354,9 +366,12 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Section Divider */}
+        <div className="h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent my-12"></div>
+
         {/* Why Choose Us */}
-        <div className="mx-auto max-w-4xl mt-16 mb-8">
-          <Card className="shadow-xl bg-gradient-to-br from-primary/10 via-primary/8 to-transparent border-2 border-primary/20 transition-all duration-300">
+        <div className="mx-auto max-w-4xl mt-16 mb-8 animate-slide-up">
+          <Card className="shadow-xl bg-gradient-to-br from-primary/10 via-primary/8 to-transparent border-2 border-primary/20 transition-smooth duration-300 hover:shadow-2xl">
             <CardHeader className="text-center pb-8">
               <CardTitle className="text-3xl md:text-4xl font-bold">لماذا تختار منصتنا؟</CardTitle>
             </CardHeader>
