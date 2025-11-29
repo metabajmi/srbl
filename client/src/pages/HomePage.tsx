@@ -124,6 +124,9 @@ export default function HomePage() {
               سِرْبَال
             </h1>
           </div>
+          <p className="text-center text-lg font-semibold text-primary mt-2">
+            درع الامتثال
+          </p>
         </div>
       </section>
 
