@@ -137,7 +137,12 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
     'شروط الاستخدام', 'الشروط والأحكام', 'شروط الخدمة', 'اتفاقية المستخدم',
     // Compound Arabic phrases
     'سياسة الاستخدام والخصوصية', 'شروط وأحكام', 'الاستخدام والخصوصية',
-    'سياسة الاستبدال والاسترجاع', 'سياسة الإرجاع', 'سياسة الاستبدال'
+    'سياسة الاستبدال والاسترجاع', 'سياسة الإرجاع', 'سياسة الاستبدال',
+    // Additional e-commerce terms (Saudi sites)
+    'الاستبدال والاسترجاع', 'سياسة الارجاع', 'سياسة الاسترجاع', 'سياسة الاستبدال',
+    'الإرجاع والاستبدال', 'شروط البيع', 'شروط الشراء', 'سياسة الشحن',
+    'refund policy', 'return policy', 'exchange policy', 'shipping policy',
+    'refund & exchange', 'returns & exchanges'
   ];
   
   // Terms - URL patterns that definitively indicate a terms page
@@ -148,7 +153,11 @@ function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks 
     // Shopify and e-commerce patterns
     '/policies/terms-of-service', '/policies/terms', '/pages/terms',
     '/policies/refund-policy', '/policies/shipping-policy',
-    '/ar/terms', '/en/terms', 'terms.html'
+    '/ar/terms', '/en/terms', 'terms.html',
+    // Zid/Salla e-commerce patterns
+    '/pages/refund', '/pages/return', '/pages/exchange', '/pages/shipping',
+    '/refund-policy', '/return-policy', '/exchange-policy', '/shipping-policy',
+    '/refund-exchange', '/refund-exchange-policy', '/returns-exchanges'
   ];
   
   let privacyPolicyUrl: string | undefined;
