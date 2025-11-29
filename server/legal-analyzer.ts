@@ -145,6 +145,130 @@ function formatRequirementsForPrompt(requirements: LegalArticle[]): string {
   ).join('\n\n');
 }
 
+// False positive detection - check if element actually exists in text
+function verifyViolationAgainstText(violation: LegalViolation, textLower: string): boolean {
+  const title = violation.title;
+  const reqId = violation.requirementId;
+  
+  // Check for identity/company name - pp1
+  if (reqId === 'pp1' || title.includes('اسم الجهة') || title.includes('هوية')) {
+    const hasCompanyName = 
+      /مكتبة|شركة|مؤسسة|متجر|store|company|جرير|jarir|اكسترا|extra/i.test(textLower) ||
+      textLower.includes('نبذة عن') ||
+      textLower.includes('من نحن');
+    if (hasCompanyName) return false;
+  }
+  
+  // Check for contact info - pp10 or ecom2
+  if (reqId === 'pp10' || reqId === 'ecom2' || title.includes('معلومات اتصال') || title.includes('تواصل')) {
+    const hasContactInfo = 
+      /@[a-z0-9.-]+\.[a-z]{2,}/i.test(textLower) || // email
+      /\d{9,}/i.test(textLower) || // phone
+      /صندوق بريد|ص\.ب|p\.o\.box/i.test(textLower) || // PO Box
+      /شارع|طريق|حي|street|road/i.test(textLower) || // address
+      textLower.includes('للتواصل') ||
+      textLower.includes('اتصل بنا');
+    if (hasContactInfo) return false;
+  }
+  
+  // Check for update date - pp6
+  if (reqId === 'pp6' || title.includes('تحديث') || title.includes('سجل')) {
+    const hasUpdateDate = 
+      /تاريخ التحديث|آخر تحديث|تم التحديث|last updated/i.test(textLower) ||
+      /\d{1,2}[\s\-\/]\w+[\s\-\/]\d{4}/.test(textLower) || // date pattern
+      /\d{4}[\s\-\/]\d{1,2}[\s\-\/]\d{1,2}/.test(textLower);
+    if (hasUpdateDate) return false;
+  }
+  
+  // Check for data collection methods - pp2
+  if (reqId === 'pp2' || title.includes('طرق جمع') || title.includes('جمع البيانات')) {
+    const hasCollectionInfo = 
+      textLower.includes('نجمع') ||
+      textLower.includes('جمع المعلومات') ||
+      textLower.includes('متى نجمع') ||
+      textLower.includes('كيف نجمع') ||
+      textLower.includes('we collect');
+    if (hasCollectionInfo) return false;
+  }
+  
+  // Check for data usage purposes - pp3
+  if (reqId === 'pp3' || title.includes('غرض') || title.includes('استخدام')) {
+    const hasUsageInfo = 
+      textLower.includes('نستخدم') ||
+      textLower.includes('كيف نستخدم') ||
+      textLower.includes('الغرض') ||
+      textLower.includes('من أجل') ||
+      textLower.includes('we use');
+    if (hasUsageInfo) return false;
+  }
+  
+  // Check for data sharing - pp4
+  if (reqId === 'pp4' || title.includes('مشاركة') || title.includes('أطراف')) {
+    const hasSharingInfo = 
+      textLower.includes('نشارك') ||
+      textLower.includes('مشاركة') ||
+      textLower.includes('أطراف أخرى') ||
+      textLower.includes('طرف ثالث') ||
+      textLower.includes('لا نبيع') ||
+      textLower.includes('third party');
+    if (hasSharingInfo) return false;
+  }
+  
+  // Check for data retention - pp5
+  if (reqId === 'pp5' || title.includes('احتفاظ') || title.includes('تخزين') || title.includes('إتلاف')) {
+    const hasRetentionInfo = 
+      textLower.includes('نحتفظ') ||
+      textLower.includes('الاحتفاظ') ||
+      textLower.includes('تخزين') ||
+      textLower.includes('نخزن') ||
+      textLower.includes('إتلاف') ||
+      textLower.includes('حذف') ||
+      textLower.includes('retention');
+    if (hasRetentionInfo) return false;
+  }
+  
+  // Check for data subject rights - pp7, r1-r5
+  if (reqId === 'pp7' || reqId?.startsWith('r') || title.includes('حقوق')) {
+    const hasRightsInfo = 
+      textLower.includes('حقوقك') ||
+      textLower.includes('يحق لك') ||
+      textLower.includes('الحق في') ||
+      textLower.includes('your rights') ||
+      textLower.includes('تغيير معلوماتهم') ||
+      textLower.includes('إلغاء اشتراكهم') ||
+      textLower.includes('إلغاء أو حذف');
+    if (hasRightsInfo) return false;
+  }
+  
+  // Check for cookies info - pp8, c1-c4
+  if (reqId === 'pp8' || reqId?.startsWith('c') || title.includes('ملفات تعريف الارتباط') || title.includes('كوكيز')) {
+    const hasCookieInfo = 
+      textLower.includes('ملفات تعريف الارتباط') ||
+      textLower.includes('سجلات المتصفح') ||
+      textLower.includes('cookies') ||
+      textLower.includes('cookie');
+    // Only reject if claiming cookies info is missing but it exists
+    if ((title.includes('عدم توضيح أنواع') || title.includes('لا توضح')) && hasCookieInfo) {
+      return false;
+    }
+  }
+  
+  // Check for complaints/grievances - pp9
+  if (reqId === 'pp9' || title.includes('شكاوى') || title.includes('اعتراض')) {
+    const hasComplaintsInfo = 
+      textLower.includes('شكوى') ||
+      textLower.includes('شكاوى') ||
+      textLower.includes('اعتراض') ||
+      textLower.includes('التواصل') ||
+      textLower.includes('للتواصل') ||
+      textLower.includes('contact');
+    if (hasComplaintsInfo) return false;
+  }
+  
+  // If none of the above checks caught it, keep the violation
+  return true;
+}
+
 export async function analyzeWithRAG(
   policyText: string,
   policyUrl: string,
@@ -176,37 +300,60 @@ export async function analyzeWithRAG(
   
   console.log(`[RAG_ANALYSIS] Analyzing ${documentType} with ${relevantRequirements.length} legal requirements`);
   
-  const systemPrompt = `أنت محلل قانوني متخصص في نظام حماية البيانات الشخصية السعودي (PDPL).
+  const systemPrompt = `أنت محلل قانوني دقيق متخصص في نظام حماية البيانات الشخصية السعودي (PDPL).
 
 ## مهمتك:
-تحليل ${documentType === "privacy_policy" ? "سياسة الخصوصية" : "الشروط والأحكام"} وتحديد المخالفات بناءً على المتطلبات القانونية المحددة أدناه فقط.
+تحليل ${documentType === "privacy_policy" ? "سياسة الخصوصية" : "الشروط والأحكام"} بدقة عالية لتحديد المتطلبات المفقودة فعلياً.
 
-## قواعد صارمة:
-1. **استند فقط للمتطلبات المذكورة أدناه** - لا تختلق متطلبات جديدة
-2. **اقتبس النص المخالف حرفياً** - إذا وجدت نصاً مخالفاً، انسخه كما هو
-3. **استخدم معرف المتطلب (id) بالضبط** - مثل pp1, pp2, r1, c1, tc1
-4. **حدد المادة القانونية من المصدر** - استخدم المصدر المذكور مع كل متطلب
-5. **إذا كان العنصر موجوداً ومتوافقاً - لا تذكره كمخالفة**
+## ⚠️ قواعد التحقق الصارمة - اقرأها بعناية:
+
+### 1. تحقق من وجود العنصر أولاً قبل الإبلاغ عنه كمخالفة:
+- ابحث عن العنصر بجميع الصيغ الممكنة (مرادفات، تعبيرات مختلفة)
+- إذا وجدت معلومات الاتصال (بريد، هاتف، عنوان) = العنصر موجود ✓
+- إذا وجدت اسم الشركة/الجهة بأي شكل = العنصر موجود ✓
+- إذا وجدت تاريخ تحديث بأي صيغة = العنصر موجود ✓
+- إذا وجدت شرحاً لجمع البيانات أو استخدامها = العنصر موجود ✓
+
+### 2. أمثلة على ما يُعتبر موجوداً (لا تبلغ عنه كمخالفة):
+- "مكتبة جرير" أو أي اسم شركة = هوية الجهة موجودة ✓
+- "[email protected]" أو أي بريد = معلومات اتصال موجودة ✓
+- "شارع العليا" أو أي عنوان = معلومات اتصال موجودة ✓
+- "920000089" أو أي رقم = معلومات اتصال موجودة ✓
+- "تاريخ التحديث: ..." = سجل التحديثات موجود ✓
+- "نجمع المعلومات عندما..." = طرق الجمع مذكورة ✓
+- "نستخدم المعلومات من أجل..." = أغراض الاستخدام مذكورة ✓
+- "للتواصل معنا..." = قنوات التواصل موجودة ✓
+
+### 3. متى تُبلغ عن مخالفة فقط:
+- فقط إذا بحثت جيداً ولم تجد العنصر نهائياً في كامل النص
+- استخدم confidence منخفض (0.5-0.7) إذا لم تكن متأكداً
+- إذا كان العنصر موجوداً جزئياً، اقترح تحسينه بـ severity: "suggestion" بدلاً من "critical"
+
+### 4. المعرّفات المسموحة فقط:
+استخدم هذه المعرّفات بالضبط: ${relevantRequirements.map(r => r.id).join(', ')}
 
 ## المتطلبات القانونية الواجب فحصها:
 ${formattedRequirements}
 
-## تعليمات الإخراج:
-لكل مخالفة مكتشفة، قدم:
+## صيغة الإخراج:
 {
   "violations": [
     {
-      "requirementId": "معرف المتطلب (pp1, r2, c3, tc1 إلخ)",
-      "articleReference": "المادة القانونية من المصدر",
+      "requirementId": "معرف المتطلب المحدد أعلاه فقط",
+      "articleReference": "المادة القانونية",
       "severity": "critical|warning|suggestion",
-      "title": "عنوان المخالفة بالعربية",
-      "description": "وصف تفصيلي للمشكلة",
-      "violatingText": "النص المخالف المقتبس حرفياً أو null إذا كان العنصر مفقوداً",
-      "remediation": "كيفية إصلاح المخالفة",
-      "confidence": 0.0-1.0
+      "title": "عنوان المخالفة",
+      "description": "وصف المشكلة - اذكر ما بحثت عنه ولم تجده",
+      "violatingText": "null لأن العنصر غير موجود",
+      "remediation": "كيفية الإصلاح",
+      "confidence": 0.5-1.0
     }
   ]
-}`;
+}
+
+## تذكر: 
+- أعط مصفوفة violations فارغة [] إذا كانت السياسة متوافقة تماماً
+- تحقق مرتين قبل إضافة أي مخالفة`;
 
   const userPrompt = `## المستند للتحليل
 **الرابط:** ${policyUrl}
@@ -256,13 +403,24 @@ ${policyText.substring(0, 25000)}
       const reqExists = relevantRequirements.some(r => r.id === v.requirementId);
       if (!reqExists) {
         console.log(`[RAG_VALIDATION] Rejected violation with unknown requirementId: ${v.requirementId}`);
+        return false;
       }
-      return reqExists;
+      return true;
     });
     
-    console.log(`[RAG_ANALYSIS] Found ${validViolations.length} validated violations (${violations.length - validViolations.length} rejected)`);
+    // Second pass: verify violations against actual text content
+    const verifiedViolations = validViolations.filter(v => {
+      const textLower = policyText.toLowerCase();
+      const isVerified = verifyViolationAgainstText(v, textLower);
+      if (!isVerified) {
+        console.log(`[RAG_VERIFY] Rejected false positive: ${v.title}`);
+      }
+      return isVerified;
+    });
     
-    return validViolations;
+    console.log(`[RAG_ANALYSIS] Found ${verifiedViolations.length} validated violations (${violations.length - verifiedViolations.length} rejected)`);
+    
+    return verifiedViolations;
   } catch (error: any) {
     console.error("[RAG_ANALYSIS] Error:", error.message);
     return [];

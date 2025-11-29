@@ -1052,6 +1052,27 @@ ${prepareHtmlForAnalysis(htmlContent)}
       console.log("Removed contact info issues (element confirmed by hybrid detection)");
     }
     
+    // IMPORTANT: Filter out content-analysis issues from OpenAI detection
+    // These will be handled more accurately by RAG-based deep analysis
+    // Keep only structural/detection issues (missing elements, not content quality)
+    const detectionOnlyCategories = ["cookies", "data_collection", "consent"];
+    issues = issues.filter((issue: any) => {
+      // Keep cookie banner issues (structural)
+      if (!hasCookieBanner && issue.category === "cookies") return true;
+      // Keep data collection form issues (structural)
+      if (issue.category === "data_collection") return true;
+      // Keep consent mechanism issues (structural)
+      if (issue.category === "consent" && issue.title?.includes("آلية")) return true;
+      // Filter out content analysis issues - these are better handled by RAG
+      if (issue.title?.includes("عدم توضيح") || 
+          issue.title?.includes("عدم ذكر") || 
+          issue.title?.includes("عدم وجود معلومات")) {
+        console.log(`[FILTER] Removed OpenAI content issue (handled by RAG): ${issue.title}`);
+        return false;
+      }
+      return true;
+    });
+    
     // Calculate deterministic score based on findings and issues
     // Start from 100 and deduct for missing elements and issues
     let deterministicScore = 100;
