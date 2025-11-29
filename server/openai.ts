@@ -666,21 +666,22 @@ ${termsText}
 }
 
 // Main function to perform deep content analysis on detected policies
+// Now uses RAG-based analysis for grounded legal citations
 export async function performDeepContentAnalysis(
   privacyPolicyUrl?: string,
   termsUrl?: string
 ): Promise<PolicyContentViolation[]> {
+  const { performRAGBasedAnalysis } = await import("./legal-analyzer");
   const allViolations: PolicyContentViolation[] = [];
   
-  // Analyze privacy policy content if URL available
+  let privacyHtml: string | null = null;
+  let termsHtml: string | null = null;
+  
+  // Fetch content with improved reliability
   if (privacyPolicyUrl) {
-    console.log("[DEEP_ANALYSIS] Starting privacy policy content analysis...");
-    const privacyHtml = await fetchPolicyContent(privacyPolicyUrl);
-    if (privacyHtml) {
-      const privacyViolations = await analyzePrivacyPolicyContent(privacyHtml, privacyPolicyUrl);
-      allViolations.push(...privacyViolations);
-      console.log(`[DEEP_ANALYSIS] Found ${privacyViolations.length} privacy policy violations`);
-    } else {
+    console.log("[DEEP_ANALYSIS] Fetching privacy policy content...");
+    privacyHtml = await fetchPolicyContent(privacyPolicyUrl);
+    if (!privacyHtml) {
       allViolations.push({
         severity: "warning",
         category: "privacy_policy_content",
@@ -695,15 +696,10 @@ export async function performDeepContentAnalysis(
     }
   }
   
-  // Analyze terms content if URL available
   if (termsUrl) {
-    console.log("[DEEP_ANALYSIS] Starting terms content analysis...");
-    const termsHtml = await fetchPolicyContent(termsUrl);
-    if (termsHtml) {
-      const termsViolations = await analyzeTermsContent(termsHtml, termsUrl);
-      allViolations.push(...termsViolations);
-      console.log(`[DEEP_ANALYSIS] Found ${termsViolations.length} terms violations`);
-    } else {
+    console.log("[DEEP_ANALYSIS] Fetching terms content...");
+    termsHtml = await fetchPolicyContent(termsUrl);
+    if (!termsHtml) {
       allViolations.push({
         severity: "warning",
         category: "terms_content",
@@ -718,6 +714,32 @@ export async function performDeepContentAnalysis(
     }
   }
   
+  // Perform RAG-based analysis with legal grounding
+  console.log("[DEEP_ANALYSIS] Starting RAG-based legal analysis...");
+  const ragViolations = await performRAGBasedAnalysis(
+    privacyPolicyUrl,
+    privacyHtml || undefined,
+    termsUrl,
+    termsHtml || undefined
+  );
+  
+  // Convert RAG violations to PolicyContentViolation format
+  for (const v of ragViolations) {
+    allViolations.push({
+      severity: v.severity,
+      category: v.category,
+      title: v.title,
+      description: v.description,
+      articleReference: v.articleReference,
+      regulation: v.articleReference,
+      remediation: v.remediation,
+      documentType: v.documentType,
+      violatingText: v.violatingText || undefined,
+      requirementId: v.requirementId
+    });
+  }
+  
+  console.log(`[DEEP_ANALYSIS] Total violations found: ${allViolations.length}`);
   return allViolations;
 }
 
