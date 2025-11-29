@@ -116,15 +116,17 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Brand Header */}
-      <section className="bg-gradient-to-b from-primary/10 to-primary/5 border-b">
-        <div className="container py-12">
-          <div className="flex items-center justify-center gap-6">
-            <Shield className="w-14 h-14 text-primary" />
+      <section className="bg-gradient-to-b from-primary/15 via-primary/8 to-primary/3 border-b backdrop-blur-sm">
+        <div className="container py-16">
+          <div className="flex items-center justify-center gap-5">
+            <div className="flex items-center justify-center">
+              <Shield className="w-16 h-16 text-primary drop-shadow-sm" />
+            </div>
             <div className="flex flex-col items-center justify-center">
-              <h1 className="text-6xl md:text-7xl font-bold text-primary leading-none" data-testid="text-brand-sirbal">
+              <h1 className="text-6xl md:text-7xl font-bold text-primary leading-tight" data-testid="text-brand-sirbal">
                 سِرْبَال
               </h1>
-              <p className="text-xl font-semibold text-primary mt-6 tracking-wide text-center">
+              <p className="text-xl font-semibold text-primary/75 mt-3 tracking-widest text-center">
                 درع الامتثال
               </p>
             </div>
@@ -145,19 +147,19 @@ export default function HomePage() {
         </div>
 
         {/* Compliance Checker Tool - PROMINENT & FREE */}
-        <div className="mx-auto max-w-4xl mb-16">
-          <Card className="border-2 border-primary/20 shadow-lg">
-            <CardHeader className="text-center pb-4">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <FileSearch className="h-8 w-8 text-primary" />
+        <div className="mx-auto max-w-4xl mb-20">
+          <Card className="border-2 border-primary/25 shadow-xl hover:shadow-2xl transition-shadow duration-300 bg-gradient-to-br from-white dark:from-slate-950 to-primary/2 dark:to-primary/5">
+            <CardHeader className="text-center pb-6 pt-8">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/12 shadow-md">
+                <FileSearch className="h-10 w-10 text-primary" />
               </div>
-              <CardTitle className="text-2xl md:text-3xl">
+              <CardTitle className="text-3xl md:text-4xl font-bold mb-3">
                 افحص موقعك للامتثال - مجاناً
               </CardTitle>
-              <CardDescription className="text-base mt-2">
+              <CardDescription className="text-base mt-3 leading-relaxed">
                 تحليل شامل باستخدام الذكاء الاصطناعي لاكتشاف مخالفات حماية البيانات الشخصية
               </CardDescription>
-              <Badge variant="secondary" className="mt-3 mx-auto">
+              <Badge variant="secondary" className="mt-4 mx-auto">
                 مجاني بالكامل - بدون تسجيل
               </Badge>
             </CardHeader>
@@ -202,16 +204,16 @@ export default function HomePage() {
         </div>
 
         {/* Features - Ordered as requested */}
-        <div className="mx-auto max-w-5xl mb-16">
-          <div className="grid gap-6 md:grid-cols-3">
+        <div className="mx-auto max-w-5xl mb-20">
+          <div className="grid gap-8 md:grid-cols-3">
             {features.map((feature, index) => (
-              <Card key={index} className="text-center border-none shadow-none bg-muted/50">
-                <CardContent className="pt-6">
-                  <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Card key={index} className="text-center border border-primary/10 shadow-md hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-primary/5 to-transparent">
+                <CardContent className="pt-8 pb-6">
+                  <div className="mb-5 inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary shadow-sm">
                     {feature.icon}
                   </div>
-                  <h3 className="mb-2 font-semibold">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="mb-3 font-bold text-lg">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     {feature.description}
                   </p>
                 </CardContent>
@@ -221,46 +223,46 @@ export default function HomePage() {
         </div>
 
         {/* Unified Compliance Workspace - Prominent CTA */}
-        <div className="mx-auto max-w-4xl mb-16">
+        <div className="mx-auto max-w-4xl mb-20">
           <Link href="/workspace">
             <Card 
-              className="hover-elevate active-elevate-2 cursor-pointer border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-transparent to-primary/5"
+              className="hover-elevate active-elevate-2 cursor-pointer border-2 border-primary/25 shadow-xl bg-gradient-to-br from-primary/8 via-transparent to-primary/4 transition-all duration-300"
               data-testid="card-workspace"
             >
-              <CardHeader className="text-center pb-4">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                  <Layers className="h-8 w-8 text-primary" />
+              <CardHeader className="text-center pb-6 pt-8">
+                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/15 shadow-md">
+                  <Layers className="h-10 w-10 text-primary" />
                 </div>
-                <Badge variant="default" className="mx-auto mb-3">
+                <Badge variant="default" className="mx-auto mb-4">
                   موحّد في مكان واحد
                 </Badge>
-                <CardTitle className="text-2xl md:text-3xl">
+                <CardTitle className="text-3xl md:text-4xl font-bold mb-4">
                   مساحة العمل الموحدة للامتثال
                 </CardTitle>
-                <CardDescription className="text-base mt-2 max-w-xl mx-auto">
+                <CardDescription className="text-base mt-3 max-w-xl mx-auto leading-relaxed">
                   أنشئ سياسة الخصوصية والشروط والأحكام وإدارة الموافقات وإعدادات الخصوصية - كلها في مكان واحد
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-0 text-center">
-                <div className="flex flex-wrap justify-center gap-2 mb-4">
-                  <Badge variant="outline" className="text-xs">
+              <CardContent className="pt-0 pb-8 text-center">
+                <div className="flex flex-wrap justify-center gap-2 mb-8">
+                  <Badge variant="outline" className="text-xs px-3 py-1.5">
                     <FileText className="w-3 h-3 ml-1" />
                     سياسة الخصوصية
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs px-3 py-1.5">
                     <ScrollText className="w-3 h-3 ml-1" />
                     الشروط والأحكام
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs px-3 py-1.5">
                     <CheckCircle className="w-3 h-3 ml-1" />
                     إدارة الموافقة
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs px-3 py-1.5">
                     <Shield className="w-3 h-3 ml-1" />
                     إعدادات الخصوصية
                   </Badge>
                 </div>
-                <Button size="lg" className="px-8">
+                <Button size="lg" className="px-10 h-11 text-base font-semibold">
                   <Layers className="ml-2 h-5 w-5" />
                   ابدأ الآن
                 </Button>
@@ -270,42 +272,42 @@ export default function HomePage() {
         </div>
 
         {/* Internal Compliance Workspace - Prominent CTA */}
-        <div className="mx-auto max-w-4xl mb-16">
+        <div className="mx-auto max-w-4xl mb-20">
           <Link href="/internal-compliance">
             <Card 
-              className="hover-elevate active-elevate-2 cursor-pointer border-2 border-accent/30 bg-gradient-to-br from-accent/5 via-transparent to-accent/5"
+              className="hover-elevate active-elevate-2 cursor-pointer border-2 border-accent/25 shadow-xl bg-gradient-to-br from-accent/8 via-transparent to-accent/4 transition-all duration-300"
               data-testid="card-internal-compliance"
             >
-              <CardHeader className="text-center pb-4">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10">
-                  <Lock className="h-8 w-8 text-accent" />
+              <CardHeader className="text-center pb-6 pt-8">
+                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-accent/15 shadow-md">
+                  <Lock className="h-10 w-10 text-accent" />
                 </div>
-                <Badge variant="secondary" className="mx-auto mb-3">
+                <Badge variant="secondary" className="mx-auto mb-4">
                   إدارة شاملة
                 </Badge>
-                <CardTitle className="text-2xl md:text-3xl">
+                <CardTitle className="text-3xl md:text-4xl font-bold mb-4">
                   مساحة العمل الموحدة للامتثال الداخلي
                 </CardTitle>
-                <CardDescription className="text-base mt-2 max-w-xl mx-auto">
+                <CardDescription className="text-base mt-3 max-w-xl mx-auto leading-relaxed">
                   إدارة سجل المعالجة (ROPA) وطلبات الوصول (DSAR) وتقييمات التأثير (DPIA) - كلها في مكان واحد
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-0 text-center">
-                <div className="flex flex-wrap justify-center gap-2 mb-4">
-                  <Badge variant="outline" className="text-xs">
+              <CardContent className="pt-0 pb-8 text-center">
+                <div className="flex flex-wrap justify-center gap-2 mb-8">
+                  <Badge variant="outline" className="text-xs px-3 py-1.5">
                     <FileText className="w-3 h-3 ml-1" />
                     ROPA
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs px-3 py-1.5">
                     <Users className="w-3 h-3 ml-1" />
                     DSAR
                   </Badge>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs px-3 py-1.5">
                     <Lock className="w-3 h-3 ml-1" />
                     DPIA
                   </Badge>
                 </div>
-                <Button size="lg" className="px-8">
+                <Button size="lg" className="px-10 h-11 text-base font-semibold">
                   <Lock className="ml-2 h-5 w-5" />
                   ابدأ الآن
                 </Button>
@@ -315,34 +317,35 @@ export default function HomePage() {
         </div>
 
         {/* Additional Services */}
-        <div className="mx-auto max-w-6xl">
-          <h2 className="text-2xl font-bold text-center mb-8">أدوات إضافية</h2>
+        <div className="mx-auto max-w-6xl mb-20">
+          <h2 className="text-3xl font-bold text-center mb-12">أدوات إضافية</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
             {additionalServices.map((service) => (
               <Link key={service.testId} href={service.href}>
                 <Card 
-                  className="hover-elevate active-elevate-2 cursor-pointer h-full transition-all duration-200"
+                  className="hover-elevate active-elevate-2 cursor-pointer h-full transition-all duration-300 shadow-md hover:shadow-lg border-l-4"
+                  style={{ borderLeftColor: 'hsl(142 76% 36%)' }}
                   data-testid={service.testId}
                 >
-                  <CardHeader className="space-y-3">
+                  <CardHeader className="space-y-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl ${service.bgColor} ${service.color}`}>
+                      <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-lg ${service.bgColor} ${service.color} shadow-md`}>
                         {service.icon}
                       </div>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs px-2.5 py-0.5">
                         {service.badge}
                       </Badge>
                     </div>
                     <div>
-                      <CardTitle className="text-xl mb-2">{service.title}</CardTitle>
-                      <CardDescription className="text-sm leading-relaxed">
+                      <CardTitle className="text-2xl font-bold mb-3">{service.title}</CardTitle>
+                      <CardDescription className="text-sm leading-relaxed text-muted-foreground">
                         {service.description}
                       </CardDescription>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <Button variant="ghost" className="w-full" size="sm">
-                      ابدأ الآن ←
+                  <CardContent className="pt-2">
+                    <Button variant="ghost" className="w-full justify-center text-primary font-semibold hover:bg-primary/5" size="sm">
+                      ابدأ الآن →
                     </Button>
                   </CardContent>
                 </Card>
@@ -352,24 +355,26 @@ export default function HomePage() {
         </div>
 
         {/* Why Choose Us */}
-        <div className="mx-auto max-w-4xl mt-20">
-          <Card className="bg-gradient-to-br from-primary/5 via-primary/10 to-transparent border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-2xl text-center">لماذا تختار منصتنا؟</CardTitle>
+        <div className="mx-auto max-w-4xl mt-16 mb-8">
+          <Card className="shadow-xl bg-gradient-to-br from-primary/10 via-primary/8 to-transparent border-2 border-primary/20 transition-all duration-300">
+            <CardHeader className="text-center pb-8">
+              <CardTitle className="text-3xl md:text-4xl font-bold">لماذا تختار منصتنا؟</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="text-center space-y-2">
-                  <div className="text-3xl font-bold text-primary">100%</div>
-                  <p className="text-sm text-muted-foreground">متوافق مع اللوائح السعودية</p>
+            <CardContent className="pb-8">
+              <div className="grid gap-8 md:grid-cols-3">
+                <div className="text-center space-y-3">
+                  <div className="text-4xl md:text-5xl font-bold text-primary">100%</div>
+                  <p className="text-base font-semibold text-muted-foreground">متوافق مع اللوائح السعودية</p>
                 </div>
-                <div className="text-center space-y-2">
-                  <div className="text-3xl font-bold text-primary">AI</div>
-                  <p className="text-sm text-muted-foreground">تحليل ذكي بتقنية GPT-4o</p>
+                <div className="h-auto w-0.5 bg-primary/10 hidden md:block mx-auto"></div>
+                <div className="text-center space-y-3">
+                  <div className="text-4xl md:text-5xl font-bold text-primary">AI</div>
+                  <p className="text-base font-semibold text-muted-foreground">تحليل ذكي بتقنية GPT-4o</p>
                 </div>
-                <div className="text-center space-y-2">
-                  <div className="text-3xl font-bold text-primary">دقائق</div>
-                  <p className="text-sm text-muted-foreground">احصل على وثائق جاهزة فوراً</p>
+                <div className="h-0.5 w-full bg-primary/10 md:hidden"></div>
+                <div className="text-center space-y-3">
+                  <div className="text-4xl md:text-5xl font-bold text-primary">دقائق</div>
+                  <p className="text-base font-semibold text-muted-foreground">احصل على وثائق جاهزة فوراً</p>
                 </div>
               </div>
             </CardContent>
