@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 import { ComplianceScan } from "@shared/schema";
 
 interface ExtractedScanData {
@@ -11,6 +11,8 @@ interface ExtractedScanData {
   hasTermsAndConditions: boolean;
   hasCookieBanner: boolean;
   hasContactInfo: boolean;
+  privacyPolicyUrl: string | null;
+  termsAndConditionsUrl: string | null;
   overallScore: number;
   complianceLevel: string;
   scanId: string;
@@ -74,10 +76,9 @@ export function useScanContext() {
 
 export function extractScanData(scan: ComplianceScan): ExtractedScanData {
   let extractedCompanyName = "";
-  let extractedEmail = "";
-  let extractedPhone = "";
   let extractedBusinessType = "";
   
+  // Extract company name from URL
   try {
     const url = new URL(scan.url);
     const hostname = url.hostname.replace("www.", "");
@@ -90,16 +91,34 @@ export function extractScanData(scan: ComplianceScan): ExtractedScanData {
     extractedCompanyName = "";
   }
   
+  // Determine business type from URL patterns
+  const urlLower = scan.url.toLowerCase();
+  if (urlLower.includes("jarir") || urlLower.includes("shop") || urlLower.includes("store") || urlLower.includes("buy") || urlLower.includes("cart")) {
+    extractedBusinessType = "ecommerce_general";
+  } else if (urlLower.includes("bank") || urlLower.includes("finance")) {
+    extractedBusinessType = "financial_services";
+  } else if (urlLower.includes("health") || urlLower.includes("clinic") || urlLower.includes("hospital")) {
+    extractedBusinessType = "healthcare";
+  } else if (urlLower.includes("service") || urlLower.includes("consult") || urlLower.includes("agency")) {
+    extractedBusinessType = "digital_services";
+  } else if (urlLower.includes("tech") || urlLower.includes("app") || urlLower.includes("software")) {
+    extractedBusinessType = "technology";
+  } else {
+    extractedBusinessType = "ecommerce_general";
+  }
+  
   return {
     websiteUrl: scan.url,
     companyName: extractedCompanyName,
-    contactEmail: extractedEmail,
-    contactPhone: extractedPhone,
+    contactEmail: "",
+    contactPhone: "",
     businessType: extractedBusinessType,
     hasPrivacyPolicy: scan.hasPrivacyPolicy || false,
     hasTermsAndConditions: scan.hasTermsAndConditions || false,
     hasCookieBanner: scan.hasCookieBanner || false,
     hasContactInfo: scan.hasContactInfo || false,
+    privacyPolicyUrl: scan.privacyPolicyUrl || null,
+    termsAndConditionsUrl: scan.termsAndConditionsUrl || null,
     overallScore: scan.overallScore || 0,
     complianceLevel: scan.complianceLevel || "low",
     scanId: scan.id,
