@@ -54,7 +54,7 @@ export default function PrivacyGeneratorTab() {
   const { toast } = useToast();
   const [currentSection, setCurrentSection] = useState(1);
   const { scanData, hasScanData } = useScanContext();
-  const [dataPreFilled, setDataPreFilled] = useState(false);
+  const [lastPreFilledScanId, setLastPreFilledScanId] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -80,29 +80,33 @@ export default function PrivacyGeneratorTab() {
     },
   });
 
-  // Pre-fill form with scan data
+  // Pre-fill form with scan data (react to new scans)
   useEffect(() => {
-    if (hasScanData && scanData && !dataPreFilled) {
-      form.setValue("companyName", scanData.companyName || "");
-      form.setValue("contactEmail", scanData.contactEmail || "");
-      form.setValue("contactPhone", scanData.contactPhone || "");
+    if (hasScanData && scanData && scanData.scanId !== lastPreFilledScanId) {
+      // Pre-fill empty fields only - don't overwrite user edits
+      const currentCompanyName = form.getValues("companyName");
+      const currentBusinessType = form.getValues("businessType");
       
-      if (scanData.businessType) {
+      if (!currentCompanyName && scanData.companyName) {
+        form.setValue("companyName", scanData.companyName);
+      }
+      
+      if (!currentBusinessType && scanData.businessType) {
         form.setValue("businessType", scanData.businessType);
       }
       
-      if (scanData.hasCookieBanner) {
+      if (scanData.hasCookieBanner && !form.getValues("usesCookies")) {
         form.setValue("usesCookies", "yes");
       }
       
-      setDataPreFilled(true);
+      setLastPreFilledScanId(scanData.scanId);
       
       toast({
-        title: "تم تعبئة البيانات تلقائياً",
-        description: `تم تعبئة بيانات من فحص ${scanData.websiteUrl} - راجع وأكمل البيانات المتبقية`,
+        title: "بيانات الفحص متاحة",
+        description: `تم تحميل بيانات من فحص ${scanData.websiteUrl} - أكمل البيانات المتبقية`,
       });
     }
-  }, [hasScanData, scanData, dataPreFilled, form, toast]);
+  }, [hasScanData, scanData, lastPreFilledScanId, form, toast]);
 
   const { fields: dataFields, append: appendData, remove: removeData } = useFieldArray({
     control: form.control,

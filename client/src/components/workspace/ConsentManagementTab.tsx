@@ -91,21 +91,10 @@ export default function ConsentManagementTab() {
   const [isScriptDialogOpen, setIsScriptDialogOpen] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const { scanData, hasScanData } = useScanContext();
-  const [dataPreFilled, setDataPreFilled] = useState(false);
+  const [lastPreFilledScanId, setLastPreFilledScanId] = useState<string | null>(null);
 
   const { data: settings } = useQuery<CmpSettings>({ queryKey: ["/api/cmp/settings"] });
   const { data: scriptsAPI = [] } = useQuery<CmpScriptAPI[]>({ queryKey: ["/api/cmp/scripts"] });
-
-  // Show notification when scan data is available
-  useEffect(() => {
-    if (hasScanData && scanData && !dataPreFilled) {
-      setDataPreFilled(true);
-      toast({
-        title: "بيانات الفحص متاحة",
-        description: `تم تحميل بيانات من فحص ${scanData.websiteUrl} - ${scanData.hasCookieBanner ? "لافتة كوكيز موجودة" : "لافتة كوكيز مفقودة"}`,
-      });
-    }
-  }, [hasScanData, scanData, dataPreFilled, toast]);
 
   const scripts: CmpScript[] = scriptsAPI.map(script => ({
     ...script,
@@ -121,6 +110,38 @@ export default function ConsentManagementTab() {
       termsUrl: settings.termsUrl || "",
     } : undefined,
   });
+
+  // Show notification and update settings with scan data
+  useEffect(() => {
+    if (hasScanData && scanData && scanData.scanId !== lastPreFilledScanId) {
+      setLastPreFilledScanId(scanData.scanId);
+      
+      // Pre-fill settings form with scan data if available
+      const currentPrivacyUrl = settingsForm.getValues("privacyPolicyUrl");
+      const currentTermsUrl = settingsForm.getValues("termsUrl");
+      
+      if (!currentPrivacyUrl && scanData.privacyPolicyUrl) {
+        settingsForm.setValue("privacyPolicyUrl", scanData.privacyPolicyUrl);
+      }
+      
+      if (!currentTermsUrl && scanData.termsAndConditionsUrl) {
+        settingsForm.setValue("termsUrl", scanData.termsAndConditionsUrl);
+      }
+      
+      // Set default banner description based on scan findings
+      const currentDescription = settingsForm.getValues("bannerDescription");
+      if (!currentDescription && !scanData.hasCookieBanner) {
+        settingsForm.setValue("bannerDescription", 
+          `نستخدم ملفات تعريف الارتباط لتحسين تجربتك على ${scanData.companyName}. يمكنك التحكم في تفضيلاتك أو قبول الكل للمتابعة.`
+        );
+      }
+      
+      toast({
+        title: "بيانات الفحص متاحة",
+        description: `تم تحميل بيانات من فحص ${scanData.websiteUrl} - ${scanData.hasCookieBanner ? "لافتة كوكيز موجودة" : "لافتة كوكيز مفقودة - يُنصح بإنشاء واحدة"}`,
+      });
+    }
+  }, [hasScanData, scanData, lastPreFilledScanId, toast, settingsForm]);
 
   const scriptForm = useForm<z.infer<typeof scriptSchema>>({
     resolver: zodResolver(scriptSchema),

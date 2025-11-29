@@ -30,7 +30,7 @@ export default function TermsGeneratorTab() {
   const [generatedDocId, setGeneratedDocId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const { scanData, hasScanData } = useScanContext();
-  const [dataPreFilled, setDataPreFilled] = useState(false);
+  const [lastPreFilledScanId, setLastPreFilledScanId] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -49,26 +49,34 @@ export default function TermsGeneratorTab() {
     },
   });
 
-  // Pre-fill form with scan data
+  // Pre-fill form with scan data (react to new scans)
   useEffect(() => {
-    if (hasScanData && scanData && !dataPreFilled) {
-      form.setValue("companyName", scanData.companyName || "");
-      form.setValue("websiteUrl", scanData.websiteUrl || "");
-      form.setValue("contactEmail", scanData.contactEmail || "");
-      form.setValue("contactPhone", scanData.contactPhone || "");
+    if (hasScanData && scanData && scanData.scanId !== lastPreFilledScanId) {
+      // Pre-fill empty fields only - don't overwrite user edits
+      const currentCompanyName = form.getValues("companyName");
+      const currentWebsiteUrl = form.getValues("websiteUrl");
+      const currentBusinessType = form.getValues("businessType");
       
-      if (scanData.businessType) {
+      if (!currentCompanyName && scanData.companyName) {
+        form.setValue("companyName", scanData.companyName);
+      }
+      
+      if (!currentWebsiteUrl && scanData.websiteUrl) {
+        form.setValue("websiteUrl", scanData.websiteUrl);
+      }
+      
+      if ((!currentBusinessType || currentBusinessType === "ecommerce_general") && scanData.businessType) {
         form.setValue("businessType", scanData.businessType);
       }
       
-      setDataPreFilled(true);
+      setLastPreFilledScanId(scanData.scanId);
       
       toast({
-        title: "تم تعبئة البيانات تلقائياً",
-        description: `تم تعبئة بيانات من فحص ${scanData.websiteUrl} - راجع وأكمل البيانات المتبقية`,
+        title: "بيانات الفحص متاحة",
+        description: `تم تحميل بيانات من فحص ${scanData.websiteUrl} - أكمل البيانات المتبقية`,
       });
     }
-  }, [hasScanData, scanData, dataPreFilled, form, toast]);
+  }, [hasScanData, scanData, lastPreFilledScanId, form, toast]);
 
   const { data: generatedDoc } = useQuery({
     queryKey: ['/api/terms', generatedDocId],
