@@ -1,6 +1,12 @@
 import OpenAI from "openai";
 import * as fs from "fs";
 import * as path from "path";
+import * as cheerio from "cheerio";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const apiKey = process.env.OPENAI_API_KEY;
 const openai = new OpenAI({ apiKey: apiKey || "missing-key" });
@@ -269,35 +275,49 @@ export async function performRAGBasedAnalysis(
   termsUrl?: string,
   termsHtml?: string
 ): Promise<LegalViolation[]> {
+  console.log("[RAG] === STARTING RAG-BASED ANALYSIS ===");
+  console.log(`[RAG] privacyPolicyUrl: ${privacyPolicyUrl || 'NONE'}`);
+  console.log(`[RAG] privacyPolicyHtml length: ${privacyPolicyHtml?.length || 0}`);
+  console.log(`[RAG] termsUrl: ${termsUrl || 'NONE'}`);
+  console.log(`[RAG] termsHtml length: ${termsHtml?.length || 0}`);
+  
   const allViolations: LegalViolation[] = [];
   
   if (privacyPolicyHtml && privacyPolicyUrl) {
     console.log("[RAG] Starting privacy policy RAG analysis...");
+    const cleanText = extractCleanText(privacyPolicyHtml);
+    console.log(`[RAG] Clean text length: ${cleanText.length}`);
     const violations = await analyzeWithRAG(
-      extractCleanText(privacyPolicyHtml),
+      cleanText,
       privacyPolicyUrl,
       "privacy_policy"
     );
     allViolations.push(...violations);
     console.log(`[RAG] Found ${violations.length} privacy policy violations`);
+  } else {
+    console.log("[RAG] Skipping privacy policy - no HTML content available");
   }
   
   if (termsHtml && termsUrl) {
     console.log("[RAG] Starting terms RAG analysis...");
+    const cleanText = extractCleanText(termsHtml);
+    console.log(`[RAG] Clean text length: ${cleanText.length}`);
     const violations = await analyzeWithRAG(
-      extractCleanText(termsHtml),
+      cleanText,
       termsUrl,
       "terms"
     );
     allViolations.push(...violations);
     console.log(`[RAG] Found ${violations.length} terms violations`);
+  } else {
+    console.log("[RAG] Skipping terms - no HTML content available");
   }
   
+  console.log(`[RAG] === TOTAL VIOLATIONS: ${allViolations.length} ===`);
   return allViolations;
 }
 
 function extractCleanText(html: string): string {
-  const cheerio = require("cheerio");
   const $ = cheerio.load(html);
   
   $('script, style, nav, header, footer, aside, [role="navigation"], [role="banner"]').remove();
