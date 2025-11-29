@@ -4,7 +4,6 @@ export default {
   darkMode: ["class"],
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
-    direction: "rtl",
     extend: {
       borderRadius: {
         lg: ".5625rem", /* 9px */
