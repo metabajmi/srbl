@@ -3,9 +3,13 @@
 ## Overview
 This project is a web application assisting organizations in complying with Saudi Arabia's Personal Data Protection Law (PDPL). It provides AI-powered tools for website scanning, generating privacy policies and terms & conditions, managing consent, and handling internal compliance. The application features an Arabic-first design with RTL support and professional legal/compliance styling, utilizing OpenAI's GPT models for intelligent document generation and compliance analysis. The project aims to be a robust solution for PDPL adherence, targeting organizations interacting with Saudi Arabian data subjects.
 
-## Current Status (Nov 16, 2025)
+## Current Status (Nov 29, 2025)
 **Completed & Tested:**
-- ✅ HomePage Redesign: Unified dashboard displaying all 5 core services (Scanner, Privacy Generator, Terms Generator, Consent Management, Smart Assistant)
+- ✅ Unified Compliance Workspace: Single page (/workspace) with 4 tools in tabs (Nov 29, 2025)
+  - Privacy Policy Generator, Terms Generator, Consent Management, Preferences Center
+  - Tab-based navigation with RTL support
+  - E2E tested: all tabs accessible and functional
+- ✅ HomePage Redesign: Unified dashboard with prominent workspace card + 5 core services
 - ✅ Terms & Conditions Generator: Full E2E flow working (form → generation → download)
 - ✅ Privacy Generator: Form accessible with 3-section navigation
 - ✅ Smart Customer Assistant: Complete RAG-based chatbot with vector search, feedback system, and E2E tested
