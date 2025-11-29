@@ -124,9 +124,6 @@ export default function HomePage() {
               سِرْبَال
             </h1>
           </div>
-          <p className="text-center text-lg text-muted-foreground mt-2">
-            منصة شاملة لامتثال نظام حماية البيانات الشخصية السعودي
-          </p>
         </div>
       </section>
 
