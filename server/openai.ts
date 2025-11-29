@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import * as cheerio from "cheerio";
 
 // Initialize OpenAI with error handling
 const apiKey = process.env.OPENAI_API_KEY;
@@ -44,153 +45,235 @@ interface DetectedLinks {
   hasContactInfo: boolean;
 }
 
+// Helper to resolve relative URLs to absolute
+function resolveUrl(href: string, baseUrl: string): string {
+  try {
+    if (href.startsWith('http://') || href.startsWith('https://')) {
+      return href;
+    }
+    const base = new URL(baseUrl);
+    if (href.startsWith('/')) {
+      return `${base.protocol}//${base.host}${href}`;
+    }
+    return new URL(href, baseUrl).href;
+  } catch {
+    return href;
+  }
+}
+
+// Helper to check if a URL is a valid page link (not asset, mailto, tel, etc.)
+function isValidPageUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim().toLowerCase();
+  
+  // Reject invalid patterns
+  if (trimmed.startsWith('mailto:') || 
+      trimmed.startsWith('tel:') || 
+      trimmed.startsWith('javascript:') ||
+      trimmed === '#' ||
+      (trimmed.startsWith('#') && !trimmed.includes('/'))) {
+    return false;
+  }
+  
+  // Reject asset files (images, scripts, styles, fonts, etc.)
+  const assetExtensions = /\.(jpg|jpeg|png|gif|svg|webp|ico|css|js|woff|woff2|ttf|eot|pdf|zip|mp4|mp3|avi|mov)(\?.*)?$/i;
+  if (assetExtensions.test(trimmed)) {
+    return false;
+  }
+  
+  return true;
+}
+
+// URLs that are NOT actual privacy policies (settings, preferences, help pages)
+const excludedPrivacyUrls = [
+  'privacy-settings', 'privacy-preferences', 'privacy-center', 'privacy-controls',
+  'privacy-options', 'privacy-dashboard', 'privacy-help', 'privacy-support',
+  'manage-privacy', 'your-privacy', 'ads/privacy', 'cookie-settings',
+  'إعدادات-الخصوصية', 'تفضيلات-الخصوصية'
+];
+
+// URLs that are NOT actual terms pages (settings, help pages)
+const excludedTermsUrls = [
+  'terms-settings', 'terms-help', 'terms-support', 'legal-help',
+  'إعدادات-الشروط'
+];
+
+// Check if URL is an excluded non-policy page
+function isExcludedUrl(url: string, excludeList: string[]): boolean {
+  const lower = url.toLowerCase();
+  return excludeList.some(excluded => lower.includes(excluded));
+}
+
+// Use cheerio for accurate DOM-based link detection
 function detectLinksInHTML(htmlContent: string, baseUrl: string): DetectedLinks {
-  const lowerHTML = htmlContent.toLowerCase();
+  const $ = cheerio.load(htmlContent);
   
-  // Helper to check if a URL is valid (not mailto, fragment-only, or javascript)
-  const isValidUrl = (url: string): boolean => {
-    if (!url || typeof url !== 'string') return false;
-    const trimmed = url.trim();
-    // Reject invalid patterns
-    if (trimmed.startsWith('mailto:') || 
-        trimmed.startsWith('tel:') || 
-        trimmed.startsWith('javascript:') ||
-        trimmed === '#' ||
-        (trimmed.startsWith('#') && !trimmed.includes('/'))) {
-      return false;
-    }
-    // Valid patterns: http/https, relative paths, file names
-    return trimmed.startsWith('http') || 
-           trimmed.startsWith('/') || 
-           trimmed.startsWith('./') ||
-           trimmed.startsWith('?') ||
-           /^[a-zA-Z0-9_-]+\.(html?|php|aspx?|jsp)$/i.test(trimmed) ||
-           /^[a-zA-Z0-9_\/-]+$/.test(trimmed); // Path-like strings
-  };
-
-  // Helper to find ALL matches using while loop (not just first match)
-  const findAllMatches = (pattern: RegExp, content: string): string[] => {
-    const matches: string[] = [];
-    const regex = new RegExp(pattern.source, pattern.flags);
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-      if (match[1]) {
-        matches.push(match[1]);
+  // Privacy policy - STRICT text matching (exact phrases, not partial matches)
+  const privacyExactPhrases = [
+    'privacy policy', 'privacy statement', 'privacy notice', 'data protection policy',
+    'datenschutzerklärung', 'política de privacidad', 'politique de confidentialité',
+    'سياسة الخصوصية', 'سياسه الخصوصيه', 'بيان الخصوصية', 'سياسة حماية البيانات'
+  ];
+  
+  // Privacy - URL patterns that definitively indicate a policy page
+  const privacyStrongUrlPatterns = [
+    '/privacy-policy', '/privacypolicy', '/privacy-statement', '/privacy-notice',
+    '/data-protection', '/datenschutz', '/سياسة-الخصوصية', '/privacy'
+  ];
+  
+  // Terms - STRICT text matching (exact phrases)
+  const termsExactPhrases = [
+    'terms of service', 'terms and conditions', 'terms & conditions', 'terms of use',
+    'user agreement', 'service agreement', 'legal terms', 'terms and conditions of use',
+    'شروط الاستخدام', 'الشروط والأحكام', 'شروط الخدمة', 'اتفاقية المستخدم'
+  ];
+  
+  // Terms - URL patterns that definitively indicate a terms page
+  const termsStrongUrlPatterns = [
+    '/terms-of-service', '/terms-and-conditions', '/tos', '/terms-of-use',
+    '/terms', '/legal', '/user-agreement', '/service-agreement',
+    '/الشروط-والأحكام', '/شروط-الاستخدام'
+  ];
+  
+  let privacyPolicyUrl: string | undefined;
+  let termsUrl: string | undefined;
+  let hasCookieBanner = false;
+  let hasContactInfo = false;
+  
+  // Scan all anchor tags - require EXACT phrase matching or strong URL patterns
+  $('a').each((_, element) => {
+    const $el = $(element);
+    const href = $el.attr('href') || '';
+    const text = $el.text().toLowerCase().trim();
+    const title = ($el.attr('title') || '').toLowerCase();
+    const ariaLabel = ($el.attr('aria-label') || '').toLowerCase();
+    
+    if (!isValidPageUrl(href)) return;
+    
+    const hrefLower = href.toLowerCase();
+    const fullUrl = resolveUrl(href, baseUrl);
+    
+    // Check for privacy policy - require EXACT phrase or strong URL pattern
+    if (!privacyPolicyUrl) {
+      // Skip excluded URLs (settings, preferences, help pages)
+      if (isExcludedUrl(hrefLower, excludedPrivacyUrls)) {
+        console.log(`[DOM] Skipping excluded privacy URL: ${href}`);
+        return;
       }
-      // Prevent infinite loops with zero-width matches
-      if (match.index === regex.lastIndex) {
-        regex.lastIndex++;
+      
+      // Check for EXACT phrase match in anchor text (not partial "privacy" match)
+      const hasExactPhraseMatch = privacyExactPhrases.some(phrase => 
+        text.includes(phrase) || title.includes(phrase) || ariaLabel.includes(phrase)
+      );
+      
+      // Check for strong URL pattern (definitively indicates a policy page)
+      const hasStrongUrlPattern = privacyStrongUrlPatterns.some(pattern => 
+        hrefLower.includes(pattern) || hrefLower.endsWith(pattern.replace('/', ''))
+      );
+      
+      // Only accept if: exact phrase match OR strong URL pattern
+      if (hasExactPhraseMatch || hasStrongUrlPattern) {
+        privacyPolicyUrl = fullUrl;
+        console.log(`[DOM] Found privacy policy: href="${href}", text="${text.substring(0,50)}", match=${hasExactPhraseMatch ? 'EXACT_PHRASE' : 'STRONG_URL'}`);
       }
     }
-    return matches;
-  };
-
-  // Find first valid URL from pattern matches
-  const findFirstValidUrl = (patterns: RegExp[], content: string): string | undefined => {
-    for (const pattern of patterns) {
-      const allMatches = findAllMatches(pattern, content);
-      for (const url of allMatches) {
-        if (isValidUrl(url)) {
-          return url;
-        }
+    
+    // Check for terms & conditions - require EXACT phrase or strong URL pattern
+    if (!termsUrl) {
+      // Skip excluded URLs
+      if (isExcludedUrl(hrefLower, excludedTermsUrls)) {
+        console.log(`[DOM] Skipping excluded terms URL: ${href}`);
+        return;
+      }
+      
+      // Check for EXACT phrase match in anchor text
+      const hasExactPhraseMatch = termsExactPhrases.some(phrase => 
+        text.includes(phrase) || title.includes(phrase) || ariaLabel.includes(phrase)
+      );
+      
+      // Check for strong URL pattern
+      const hasStrongUrlPattern = termsStrongUrlPatterns.some(pattern => 
+        hrefLower.includes(pattern) || hrefLower.endsWith(pattern.replace('/', ''))
+      );
+      
+      // Only accept if: exact phrase match OR strong URL pattern
+      if (hasExactPhraseMatch || hasStrongUrlPattern) {
+        termsUrl = fullUrl;
+        console.log(`[DOM] Found terms: href="${href}", text="${text.substring(0,50)}", match=${hasExactPhraseMatch ? 'EXACT_PHRASE' : 'STRONG_URL'}`);
       }
     }
-    return undefined;
-  };
-
-  // Privacy Policy Detection patterns (comprehensive - using .*? with s flag for nested tags)
-  const privacyPatterns = [
-    /href=["']([^"']*privacy[^"']*)["']/gi,
-    /href=["']([^"']*خصوصية[^"']*)["']/gi,
-    /href=["']([^"']*\/privacy-policy[^"']*)["']/gi,
-    /href=["']([^"']*سياسة-الخصوصية[^"']*)["']/gi,
-    /href=["']([^"']*\/privacy[^"']*)["']/gi,
-    /href=["']([^"']*\/policies[^"']*)["']/gi,
-    /href=["']([^"']*confidentiality[^"']*)["']/gi,
-    /href=["']([^"']*data-protection[^"']*)["']/gi,
-    /href=["']([^"']*حماية-البيانات[^"']*)["']/gi,
-    /href=["']([^"']*datenschutz[^"']*)["']/gi,
-    /href=["']([^"']*privacidad[^"']*)["']/gi,
-    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(privacy|سياسة الخصوصية|خصوصية|privacy policy|الخصوصية).*?<\/a>/gis,
-  ];
-  
-  // Terms Detection patterns (comprehensive - using .*? with s flag for nested tags)
-  const termsPatterns = [
-    /href=["']([^"']*terms[^"']*)["']/gi,
-    /href=["']([^"']*شروط[^"']*)["']/gi,
-    /href=["']([^"']*\/terms-and-conditions[^"']*)["']/gi,
-    /href=["']([^"']*الشروط-والأحكام[^"']*)["']/gi,
-    /href=["']([^"']*\/terms[^"']*)["']/gi,
-    /href=["']([^"']*\/conditions[^"']*)["']/gi,
-    /href=["']([^"']*\/legal[^"']*)["']/gi,
-    /href=["']([^"']*\/tos[^"']*)["']/gi,
-    /href=["']([^"']*أحكام[^"']*)["']/gi,
-    /href=["']([^"']*شروط-الاستخدام[^"']*)["']/gi,
-    /href=["']([^"']*\/use-policy[^"']*)["']/gi,
-    /href=["']([^"']*\/user-agreement[^"']*)["']/gi,
-    /href=["']([^"']*\/service-agreement[^"']*)["']/gi,
-    /<a[^>]*href=["']([^"']+)["'][^>]*>.*?(terms|شروط|الشروط|terms of service|terms & conditions|terms of use).*?<\/a>/gis,
-  ];
-  
-  const cookiePatterns = [
-    /cookie.*?(banner|consent|notice|popup|modal)/gi,
-    /\bcookie.*?accept/gi,
-    /gdpr.*?cookie/gi,
-    /class=["'][^"']*cookie[^"']*["']/gi,
-    /id=["'][^"']*cookie[^"']*["']/gi,
-    /كوكيز|ملفات تعريف الارتباط/gi,
-    /consent.*?manager/gi,
-    /cookie.*?policy/gi,
-  ];
-  
-  const contactPatterns = [
-    /mailto:[^"'\s]+/gi,
-    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
-    /\b\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}\b/g,
-    /(contact|اتصل|تواصل|للتواصل|contact us)/gi,
-    /href=["'][^"']*contact[^"']*["']/gi,
-  ];
-  
-  // Find privacy URL using comprehensive search
-  const privacyPolicyUrl = findFirstValidUrl(privacyPatterns, htmlContent);
-  
-  // Find terms URL using comprehensive search  
-  const termsUrl = findFirstValidUrl(termsPatterns, htmlContent);
-  
-  // Check existence using simple text search as fallback
-  const hasPrivacyPolicy = !!privacyPolicyUrl || 
-    /privacy\s*policy|سياسة\s*(ال)?خصوصية|privacy-policy|\/privacy/i.test(lowerHTML);
-  
-  const hasTermsAndConditions = !!termsUrl || 
-    /terms\s*(of\s*service|and\s*conditions|of\s*use)?|شروط\s*(ال)?(استخدام|خدمة)|الشروط\s*و(ال)?أحكام|\/terms|\/legal|\/tos/i.test(lowerHTML);
-  
-  const hasCookieBanner = cookiePatterns.some(pattern => {
-    pattern.lastIndex = 0;
-    return pattern.test(lowerHTML);
   });
   
-  const hasContactInfo = contactPatterns.some(pattern => {
-    pattern.lastIndex = 0;
-    return pattern.test(htmlContent);
-  });
+  // Cookie banner detection - look for specific elements
+  const cookieSelectors = [
+    '[class*="cookie"]', '[id*="cookie"]',
+    '[class*="consent"]', '[id*="consent"]',
+    '[class*="gdpr"]', '[id*="gdpr"]',
+    '[class*="privacy-banner"]', '[id*="privacy-banner"]',
+    '[class*="cookie-banner"]', '[id*="cookie-banner"]',
+    '[class*="cookie-notice"]', '[id*="cookie-notice"]',
+    '[data-cookieconsent]', '[data-consent]'
+  ];
   
-  console.log("Direct HTML detection results:", {
-    hasPrivacyPolicy,
+  for (const selector of cookieSelectors) {
+    if ($(selector).length > 0) {
+      hasCookieBanner = true;
+      console.log(`[DOM] Found cookie banner element: ${selector}`);
+      break;
+    }
+  }
+  
+  // Also check for cookie-related text in specific containers
+  if (!hasCookieBanner) {
+    const bodyText = $('body').text().toLowerCase();
+    const cookieTextPatterns = [
+      /نستخدم ملفات تعريف الارتباط/,
+      /ملفات الكوكيز/,
+      /we use cookies/i,
+      /this website uses cookies/i,
+      /accept cookies/i,
+      /cookie preferences/i
+    ];
+    hasCookieBanner = cookieTextPatterns.some(p => p.test(bodyText));
+  }
+  
+  // Contact info detection
+  const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+  const phonePattern = /\+?\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,9}/;
+  const htmlText = $.text();
+  
+  hasContactInfo = emailPattern.test(htmlText) || phonePattern.test(htmlText);
+  
+  // Also check for mailto links
+  if (!hasContactInfo) {
+    hasContactInfo = $('a[href^="mailto:"]').length > 0;
+  }
+  
+  // Check for contact page link
+  if (!hasContactInfo) {
+    $('a').each((_, el) => {
+      const href = ($(el).attr('href') || '').toLowerCase();
+      const text = $(el).text().toLowerCase();
+      if (href.includes('contact') || text.includes('contact') || 
+          text.includes('اتصل') || text.includes('تواصل')) {
+        hasContactInfo = true;
+        return false; // break
+      }
+    });
+  }
+  
+  const result = {
+    hasPrivacyPolicy: !!privacyPolicyUrl,
     privacyPolicyUrl,
-    hasTermsAndConditions,
-    termsUrl,
-    hasCookieBanner,
-    hasContactInfo
-  });
-  
-  return {
-    hasPrivacyPolicy,
-    privacyPolicyUrl,
-    hasTermsAndConditions,
+    hasTermsAndConditions: !!termsUrl,
     termsAndConditionsUrl: termsUrl,
     hasCookieBanner,
     hasContactInfo,
   };
+  
+  console.log("[DOM] Detection results:", result);
+  
+  return result;
 }
 
 // Analyze website content for compliance issues
@@ -377,39 +460,50 @@ ${prepareHtmlForAnalysis(htmlContent)}
     const result = JSON.parse(response.choices[0].message.content || "{}");
     console.log("OpenAI analysis results:", result.findings);
     
-    // Merge direct detection with OpenAI results (prioritize positive findings)
+    // OPENAI IS THE SOLE SOURCE OF TRUTH for compliance detection
+    // DOM detection ONLY provides supplementary URL information, never overrides OpenAI
+    
+    // Use OpenAI findings exclusively - DOM detection cannot flip these to true
+    const hasPrivacyPolicy = result.findings?.hasPrivacyPolicy || false;
+    const hasTermsAndConditions = result.findings?.hasTermsAndConditions || false;
+    const hasCookieBanner = result.findings?.hasCookieBanner || false;
+    const hasContactInfo = result.findings?.hasContactInfo || false;
+    
+    // DOM detection only adds URLs if OpenAI already confirmed the element exists
     const mergedFindings = {
-      hasPrivacyPolicy: directDetection.hasPrivacyPolicy || result.findings?.hasPrivacyPolicy || false,
-      privacyPolicyUrl: directDetection.privacyPolicyUrl || result.findings?.privacyPolicyUrl || undefined,
-      hasTermsAndConditions: directDetection.hasTermsAndConditions || result.findings?.hasTermsAndConditions || false,
-      termsAndConditionsUrl: directDetection.termsAndConditionsUrl || result.findings?.termsAndConditionsUrl || undefined,
-      hasCookieBanner: directDetection.hasCookieBanner || result.findings?.hasCookieBanner || false,
+      hasPrivacyPolicy,
+      privacyPolicyUrl: hasPrivacyPolicy ? (result.findings?.privacyPolicyUrl || directDetection.privacyPolicyUrl) : undefined,
+      hasTermsAndConditions,
+      termsAndConditionsUrl: hasTermsAndConditions ? (result.findings?.termsAndConditionsUrl || directDetection.termsAndConditionsUrl) : undefined,
+      hasCookieBanner,
       hasDataCollectionForms: result.findings?.hasDataCollectionForms || false,
-      hasContactInfo: directDetection.hasContactInfo || result.findings?.hasContactInfo || false,
+      hasContactInfo,
     };
     
-    console.log("Merged findings (direct + OpenAI):", mergedFindings);
+    console.log("OpenAI findings (sole source of truth):", result.findings);
+    console.log("DOM supplementary detection:", directDetection);
+    console.log("Final merged findings:", mergedFindings);
     
-    // Filter out issues ONLY when we have valid URLs from direct detection
-    // This prevents removing legitimate OpenAI issues when we only detected anchor text
+    // NEVER remove OpenAI issues - they are the authoritative source
+    // Only remove issues if OpenAI explicitly said the element exists
     let issues = Array.isArray(result.issues) ? result.issues : [];
     
-    // Only remove privacy_policy issues if we have a valid URL from direct detection
-    if (directDetection.privacyPolicyUrl) {
+    // Remove privacy issues only if OpenAI said hasPrivacyPolicy is true
+    if (hasPrivacyPolicy) {
       issues = issues.filter((issue: any) => issue.category !== "privacy_policy");
-      console.log("Removed privacy_policy issues (valid URL found via direct detection)");
+      console.log("Removed privacy_policy issues (OpenAI confirmed policy exists)");
     }
     
-    // Only remove terms issues if we have a valid URL from direct detection
-    if (directDetection.termsAndConditionsUrl) {
+    // Remove terms issues only if OpenAI said hasTermsAndConditions is true
+    if (hasTermsAndConditions) {
       issues = issues.filter((issue: any) => issue.category !== "terms_and_conditions");
-      console.log("Removed terms_and_conditions issues (valid URL found via direct detection)");
+      console.log("Removed terms_and_conditions issues (OpenAI confirmed terms exist)");
     }
     
-    // Only remove cookie issues if detected via direct detection
-    if (directDetection.hasCookieBanner) {
+    // Remove cookie issues only if OpenAI said hasCookieBanner is true
+    if (hasCookieBanner) {
       issues = issues.filter((issue: any) => issue.category !== "cookies");
-      console.log("Removed cookies issues (cookie banner found via direct detection)");
+      console.log("Removed cookies issues (OpenAI confirmed cookie banner exists)");
     }
     
     // Calculate deterministic score based on findings and issues
