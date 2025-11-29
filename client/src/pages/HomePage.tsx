@@ -8,7 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertComplianceScanSchema } from "@shared/schema";
 import { useLocation, Link } from "wouter";
-import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe } from "lucide-react";
+import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers } from "lucide-react";
 import { z } from "zod";
 
 export default function HomePage() {
@@ -207,9 +207,58 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Unified Compliance Workspace - Prominent CTA */}
+        <div className="mx-auto max-w-4xl mb-16">
+          <Link href="/workspace">
+            <Card 
+              className="hover-elevate active-elevate-2 cursor-pointer border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-transparent to-primary/5"
+              data-testid="card-workspace"
+            >
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                  <Layers className="h-8 w-8 text-primary" />
+                </div>
+                <Badge variant="default" className="mx-auto mb-3">
+                  موحّد في مكان واحد
+                </Badge>
+                <CardTitle className="text-2xl md:text-3xl">
+                  مساحة العمل الموحدة للامتثال
+                </CardTitle>
+                <CardDescription className="text-base mt-2 max-w-xl mx-auto">
+                  أنشئ سياسة الخصوصية والشروط والأحكام وإدارة الموافقات وإعدادات الخصوصية - كلها في مكان واحد
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 text-center">
+                <div className="flex flex-wrap justify-center gap-2 mb-4">
+                  <Badge variant="outline" className="text-xs">
+                    <FileText className="w-3 h-3 ml-1" />
+                    سياسة الخصوصية
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <ScrollText className="w-3 h-3 ml-1" />
+                    الشروط والأحكام
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <CheckCircle className="w-3 h-3 ml-1" />
+                    إدارة الموافقة
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <Shield className="w-3 h-3 ml-1" />
+                    إعدادات الخصوصية
+                  </Badge>
+                </div>
+                <Button size="lg" className="px-8">
+                  <Layers className="ml-2 h-5 w-5" />
+                  ابدأ الآن
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
         {/* Additional Services */}
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-2xl font-bold text-center mb-8">أدوات إضافية لحماية بياناتك</h2>
+          <h2 className="text-2xl font-bold text-center mb-8">أدوات إضافية</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
             {additionalServices.map((service) => (
               <Link key={service.testId} href={service.href}>

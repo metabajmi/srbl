@@ -31,6 +31,7 @@ import AdminManagementPage from "@/pages/admin/AdminManagementPage";
 import RopaPage from "@/pages/RopaPage";
 import DsarPage from "@/pages/DsarPage";
 import DpiaPage from "@/pages/DpiaPage";
+import ComplianceWorkspacePage from "@/pages/ComplianceWorkspacePage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/scan/:id" component={ScanResultsPage} />
       
       {/* Tools */}
+      <Route path="/workspace" component={ComplianceWorkspacePage} />
       <Route path="/privacy-generator" component={PrivacyGeneratorPage} />
       <Route path="/terms-generator" component={TermsGeneratorPage} />
       <Route path="/consent-management" component={ConsentManagementPage} />
