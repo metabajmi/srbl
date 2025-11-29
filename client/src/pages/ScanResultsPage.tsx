@@ -53,15 +53,20 @@ export default function ScanResultsPage() {
     enabled: !!scanId && scan?.status === "completed",
   });
 
-  // Refetch issues when scan completes and save scan data
+  // Refetch issues when scan completes
   useEffect(() => {
     if (scan?.status === "completed") {
       refetchIssues();
-      // Save scan data for use in tools
+    }
+  }, [scan?.status, refetchIssues]);
+  
+  // Save scan data for use in tools (only when scan ID changes or scan completes)
+  useEffect(() => {
+    if (scan?.status === "completed" && scan.id) {
       const extractedData = extractScanData(scan);
       setScanData(extractedData);
     }
-  }, [scan?.status, refetchIssues, scan, setScanData]);
+  }, [scan?.id, scan?.status]);
 
   // Navigate to tool with scan data
   const navigateToTool = (tool: "privacy" | "terms" | "consent") => {
