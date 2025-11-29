@@ -120,11 +120,11 @@ export default function HomePage() {
         <div className="container py-12">
           <div className="flex items-center justify-center gap-6">
             <Shield className="w-14 h-14 text-primary" />
-            <div className="flex flex-col justify-center">
+            <div className="flex flex-col items-center justify-center">
               <h1 className="text-6xl md:text-7xl font-bold text-primary leading-none" data-testid="text-brand-sirbal">
                 سِرْبَال
               </h1>
-              <p className="text-xl font-semibold text-primary mt-1 tracking-wide">
+              <p className="text-xl font-semibold text-primary mt-6 tracking-wide text-center">
                 درع الامتثال
               </p>
             </div>
