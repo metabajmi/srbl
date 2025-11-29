@@ -1,0 +1,427 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-11-29",
+  "jurisdiction": "المملكة العربية السعودية",
+  "regulatoryAuthority": "الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا)",
+  
+  "ecommerceComplianceChecklist": {
+    "source": "قائمة التقييم الذاتي لامتثال المتاجر الإلكترونية - يناير 2022",
+    "totalPoints": 20,
+    "requirements": [
+      {
+        "id": 1,
+        "ar": "توفير البيانات الأساسية المعرّفة لكل من المتجر، والمنتج، والخدمة",
+        "en": "Provide basic identifying data for the store, product, and service",
+        "category": "store_info",
+        "severity": "critical"
+      },
+      {
+        "id": 2,
+        "ar": "إتاحة وسائل للتواصل وتقديم الشكوى",
+        "en": "Provide means of communication and complaint submission",
+        "category": "contact_info",
+        "severity": "critical"
+      },
+      {
+        "id": 3,
+        "ar": "توضيح الإجراءات المتبعة لاستقبال الشكوى ومعالجتها",
+        "en": "Clarify procedures for receiving and handling complaints",
+        "category": "complaints",
+        "severity": "warning"
+      },
+      {
+        "id": 4,
+        "ar": "الإفصاح عن سياسة الاستبدال والاسترجاع",
+        "en": "Disclose exchange and return policy",
+        "category": "return_policy",
+        "severity": "critical"
+      },
+      {
+        "id": 5,
+        "ar": "نظامية سياسة الاستبدال والاسترجاع",
+        "en": "Legality of exchange and return policy",
+        "category": "return_policy",
+        "severity": "warning"
+      },
+      {
+        "id": 6,
+        "ar": "إتاحة إمكانية إلغاء حساب العميل",
+        "en": "Allow account deletion capability",
+        "category": "data_rights",
+        "severity": "critical"
+      },
+      {
+        "id": 7,
+        "ar": "إتاحة إمكانية وقف إرسال الإعلانات الإلكترونية",
+        "en": "Allow opt-out from marketing communications",
+        "category": "consent",
+        "severity": "critical"
+      },
+      {
+        "id": 8,
+        "ar": "الإفصاح عن الوقت الأقصى للتوصيل قبل إتمام عملية الطلب",
+        "en": "Disclose maximum delivery time before order completion",
+        "category": "delivery",
+        "severity": "warning"
+      },
+      {
+        "id": 9,
+        "ar": "تضمين إجمالي سعر الطلب في الفاتورة",
+        "en": "Include total order price in invoice",
+        "category": "pricing",
+        "severity": "warning"
+      },
+      {
+        "id": 10,
+        "ar": "توضيح السعر الأساسي للمنتج في الفاتورة",
+        "en": "Clarify base product price in invoice",
+        "category": "pricing",
+        "severity": "warning"
+      },
+      {
+        "id": 11,
+        "ar": "توضيح قيمة أو نسبة الضريبة من السعر الإجمالي في الفاتورة",
+        "en": "Clarify tax value or percentage in invoice",
+        "category": "pricing",
+        "severity": "warning"
+      },
+      {
+        "id": 12,
+        "ar": "توضيح قيمة الأجور الإضافية في الفاتورة (مثال: الدفع عند الاستلام، خدمات التركيب، التغليف)",
+        "en": "Clarify additional fees in invoice (e.g., COD, installation, packaging)",
+        "category": "pricing",
+        "severity": "warning"
+      },
+      {
+        "id": 13,
+        "ar": "توضيح أجور الشحن والنقل والتوصيل في الفاتورة",
+        "en": "Clarify shipping and delivery fees in invoice",
+        "category": "delivery",
+        "severity": "warning"
+      },
+      {
+        "id": 14,
+        "ar": "بيان مدة أو موعد توصيل المنتج أو تقديم الخدمة في الفاتورة",
+        "en": "State delivery time or date in invoice",
+        "category": "delivery",
+        "severity": "warning"
+      },
+      {
+        "id": 15,
+        "ar": "بيان اسم الناقل ورقم تتبع مسار التوصيل",
+        "en": "State carrier name and tracking number",
+        "category": "delivery",
+        "severity": "suggestion"
+      },
+      {
+        "id": 16,
+        "ar": "الإفصاح عن رقم السجل التجاري في الموقع الإلكتروني",
+        "en": "Disclose commercial registration number on website",
+        "category": "legal_info",
+        "severity": "critical"
+      },
+      {
+        "id": 17,
+        "ar": "الإفصاح عن الرقم الضريبي في الموقع الإلكتروني",
+        "en": "Disclose tax number on website",
+        "category": "legal_info",
+        "severity": "critical"
+      },
+      {
+        "id": 18,
+        "ar": "الإفصاح عن رقم الترخيص أو التصريح اللازم لممارسة المهنة، وتاريخ انتهاءه، والجهة المانحة له",
+        "en": "Disclose license/permit number, expiry date, and issuing authority",
+        "category": "legal_info",
+        "severity": "warning"
+      },
+      {
+        "id": 19,
+        "ar": "قيد رابط المتجر الإلكتروني في السجل التجاري",
+        "en": "Register store URL in commercial registry",
+        "category": "legal_info",
+        "severity": "warning"
+      },
+      {
+        "id": 20,
+        "ar": "الإفصاح عن سياسة الخصوصية وحماية بيانات المستهلك",
+        "en": "Disclose privacy policy and consumer data protection",
+        "category": "privacy_policy",
+        "severity": "critical"
+      }
+    ]
+  },
+
+  "privacyPolicyRequirements": {
+    "source": "الدليل الاسترشادي لإعداد وتطوير سياسة الخصوصية - أغسطس 2024",
+    "legalBasis": "المادة الثانية عشرة من نظام حماية البيانات الشخصية",
+    "mandatoryElements": [
+      {
+        "id": "pp1",
+        "ar": "اسم الجهة ونشاطها",
+        "en": "Entity name and activities",
+        "description": "الاسم الرسمي للجهة وفقاً للسجلات النظامية والعلامات التجارية، مع نبذة مختصرة عن مهامها واختصاصاتها",
+        "severity": "critical"
+      },
+      {
+        "id": "pp2",
+        "ar": "بيانات التواصل وسجل التحديثات",
+        "en": "Contact information and update log",
+        "description": "معلومات التواصل مع الجهة وتاريخ آخر تحديث للسياسة",
+        "severity": "critical"
+      },
+      {
+        "id": "pp3",
+        "ar": "البيانات الشخصية التي سيتم جمعها",
+        "en": "Personal data to be collected",
+        "description": "تحديد أنواع البيانات الشخصية التي تجمعها الجهة",
+        "severity": "critical"
+      },
+      {
+        "id": "pp4",
+        "ar": "طرق جمع البيانات الشخصية والغرض من جمعها",
+        "en": "Data collection methods and purposes",
+        "description": "توضيح كيفية جمع البيانات والأسباب المشروعة لذلك",
+        "severity": "critical"
+      },
+      {
+        "id": "pp5",
+        "ar": "معالجة البيانات الشخصية",
+        "en": "Personal data processing",
+        "description": "شرح كيفية معالجة واستخدام البيانات الشخصية",
+        "severity": "critical"
+      },
+      {
+        "id": "pp6",
+        "ar": "مشاركة البيانات الشخصية",
+        "en": "Personal data sharing",
+        "description": "توضيح الجهات التي يتم مشاركة البيانات معها",
+        "severity": "critical"
+      },
+      {
+        "id": "pp7",
+        "ar": "تخزين البيانات الشخصية ومدة الاحتفاظ بها وإتلافها",
+        "en": "Data storage, retention period, and destruction",
+        "description": "فترة الاحتفاظ بالبيانات وكيفية إتلافها",
+        "severity": "critical"
+      },
+      {
+        "id": "pp8",
+        "ar": "حقوق أصحاب البيانات الشخصية",
+        "en": "Data subject rights",
+        "description": "حق العلم، الوصول، التصحيح، الإتلاف، الاعتراض",
+        "severity": "critical"
+      },
+      {
+        "id": "pp9",
+        "ar": "آلية تقديم الشكاوى والاعتراضات",
+        "en": "Complaints and objections mechanism",
+        "description": "كيفية تقديم الشكاوى المتعلقة بالخصوصية",
+        "severity": "critical"
+      },
+      {
+        "id": "pp10",
+        "ar": "إتاحة السياسة وتسهيل الوصول إليها",
+        "en": "Policy accessibility",
+        "description": "جعل السياسة سهلة الوصول للمستخدمين",
+        "severity": "critical"
+      }
+    ]
+  },
+
+  "dataSubjectRights": {
+    "source": "المادة الرابعة من نظام حماية البيانات الشخصية",
+    "rights": [
+      {
+        "id": "r1",
+        "ar": "الحق في العلم",
+        "en": "Right to be informed",
+        "description": "العلم بالمسوغ النظامي لجمع بياناته والغرض من ذلك",
+        "article": "المادة الرابعة - الفقرة 1"
+      },
+      {
+        "id": "r2",
+        "ar": "الحق في الوصول",
+        "en": "Right of access",
+        "description": "الوصول إلى بياناته الشخصية لدى جهة التحكم",
+        "article": "المادة الرابعة - الفقرة 2"
+      },
+      {
+        "id": "r3",
+        "ar": "الحق في طلب الحصول على البيانات",
+        "en": "Right to obtain data",
+        "description": "طلب الحصول على بياناته بصيغة واضحة ومقروءة",
+        "article": "المادة الرابعة - الفقرة 3"
+      },
+      {
+        "id": "r4",
+        "ar": "الحق في التصحيح والتحديث",
+        "en": "Right to rectification",
+        "description": "طلب تصحيح أو إتمام أو تحديث بياناته",
+        "article": "المادة الرابعة - الفقرة 4"
+      },
+      {
+        "id": "r5",
+        "ar": "الحق في الإتلاف",
+        "en": "Right to erasure",
+        "description": "طلب إتلاف بياناته عند انتهاء الغرض منها",
+        "article": "المادة الرابعة - الفقرة 5"
+      }
+    ]
+  },
+
+  "cookieConsentRequirements": {
+    "source": "اللائحة التنفيذية لنظام حماية البيانات الشخصية",
+    "requirements": [
+      {
+        "id": "c1",
+        "ar": "الحصول على موافقة صريحة قبل استخدام ملفات تعريف الارتباط",
+        "en": "Obtain explicit consent before using cookies",
+        "severity": "critical"
+      },
+      {
+        "id": "c2",
+        "ar": "توضيح أنواع ملفات تعريف الارتباط المستخدمة",
+        "en": "Explain types of cookies used",
+        "severity": "critical"
+      },
+      {
+        "id": "c3",
+        "ar": "إتاحة خيار رفض ملفات تعريف الارتباط غير الضرورية",
+        "en": "Allow rejection of non-essential cookies",
+        "severity": "critical"
+      },
+      {
+        "id": "c4",
+        "ar": "توفير آلية لسحب الموافقة",
+        "en": "Provide mechanism to withdraw consent",
+        "severity": "critical"
+      }
+    ]
+  },
+
+  "termsAndConditionsRequirements": {
+    "source": "نظام التجارة الإلكترونية ولائحته التنفيذية",
+    "requirements": [
+      {
+        "id": "tc1",
+        "ar": "سياسة الاستبدال والاسترجاع",
+        "en": "Exchange and return policy",
+        "severity": "critical"
+      },
+      {
+        "id": "tc2",
+        "ar": "شروط الاستخدام",
+        "en": "Terms of use",
+        "severity": "critical"
+      },
+      {
+        "id": "tc3",
+        "ar": "حدود المسؤولية",
+        "en": "Limitation of liability",
+        "severity": "warning"
+      },
+      {
+        "id": "tc4",
+        "ar": "القانون الحاكم والاختصاص القضائي",
+        "en": "Governing law and jurisdiction",
+        "severity": "warning"
+      },
+      {
+        "id": "tc5",
+        "ar": "حقوق الملكية الفكرية",
+        "en": "Intellectual property rights",
+        "severity": "warning"
+      }
+    ]
+  },
+
+  "scannerCheckpoints": {
+    "description": "نقاط الفحص الرئيسية للامتثال",
+    "checkpoints": [
+      {
+        "id": "scan1",
+        "name": "privacy_policy",
+        "ar": "وجود سياسة خصوصية واضحة ومتاحة",
+        "en": "Clear and accessible privacy policy exists",
+        "weight": 30,
+        "requiredElements": ["اسم الجهة", "بيانات التواصل", "أنواع البيانات المجمعة", "أغراض المعالجة", "حقوق صاحب البيانات"]
+      },
+      {
+        "id": "scan2",
+        "name": "terms_conditions",
+        "ar": "وجود الشروط والأحكام",
+        "en": "Terms and conditions exist",
+        "weight": 30,
+        "requiredElements": ["سياسة الاستبدال والاسترجاع", "شروط الاستخدام"]
+      },
+      {
+        "id": "scan3",
+        "name": "cookie_banner",
+        "ar": "وجود شريط موافقة ملفات تعريف الارتباط",
+        "en": "Cookie consent banner exists",
+        "weight": 10,
+        "requiredElements": ["خيار القبول", "خيار الرفض", "رابط لسياسة الخصوصية"]
+      },
+      {
+        "id": "scan4",
+        "name": "contact_info",
+        "ar": "وجود معلومات التواصل",
+        "en": "Contact information exists",
+        "weight": 10,
+        "requiredElements": ["البريد الإلكتروني أو الهاتف", "العنوان"]
+      },
+      {
+        "id": "scan5",
+        "name": "data_collection_forms",
+        "ar": "نماذج جمع البيانات متوافقة",
+        "en": "Data collection forms are compliant",
+        "weight": 10,
+        "requiredElements": ["موافقة صريحة", "توضيح الغرض من الجمع"]
+      },
+      {
+        "id": "scan6",
+        "name": "legal_info",
+        "ar": "المعلومات القانونية للمتجر",
+        "en": "Store legal information",
+        "weight": 10,
+        "requiredElements": ["السجل التجاري", "الرقم الضريبي"]
+      }
+    ]
+  },
+
+  "arabicKeywords": {
+    "privacyPolicy": [
+      "سياسة الخصوصية",
+      "حماية البيانات",
+      "حماية البيانات الشخصية",
+      "الخصوصية",
+      "بيانات المستخدم",
+      "جمع البيانات",
+      "معالجة البيانات",
+      "حقوق صاحب البيانات"
+    ],
+    "termsConditions": [
+      "الشروط والأحكام",
+      "شروط الاستخدام",
+      "شروط الخدمة",
+      "الأحكام والشروط",
+      "اتفاقية الاستخدام",
+      "سياسة الاستبدال",
+      "سياسة الاسترجاع",
+      "سياسة الإرجاع"
+    ],
+    "cookies": [
+      "ملفات تعريف الارتباط",
+      "الكوكيز",
+      "ملفات الكوكيز",
+      "سياسة ملفات تعريف الارتباط"
+    ],
+    "consent": [
+      "موافقة",
+      "الموافقة",
+      "أوافق",
+      "قبول",
+      "رفض"
+    ]
+  }
+}
