@@ -133,7 +133,9 @@ export default function ScanResultsPage() {
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
       privacy_policy: "سياسة الخصوصية",
+      privacy_policy_content: "محتوى سياسة الخصوصية",
       terms_and_conditions: "شروط الاستخدام",
+      terms_content: "محتوى الشروط والأحكام",
       data_collection: "جمع البيانات",
       consent: "الموافقة والإذن",
       security: "الأمان والحماية",
@@ -146,6 +148,16 @@ export default function ScanResultsPage() {
     return labels[category] || category;
   };
 
+  const getDocumentTypeLabel = (docType?: string) => {
+    const labels: Record<string, string> = {
+      privacy_policy: "سياسة الخصوصية",
+      terms: "الشروط والأحكام",
+      cookie_banner: "لافتة الكوكيز",
+      consent: "آلية الموافقة",
+    };
+    return docType ? labels[docType] || docType : null;
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
     if (score >= 60) return "text-yellow-600";
@@ -153,7 +165,7 @@ export default function ScanResultsPage() {
     return "text-destructive";
   };
 
-  const getComplianceLevelBadge = (level?: string) => {
+  const getComplianceLevelBadge = (level?: string | null) => {
     if (level === "high") {
       return <Badge className="bg-green-600 hover:bg-green-700 text-white gap-2"><CheckCircle className="w-3 h-3" />امتثال عالي</Badge>;
     } else if (level === "medium") {
@@ -163,7 +175,7 @@ export default function ScanResultsPage() {
     }
   };
 
-  const getComplianceLevelColor = (level?: string) => {
+  const getComplianceLevelColor = (level?: string | null) => {
     if (level === "high") return "text-green-600";
     if (level === "medium") return "text-orange-500";
     return "text-destructive";
@@ -541,6 +553,14 @@ export default function ScanResultsPage() {
                                               {issue.description}
                                             </p>
                                           </div>
+                                          {issue.violatingText && (
+                                            <div>
+                                              <h4 className="font-semibold text-sm mb-2 text-destructive">النص المخالف:</h4>
+                                              <blockquote className="text-sm bg-destructive/10 text-destructive-foreground p-3 rounded border-r-4 border-destructive">
+                                                "{issue.violatingText}"
+                                              </blockquote>
+                                            </div>
+                                          )}
                                           {issue.regulation && (
                                             <div>
                                               <h4 className="font-semibold text-sm mb-2">اللائحة المخالفة:</h4>
@@ -555,14 +575,24 @@ export default function ScanResultsPage() {
                                               {issue.remediation}
                                             </p>
                                           </div>
-                                          {issue.affectedElement && (
-                                            <div>
-                                              <h4 className="font-semibold text-sm mb-2">العنصر المتأثر:</h4>
-                                              <code className="text-xs bg-muted p-2 rounded block" dir="ltr">
+                                          <div className="flex flex-wrap gap-2 pt-2 border-t">
+                                            {issue.documentType && (
+                                              <Badge variant="outline" className="gap-1">
+                                                <FileText className="w-3 h-3" />
+                                                {getDocumentTypeLabel(issue.documentType)}
+                                              </Badge>
+                                            )}
+                                            {issue.requirementId && (
+                                              <Badge variant="secondary" className="font-mono text-xs">
+                                                {issue.requirementId}
+                                              </Badge>
+                                            )}
+                                            {issue.affectedElement && (
+                                              <Badge variant="outline" className="text-xs">
                                                 {issue.affectedElement}
-                                              </code>
-                                            </div>
-                                          )}
+                                              </Badge>
+                                            )}
+                                          </div>
                                         </div>
                                       </CardContent>
                                     </Card>
