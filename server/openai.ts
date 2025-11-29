@@ -557,7 +557,7 @@ function generateMockReport(
   if (format === "json") {
     return {
       content: JSON.stringify({
-        title: "تقرير فحص الامتثال",
+        title: "تقرير فحص سِرْبَال",
         url: scan.url,
         scanDate: scan.scanDate,
         overallScore: scan.overallScore,
@@ -583,7 +583,7 @@ function generateMockReport(
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>تقرير فحص الامتثال</title>
+  <title>تقرير فحص سِرْبَال</title>
   <style>
     body { font-family: 'Cairo', Arial; direction: rtl; padding: 20px; }
     h1 { color: #333; }
@@ -595,7 +595,7 @@ function generateMockReport(
   </style>
 </head>
 <body>
-  <h1>تقرير فحص الامتثال لحماية البيانات</h1>
+  <h1>تقرير فحص سِرْبَال</h1>
   <div class="summary">
     <h2>ملخص الفحص</h2>
     <p>الموقع: ${scan.url}</p>
@@ -618,7 +618,7 @@ function generateMockReport(
   }
   
   // Default PDF format (text)
-  const pdfContent = `تقرير فحص الامتثال لحماية البيانات الشخصية
+  const pdfContent = `تقرير فحص سِرْبَال
 ========================================
 
 معلومات الفحص:
