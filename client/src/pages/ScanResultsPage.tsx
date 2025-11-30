@@ -613,6 +613,186 @@ export default function ScanResultsPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Missing Elements Summary Card */}
+              <Card className="border-2 border-destructive/30 bg-destructive/5">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <XCircle className="w-5 h-5 text-destructive" />
+                    العناصر المفقودة من الفحص
+                  </CardTitle>
+                  <CardDescription>
+                    العناصر التي لم يتم العثور عليها أو تحتاج إلى إضافة/تحسين
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    
+                    {/* Missing Main Elements */}
+                    {(!scan.hasPrivacyPolicy || !scan.hasTermsAndConditions || !scan.hasCookieBanner || !scan.hasContactInfo) && (
+                      <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/30">
+                        <h4 className="font-bold text-destructive mb-2 flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          عناصر رئيسية مفقودة
+                        </h4>
+                        <ul className="space-y-2 text-sm">
+                          {!scan.hasPrivacyPolicy && (
+                            <li className="flex items-start gap-2">
+                              <XCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                              <div>
+                                <span className="font-medium">سياسة الخصوصية</span>
+                                <span className="text-muted-foreground"> - مطلوبة قانونياً بموجب المادة 12 من PDPL</span>
+                              </div>
+                            </li>
+                          )}
+                          {!scan.hasTermsAndConditions && (
+                            <li className="flex items-start gap-2">
+                              <XCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                              <div>
+                                <span className="font-medium">الشروط والأحكام</span>
+                                <span className="text-muted-foreground"> - مطلوبة بموجب نظام التجارة الإلكترونية</span>
+                              </div>
+                            </li>
+                          )}
+                          {!scan.hasCookieBanner && (
+                            <li className="flex items-start gap-2">
+                              <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <span className="font-medium">لافتة الكوكيز</span>
+                                <span className="text-muted-foreground"> - موصى بها للحصول على موافقة المستخدم</span>
+                              </div>
+                            </li>
+                          )}
+                          {!scan.hasContactInfo && (
+                            <li className="flex items-start gap-2">
+                              <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <span className="font-medium">معلومات الاتصال</span>
+                                <span className="text-muted-foreground"> - مطلوبة للتواصل بشأن البيانات الشخصية</span>
+                              </div>
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Missing Privacy Policy Elements */}
+                    {scan.hasPrivacyPolicy && (
+                      <div className="p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-300">
+                        <h4 className="font-bold text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          عناصر سياسة الخصوصية المحتمل فقدانها (تحتاج تحليل AI)
+                        </h4>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          يتم فحص هذه العناصر عند توفر تحليل الذكاء الاصطناعي:
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>pp1: هوية جهة التحكم</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>pp2: بيانات التواصل</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>pp5: المسوغ النظامي</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>pp7: النقل الدولي</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>pp8: مدة الاحتفاظ</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>pp9: حقوق صاحب البيانات (7)</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>pp10: آلية الشكاوى</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Missing Terms Elements */}
+                    {scan.hasTermsAndConditions && (
+                      <div className="p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-300">
+                        <h4 className="font-bold text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-2">
+                          <ScrollText className="w-4 h-4" />
+                          عناصر الشروط والأحكام المحتمل فقدانها (تحتاج تحليل AI)
+                        </h4>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          يتم فحص هذه العناصر عند توفر تحليل الذكاء الاصطناعي:
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>tc1: الاستبدال والاسترجاع (7 أيام)</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>tc4: القانون الحاكم (السعودي)</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>tc5: الاختصاص القضائي</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>tc8: إجراءات الشكاوى</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Issues-based Missing Elements */}
+                    {issues.length > 0 && (
+                      <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/30">
+                        <h4 className="font-bold text-destructive mb-2 flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4" />
+                          مخالفات مكتشفة من تحليل المحتوى ({issues.filter(i => i.severity === 'critical').length} حرجة)
+                        </h4>
+                        <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">
+                          {issues.filter(i => i.severity === 'critical').slice(0, 5).map((issue, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <XCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                              <div>
+                                <span className="font-medium">{issue.title}</span>
+                                {issue.articleReference && (
+                                  <span className="text-xs text-muted-foreground"> ({issue.articleReference})</span>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                          {issues.filter(i => i.severity === 'critical').length > 5 && (
+                            <li className="text-xs text-muted-foreground">
+                              + {issues.filter(i => i.severity === 'critical').length - 5} مخالفات حرجة أخرى...
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* All Elements Present */}
+                    {scan.hasPrivacyPolicy && scan.hasTermsAndConditions && scan.hasCookieBanner && scan.hasContactInfo && issues.length === 0 && (
+                      <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-300 text-center">
+                        <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                        <h4 className="font-bold text-green-700 dark:text-green-400">جميع العناصر الرئيسية موجودة!</h4>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          تم العثور على جميع العناصر المطلوبة. راجع قسم المخالفات لتحسين المحتوى.
+                        </p>
+                      </div>
+                    )}
+
+                  </div>
+                </CardContent>
+              </Card>
+
             </div>
 
             {/* Smart Remediation Tools Section */}
