@@ -415,46 +415,129 @@ export default function ScanResultsPage() {
               </Card>
             )}
 
-            {/* Compliance Level & Score Summary */}
-            <div className="grid gap-6 mb-6 md:grid-cols-2">
-              {/* Compliance Level Card */}
-              <Card className="border-2">
-                <CardHeader>
-                  <CardTitle className="text-lg">مستوى الامتثال</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`text-5xl font-bold ${getComplianceLevelColor(scan.complianceLevel)}`}>
-                      {scan.overallScore || 0}%
-                    </div>
-                    {getComplianceLevelBadge(scan.complianceLevel)}
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 mt-4">
-                    <div className="text-center p-3 bg-muted rounded-lg">
-                      <div className="flex justify-center mb-1">
-                        <XCircle className="w-5 h-5 text-destructive" />
+            {/* Main Score Hero Section */}
+            <Card className="mb-6 overflow-hidden">
+              <div className={`p-6 ${
+                scan.complianceLevel === 'high' ? 'bg-gradient-to-l from-green-500/20 to-green-600/10' :
+                scan.complianceLevel === 'medium' ? 'bg-gradient-to-l from-yellow-500/20 to-orange-500/10' :
+                'bg-gradient-to-l from-red-500/20 to-red-600/10'
+              }`}>
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                  {/* Score Circle */}
+                  <div className="flex items-center gap-6">
+                    <div className={`relative w-32 h-32 rounded-full border-8 flex items-center justify-center ${
+                      scan.complianceLevel === 'high' ? 'border-green-500 bg-green-50 dark:bg-green-950' :
+                      scan.complianceLevel === 'medium' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' :
+                      'border-red-500 bg-red-50 dark:bg-red-950'
+                    }`}>
+                      <div className="text-center">
+                        <div className={`text-4xl font-bold ${getComplianceLevelColor(scan.complianceLevel)}`}>
+                          {scan.overallScore || 0}%
+                        </div>
+                        <div className="text-xs text-muted-foreground">الامتثال</div>
                       </div>
-                      <div className="text-xl font-bold">{severityCounts.critical}</div>
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold mb-1">
+                        {scan.complianceLevel === 'high' ? 'امتثال عالٍ' :
+                         scan.complianceLevel === 'medium' ? 'امتثال متوسط' : 'امتثال منخفض'}
+                      </h2>
+                      <p className="text-muted-foreground">
+                        {scan.complianceLevel === 'high' ? 'موقعك يلتزم بمعظم متطلبات PDPL' :
+                         scan.complianceLevel === 'medium' ? 'يحتاج موقعك لبعض التحسينات' : 'موقعك يحتاج لإصلاحات جوهرية'}
+                      </p>
+                      {getComplianceLevelBadge(scan.complianceLevel)}
+                    </div>
+                  </div>
+                  
+                  {/* Issues Summary */}
+                  <div className="flex gap-4">
+                    <div className="text-center p-4 bg-white/50 dark:bg-black/20 rounded-xl min-w-[80px]">
+                      <XCircle className="w-6 h-6 text-destructive mx-auto mb-1" />
+                      <div className="text-2xl font-bold text-destructive">{severityCounts.critical}</div>
                       <p className="text-xs text-muted-foreground">حرجة</p>
                     </div>
-                    <div className="text-center p-3 bg-muted rounded-lg">
-                      <div className="flex justify-center mb-1">
-                        <AlertTriangle className="w-5 h-5 text-orange-500" />
-                      </div>
-                      <div className="text-xl font-bold">{severityCounts.warning}</div>
-                      <p className="text-xs text-muted-foreground">تحذيرات</p>
+                    <div className="text-center p-4 bg-white/50 dark:bg-black/20 rounded-xl min-w-[80px]">
+                      <AlertTriangle className="w-6 h-6 text-orange-500 mx-auto mb-1" />
+                      <div className="text-2xl font-bold text-orange-500">{severityCounts.warning}</div>
+                      <p className="text-xs text-muted-foreground">تحذير</p>
                     </div>
-                    <div className="text-center p-3 bg-muted rounded-lg">
-                      <div className="flex justify-center mb-1">
-                        <Info className="w-5 h-5 text-yellow-500" />
-                      </div>
-                      <div className="text-xl font-bold">{severityCounts.suggestion}</div>
-                      <p className="text-xs text-muted-foreground">اقتراحات</p>
+                    <div className="text-center p-4 bg-white/50 dark:bg-black/20 rounded-xl min-w-[80px]">
+                      <Info className="w-6 h-6 text-blue-500 mx-auto mb-1" />
+                      <div className="text-2xl font-bold text-blue-500">{severityCounts.suggestion}</div>
+                      <p className="text-xs text-muted-foreground">اقتراح</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+            </Card>
 
+            {/* Quick Status Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <Card className={`p-4 ${scan.hasPrivacyPolicy ? 'border-green-300 bg-green-50/50 dark:bg-green-950/20' : 'border-destructive/50 bg-destructive/5'}`}>
+                <div className="flex items-center gap-3">
+                  {scan.hasPrivacyPolicy ? (
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  ) : (
+                    <XCircle className="w-8 h-8 text-destructive" />
+                  )}
+                  <div>
+                    <p className="font-bold text-sm">سياسة الخصوصية</p>
+                    <p className={`text-xs ${scan.hasPrivacyPolicy ? 'text-green-600' : 'text-destructive'}`}>
+                      {scan.hasPrivacyPolicy ? 'موجودة' : 'مفقودة'}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+              <Card className={`p-4 ${scan.hasTermsAndConditions ? 'border-green-300 bg-green-50/50 dark:bg-green-950/20' : 'border-destructive/50 bg-destructive/5'}`}>
+                <div className="flex items-center gap-3">
+                  {scan.hasTermsAndConditions ? (
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  ) : (
+                    <XCircle className="w-8 h-8 text-destructive" />
+                  )}
+                  <div>
+                    <p className="font-bold text-sm">الشروط والأحكام</p>
+                    <p className={`text-xs ${scan.hasTermsAndConditions ? 'text-green-600' : 'text-destructive'}`}>
+                      {scan.hasTermsAndConditions ? 'موجودة' : 'مفقودة'}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+              <Card className={`p-4 ${scan.hasCookieBanner ? 'border-green-300 bg-green-50/50 dark:bg-green-950/20' : 'border-orange-300 bg-orange-50/50 dark:bg-orange-950/20'}`}>
+                <div className="flex items-center gap-3">
+                  {scan.hasCookieBanner ? (
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  ) : (
+                    <AlertTriangle className="w-8 h-8 text-orange-500" />
+                  )}
+                  <div>
+                    <p className="font-bold text-sm">لافتة الكوكيز</p>
+                    <p className={`text-xs ${scan.hasCookieBanner ? 'text-green-600' : 'text-orange-500'}`}>
+                      {scan.hasCookieBanner ? 'موجودة' : 'مفقودة'}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+              <Card className={`p-4 ${scan.hasContactInfo ? 'border-green-300 bg-green-50/50 dark:bg-green-950/20' : 'border-orange-300 bg-orange-50/50 dark:bg-orange-950/20'}`}>
+                <div className="flex items-center gap-3">
+                  {scan.hasContactInfo ? (
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  ) : (
+                    <AlertTriangle className="w-8 h-8 text-orange-500" />
+                  )}
+                  <div>
+                    <p className="font-bold text-sm">معلومات الاتصال</p>
+                    <p className={`text-xs ${scan.hasContactInfo ? 'text-green-600' : 'text-orange-500'}`}>
+                      {scan.hasContactInfo ? 'موجودة' : 'مفقودة'}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Detailed Analysis Section */}
+            <div className="grid gap-6 mb-6 md:grid-cols-2">
               {/* Compliance Findings Card - Detailed */}
               <Card className="border-2">
                 <CardHeader>
@@ -615,177 +698,128 @@ export default function ScanResultsPage() {
               </Card>
 
               {/* Missing Elements Summary Card */}
-              <Card className="border-2 border-destructive/30 bg-destructive/5">
-                <CardHeader>
+              <Card className="border-2">
+                <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <XCircle className="w-5 h-5 text-destructive" />
-                    العناصر المفقودة من الفحص
+                    <AlertCircle className="w-5 h-5 text-orange-500" />
+                    ملخص حالة العناصر
                   </CardTitle>
-                  <CardDescription>
-                    العناصر التي لم يتم العثور عليها أو تحتاج إلى إضافة/تحسين
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     
+                    {/* Element Count Summary */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg text-center border border-green-200">
+                        <div className="text-2xl font-bold text-green-600">
+                          {[scan.hasPrivacyPolicy, scan.hasTermsAndConditions, scan.hasCookieBanner, scan.hasContactInfo].filter(Boolean).length}
+                        </div>
+                        <p className="text-xs text-green-700">عناصر موجودة</p>
+                      </div>
+                      <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg text-center border border-red-200">
+                        <div className="text-2xl font-bold text-destructive">
+                          {[scan.hasPrivacyPolicy, scan.hasTermsAndConditions, scan.hasCookieBanner, scan.hasContactInfo].filter(x => !x).length}
+                        </div>
+                        <p className="text-xs text-red-700">عناصر مفقودة</p>
+                      </div>
+                    </div>
+
                     {/* Missing Main Elements */}
-                    {(!scan.hasPrivacyPolicy || !scan.hasTermsAndConditions || !scan.hasCookieBanner || !scan.hasContactInfo) && (
-                      <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/30">
-                        <h4 className="font-bold text-destructive mb-2 flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4" />
-                          عناصر رئيسية مفقودة
+                    {(!scan.hasPrivacyPolicy || !scan.hasTermsAndConditions || !scan.hasCookieBanner || !scan.hasContactInfo) ? (
+                      <div className="space-y-2">
+                        <h4 className="font-bold text-sm flex items-center gap-2 text-destructive">
+                          <XCircle className="w-4 h-4" />
+                          العناصر المفقودة:
                         </h4>
-                        <ul className="space-y-2 text-sm">
+                        <div className="grid gap-2">
                           {!scan.hasPrivacyPolicy && (
-                            <li className="flex items-start gap-2">
-                              <XCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-                              <div>
-                                <span className="font-medium">سياسة الخصوصية</span>
-                                <span className="text-muted-foreground"> - مطلوبة قانونياً بموجب المادة 12 من PDPL</span>
+                            <div className="flex items-center gap-3 p-2 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200">
+                              <XCircle className="w-5 h-5 text-destructive flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="font-medium text-sm">سياسة الخصوصية</span>
+                                <p className="text-xs text-muted-foreground">المادة 12 من PDPL</p>
                               </div>
-                            </li>
+                              <Badge variant="destructive" className="text-xs">إلزامي</Badge>
+                            </div>
                           )}
                           {!scan.hasTermsAndConditions && (
-                            <li className="flex items-start gap-2">
-                              <XCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-                              <div>
-                                <span className="font-medium">الشروط والأحكام</span>
-                                <span className="text-muted-foreground"> - مطلوبة بموجب نظام التجارة الإلكترونية</span>
+                            <div className="flex items-center gap-3 p-2 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200">
+                              <XCircle className="w-5 h-5 text-destructive flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="font-medium text-sm">الشروط والأحكام</span>
+                                <p className="text-xs text-muted-foreground">نظام التجارة الإلكترونية</p>
                               </div>
-                            </li>
+                              <Badge variant="destructive" className="text-xs">إلزامي</Badge>
+                            </div>
                           )}
                           {!scan.hasCookieBanner && (
-                            <li className="flex items-start gap-2">
-                              <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <span className="font-medium">لافتة الكوكيز</span>
-                                <span className="text-muted-foreground"> - موصى بها للحصول على موافقة المستخدم</span>
+                            <div className="flex items-center gap-3 p-2 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-200">
+                              <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="font-medium text-sm">لافتة الكوكيز</span>
+                                <p className="text-xs text-muted-foreground">موافقة المستخدم</p>
                               </div>
-                            </li>
+                              <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">موصى به</Badge>
+                            </div>
                           )}
                           {!scan.hasContactInfo && (
-                            <li className="flex items-start gap-2">
-                              <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <span className="font-medium">معلومات الاتصال</span>
-                                <span className="text-muted-foreground"> - مطلوبة للتواصل بشأن البيانات الشخصية</span>
+                            <div className="flex items-center gap-3 p-2 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-200">
+                              <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="font-medium text-sm">معلومات الاتصال</span>
+                                <p className="text-xs text-muted-foreground">بيانات التواصل</p>
                               </div>
-                            </li>
+                              <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">موصى به</Badge>
+                            </div>
                           )}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Missing Privacy Policy Elements */}
-                    {scan.hasPrivacyPolicy && (
-                      <div className="p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-300">
-                        <h4 className="font-bold text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-2">
-                          <FileText className="w-4 h-4" />
-                          عناصر سياسة الخصوصية المحتمل فقدانها (تحتاج تحليل AI)
-                        </h4>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          يتم فحص هذه العناصر عند توفر تحليل الذكاء الاصطناعي:
-                        </p>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>pp1: هوية جهة التحكم</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>pp2: بيانات التواصل</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>pp5: المسوغ النظامي</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>pp7: النقل الدولي</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>pp8: مدة الاحتفاظ</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>pp9: حقوق صاحب البيانات (7)</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>pp10: آلية الشكاوى</span>
-                          </div>
                         </div>
                       </div>
-                    )}
-
-                    {/* Missing Terms Elements */}
-                    {scan.hasTermsAndConditions && (
-                      <div className="p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-300">
-                        <h4 className="font-bold text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-2">
-                          <ScrollText className="w-4 h-4" />
-                          عناصر الشروط والأحكام المحتمل فقدانها (تحتاج تحليل AI)
-                        </h4>
-                        <p className="text-xs text-muted-foreground mb-2">
-                          يتم فحص هذه العناصر عند توفر تحليل الذكاء الاصطناعي:
-                        </p>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>tc1: الاستبدال والاسترجاع (7 أيام)</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>tc4: القانون الحاكم (السعودي)</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>tc5: الاختصاص القضائي</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-orange-700 dark:text-orange-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>tc8: إجراءات الشكاوى</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Issues-based Missing Elements */}
-                    {issues.length > 0 && (
-                      <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/30">
-                        <h4 className="font-bold text-destructive mb-2 flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4" />
-                          مخالفات مكتشفة من تحليل المحتوى ({issues.filter(i => i.severity === 'critical').length} حرجة)
-                        </h4>
-                        <ul className="space-y-1 text-sm max-h-40 overflow-y-auto">
-                          {issues.filter(i => i.severity === 'critical').slice(0, 5).map((issue, idx) => (
-                            <li key={idx} className="flex items-start gap-2">
-                              <XCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
-                              <div>
-                                <span className="font-medium">{issue.title}</span>
-                                {issue.articleReference && (
-                                  <span className="text-xs text-muted-foreground"> ({issue.articleReference})</span>
-                                )}
-                              </div>
-                            </li>
-                          ))}
-                          {issues.filter(i => i.severity === 'critical').length > 5 && (
-                            <li className="text-xs text-muted-foreground">
-                              + {issues.filter(i => i.severity === 'critical').length - 5} مخالفات حرجة أخرى...
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* All Elements Present */}
-                    {scan.hasPrivacyPolicy && scan.hasTermsAndConditions && scan.hasCookieBanner && scan.hasContactInfo && issues.length === 0 && (
+                    ) : (
                       <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-300 text-center">
-                        <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                        <CheckCircle className="w-10 h-10 text-green-600 mx-auto mb-2" />
                         <h4 className="font-bold text-green-700 dark:text-green-400">جميع العناصر الرئيسية موجودة!</h4>
                         <p className="text-sm text-muted-foreground mt-1">
-                          تم العثور على جميع العناصر المطلوبة. راجع قسم المخالفات لتحسين المحتوى.
+                          تم العثور على جميع العناصر. راجع المخالفات لتحسين المحتوى.
                         </p>
+                      </div>
+                    )}
+
+                    {/* AI Analysis Note */}
+                    {(scan.hasPrivacyPolicy || scan.hasTermsAndConditions) && (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 mt-3">
+                        <div className="flex items-start gap-2">
+                          <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">ملاحظة عن التحليل العميق:</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              يتم فحص محتوى السياسات (10 عناصر للخصوصية و8 للشروط) بالتفصيل عند توفر تحليل الذكاء الاصطناعي. 
+                              راجع قسم المخالفات للتفاصيل.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Issues Summary */}
+                    {issues.length > 0 && (
+                      <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/30 mt-3">
+                        <h4 className="font-bold text-destructive mb-2 flex items-center gap-2 text-sm">
+                          <AlertCircle className="w-4 h-4" />
+                          مخالفات من تحليل المحتوى ({issues.filter(i => i.severity === 'critical').length} حرجة)
+                        </h4>
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          {issues.filter(i => i.severity === 'critical').slice(0, 3).map((issue, idx) => (
+                            <div key={idx} className="flex items-center gap-2 text-xs">
+                              <XCircle className="w-3 h-3 text-destructive flex-shrink-0" />
+                              <span className="font-medium truncate">{issue.title}</span>
+                            </div>
+                          ))}
+                          {issues.filter(i => i.severity === 'critical').length > 3 && (
+                            <p className="text-xs text-muted-foreground mr-5">
+                              +{issues.filter(i => i.severity === 'critical').length - 3} مخالفات أخرى...
+                            </p>
+                          )}
+                        </div>
                       </div>
                     )}
 
