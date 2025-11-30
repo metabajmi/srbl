@@ -86,6 +86,20 @@ export default function ScanResultsPage() {
   const realIssues = issues.filter(i => i.category !== "analysis");
   const criticalIssues = realIssues.filter(i => i.severity === "critical");
   const warningIssues = realIssues.filter(i => i.severity === "warning");
+  
+  // Count issues per element category (including all backend variants)
+  const privacyIssues = realIssues.filter(i => 
+    i.category === "privacy_policy" || i.category === "privacy_policy_content" || i.category === "privacy"
+  ).length;
+  const termsIssues = realIssues.filter(i => 
+    i.category === "terms_and_conditions" || i.category === "terms" || i.category === "terms_content"
+  ).length;
+  const cookieIssues = realIssues.filter(i => 
+    i.category === "cookies" || i.category === "consent" || i.category === "cookie_banner"
+  ).length;
+  const contactIssues = realIssues.filter(i => 
+    i.category === "contact_info" || i.category === "contact_information" || i.category === "contact"
+  ).length;
 
   if (scanLoading) {
     return (
@@ -213,20 +227,28 @@ export default function ScanResultsPage() {
                 found={!!scan.hasPrivacyPolicy} 
                 url={scan.privacyPolicyUrl}
                 required 
+                issueCount={privacyIssues}
+                testId="card-status-privacy"
               />
               <StatusCard 
                 title="الشروط والأحكام" 
                 found={!!scan.hasTermsAndConditions} 
                 url={scan.termsAndConditionsUrl}
                 required 
+                issueCount={termsIssues}
+                testId="card-status-terms"
               />
               <StatusCard 
                 title="لافتة الكوكيز" 
                 found={!!scan.hasCookieBanner} 
+                issueCount={cookieIssues}
+                testId="card-status-cookies"
               />
               <StatusCard 
                 title="معلومات الاتصال" 
                 found={!!scan.hasContactInfo} 
+                issueCount={contactIssues}
+                testId="card-status-contact"
               />
             </div>
 
@@ -306,18 +328,46 @@ export default function ScanResultsPage() {
   );
 }
 
-// Simple Status Card Component
-function StatusCard({ title, found, url, required }: { title: string; found: boolean; url?: string | null; required?: boolean }) {
+// Simple Status Card Component - Colors based on status (not green for found)
+function StatusCard({ title, found, url, required, issueCount = 0, testId }: { 
+  title: string; 
+  found: boolean; 
+  url?: string | null; 
+  required?: boolean;
+  issueCount?: number;
+  testId?: string;
+}) {
+  // Determine card style based on status
+  // Missing required → red, Missing optional → orange, Found with issues → orange, Found clean → neutral gray
+  const getCardStyle = () => {
+    if (!found) {
+      return required 
+        ? 'border-red-300 bg-red-50/50 dark:bg-red-950/20' 
+        : 'border-orange-300 bg-orange-50/50 dark:bg-orange-950/20';
+    }
+    // Found - use neutral gray (not green since we don't know if content is good)
+    if (issueCount > 0) {
+      return 'border-orange-300 bg-orange-50/50 dark:bg-orange-950/20';
+    }
+    return 'border-border bg-muted/30';
+  };
+
+  const getIcon = () => {
+    if (!found) {
+      return required 
+        ? <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+        : <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />;
+    }
+    if (issueCount > 0) {
+      return <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />;
+    }
+    return <CheckCircle className="w-5 h-5 text-muted-foreground flex-shrink-0" />;
+  };
+
   return (
-    <Card className={`p-3 ${found ? 'border-green-300 bg-green-50/50 dark:bg-green-950/20' : required ? 'border-red-300 bg-red-50/50 dark:bg-red-950/20' : 'border-orange-300 bg-orange-50/50 dark:bg-orange-950/20'}`}>
+    <Card className={`p-3 ${getCardStyle()}`} data-testid={testId}>
       <div className="flex items-center gap-2">
-        {found ? (
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-        ) : required ? (
-          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-        ) : (
-          <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
-        )}
+        {getIcon()}
         <div className="min-w-0">
           <p className="font-medium text-sm truncate">{title}</p>
           {found && url && (
@@ -325,6 +375,9 @@ function StatusCard({ title, found, url, required }: { title: string; found: boo
               <ExternalLink className="w-3 h-3" />
               عرض
             </a>
+          )}
+          {found && issueCount > 0 && (
+            <p className="text-xs text-orange-600">{issueCount} مخالفة</p>
           )}
           {!found && (
             <p className={`text-xs ${required ? 'text-red-600' : 'text-orange-600'}`}>
