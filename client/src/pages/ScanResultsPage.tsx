@@ -76,6 +76,29 @@ export default function ScanResultsPage() {
     setLocation(routes[tool]);
   };
 
+  // Rescan mutation - creates a new scan for the same URL
+  const rescanMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/scans", { url: scan?.url });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "جاري إعادة الفحص",
+        description: "تم بدء فحص جديد بالذكاء الاصطناعي...",
+      });
+      // Navigate to new scan results
+      setLocation(`/scan/${data.id}`);
+    },
+    onError: () => {
+      toast({
+        title: "خطأ في إعادة الفحص",
+        description: "حدث خطأ أثناء محاولة إعادة الفحص",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Generate report mutation
   const generateReportMutation = useMutation({
     mutationFn: async (format: string) => {
@@ -252,6 +275,22 @@ export default function ScanResultsPage() {
             <h1 className="text-xl font-bold">نتائج فحص سِرْبَال</h1>
           </div>
           <div className="flex items-center gap-2">
+            {scan?.status === "completed" && (
+              <Button 
+                variant="default"
+                onClick={() => rescanMutation.mutate()}
+                disabled={rescanMutation.isPending}
+                data-testid="button-rescan-header"
+                className="gap-2"
+              >
+                {rescanMutation.isPending ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                إعادة الفحص
+              </Button>
+            )}
             <Button 
               variant="outline" 
               onClick={() => setLocation("/")}
