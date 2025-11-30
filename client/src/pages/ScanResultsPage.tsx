@@ -54,7 +54,7 @@ export default function ScanResultsPage() {
   });
 
   // Track last processed scan to avoid duplicate processing
-  const lastProcessedScanRef = useRef<number | null>(null);
+  const lastProcessedScanRef = useRef<string | null>(null);
 
   // Refetch issues and save scan data when scan completes (only once per scan)
   useEffect(() => {
@@ -303,6 +303,56 @@ export default function ScanResultsPage() {
               </div>
             </div>
           </CardHeader>
+          {scan.status === "completed" && (
+            <CardContent className="pt-0">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 text-sm">
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">تاريخ الفحص</p>
+                  <p className="font-medium">
+                    {scan.scanDate ? new Date(scan.scanDate).toLocaleDateString('ar-SA', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : 'غير متوفر'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-muted-foreground">إجمالي المشاكل</p>
+                  <p className="font-medium">{scan.issuesCount || 0} مشكلة</p>
+                </div>
+                {scan.privacyPolicyUrl && (
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground">رابط سياسة الخصوصية</p>
+                    <a 
+                      href={scan.privacyPolicyUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary hover:underline truncate block"
+                      dir="ltr"
+                    >
+                      {scan.privacyPolicyUrl.replace(/^https?:\/\//, '').substring(0, 40)}...
+                    </a>
+                  </div>
+                )}
+                {scan.termsAndConditionsUrl && (
+                  <div className="space-y-1">
+                    <p className="text-muted-foreground">رابط الشروط والأحكام</p>
+                    <a 
+                      href={scan.termsAndConditionsUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-medium text-primary hover:underline truncate block"
+                      dir="ltr"
+                    >
+                      {scan.termsAndConditionsUrl.replace(/^https?:\/\//, '').substring(0, 40)}...
+                    </a>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         {/* Scanning Progress */}
