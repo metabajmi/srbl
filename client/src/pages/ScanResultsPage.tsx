@@ -1110,10 +1110,18 @@ export default function ScanResultsPage() {
 
             {/* Issues Tabs */}
             <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>المخالفات والتوصيات</CardTitle>
-                  <div className="flex gap-2">
+              <CardHeader className="pb-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-primary" />
+                      تفاصيل المخالفات والتوصيات
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      قائمة كاملة بالمخالفات المكتشفة مع شرح تفصيلي وتوصيات الإصلاح
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1126,7 +1134,7 @@ export default function ScanResultsPage() {
                       ) : (
                         <Download className="ml-2 h-4 w-4" />
                       )}
-                      تصدير PDF
+                      PDF
                     </Button>
                     <Button
                       variant="outline"
@@ -1140,7 +1148,7 @@ export default function ScanResultsPage() {
                       ) : (
                         <Download className="ml-2 h-4 w-4" />
                       )}
-                      تصدير HTML
+                      HTML
                     </Button>
                     <Button
                       variant="outline"
@@ -1154,139 +1162,214 @@ export default function ScanResultsPage() {
                       ) : (
                         <Download className="ml-2 h-4 w-4" />
                       )}
-                      تصدير JSON
+                      JSON
                     </Button>
                   </div>
                 </div>
+
+                {/* Issues Summary Stats */}
+                {issues.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t">
+                    <div className={`p-3 rounded-lg text-center ${severityCounts.critical > 0 ? 'bg-red-50 dark:bg-red-950/30 border border-red-200' : 'bg-muted'}`}>
+                      <XCircle className={`w-5 h-5 mx-auto mb-1 ${severityCounts.critical > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+                      <div className={`text-xl font-bold ${severityCounts.critical > 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {severityCounts.critical}
+                      </div>
+                      <p className="text-xs text-muted-foreground">حرجة (تحتاج إصلاح فوري)</p>
+                    </div>
+                    <div className={`p-3 rounded-lg text-center ${severityCounts.warning > 0 ? 'bg-orange-50 dark:bg-orange-950/30 border border-orange-200' : 'bg-muted'}`}>
+                      <AlertTriangle className={`w-5 h-5 mx-auto mb-1 ${severityCounts.warning > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
+                      <div className={`text-xl font-bold ${severityCounts.warning > 0 ? 'text-orange-500' : 'text-muted-foreground'}`}>
+                        {severityCounts.warning}
+                      </div>
+                      <p className="text-xs text-muted-foreground">تحذيرات (موصى بإصلاحها)</p>
+                    </div>
+                    <div className={`p-3 rounded-lg text-center ${severityCounts.suggestion > 0 ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200' : 'bg-muted'}`}>
+                      <Info className={`w-5 h-5 mx-auto mb-1 ${severityCounts.suggestion > 0 ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                      <div className={`text-xl font-bold ${severityCounts.suggestion > 0 ? 'text-blue-500' : 'text-muted-foreground'}`}>
+                        {severityCounts.suggestion}
+                      </div>
+                      <p className="text-xs text-muted-foreground">اقتراحات (تحسينات)</p>
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="all" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="all" data-testid="tab-all">
-                      الكل ({issues.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="critical" data-testid="tab-critical">
-                      حرج ({severityCounts.critical})
-                    </TabsTrigger>
-                    <TabsTrigger value="warning" data-testid="tab-warning">
-                      تحذير ({severityCounts.warning})
-                    </TabsTrigger>
-                    <TabsTrigger value="suggestion" data-testid="tab-suggestion">
-                      اقتراح ({severityCounts.suggestion})
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  {["all", "critical", "warning", "suggestion"].map((severity) => (
-                    <TabsContent key={severity} value={severity} className="mt-6">
-                      <Accordion type="single" collapsible className="w-full">
-                        {Object.entries(issuesByCategory).map(([category, categoryIssues]) => {
-                          const filteredIssues = severity === "all" 
-                            ? categoryIssues 
-                            : categoryIssues.filter(i => i.severity === severity);
-                          
-                          if (filteredIssues.length === 0) return null;
-                          
-                          return (
-                            <AccordionItem key={category} value={category}>
-                              <AccordionTrigger className="text-right">
-                                <div className="flex items-center justify-between w-full pl-4">
-                                  <span className="font-semibold">{getCategoryLabel(category)}</span>
-                                  <Badge variant="outline">
-                                    {filteredIssues.length} مخالفة
-                                  </Badge>
+                {issues.length === 0 ? (
+                  <div className="text-center py-12 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200">
+                    <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-green-700 dark:text-green-400 mb-2">لا توجد مخالفات!</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      {isPartialAnalysis 
+                        ? "لم يتم اكتشاف مخالفات في التحليل الأولي. لتحليل أعمق، أعد الفحص عند توفر خدمة الذكاء الاصطناعي."
+                        : "تهانينا! موقعك يبدو متوافقاً مع متطلبات PDPL الأساسية."}
+                    </p>
+                  </div>
+                ) : (
+                  <Tabs defaultValue="all" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4 mb-4">
+                      <TabsTrigger value="all" data-testid="tab-all" className="gap-1">
+                        <span>الكل</span>
+                        <Badge variant="secondary" className="text-xs">{issues.length}</Badge>
+                      </TabsTrigger>
+                      <TabsTrigger value="critical" data-testid="tab-critical" className="gap-1">
+                        <span>حرجة</span>
+                        {severityCounts.critical > 0 && (
+                          <Badge variant="destructive" className="text-xs">{severityCounts.critical}</Badge>
+                        )}
+                      </TabsTrigger>
+                      <TabsTrigger value="warning" data-testid="tab-warning" className="gap-1">
+                        <span>تحذيرات</span>
+                        {severityCounts.warning > 0 && (
+                          <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">{severityCounts.warning}</Badge>
+                        )}
+                      </TabsTrigger>
+                      <TabsTrigger value="suggestion" data-testid="tab-suggestion" className="gap-1">
+                        <span>اقتراحات</span>
+                        {severityCounts.suggestion > 0 && (
+                          <Badge variant="outline" className="text-xs border-blue-300 text-blue-600">{severityCounts.suggestion}</Badge>
+                        )}
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    {["all", "critical", "warning", "suggestion"].map((severity) => (
+                      <TabsContent key={severity} value={severity} className="mt-4">
+                        <div className="space-y-4">
+                          {Object.entries(issuesByCategory).map(([category, categoryIssues]) => {
+                            const filteredIssues = severity === "all" 
+                              ? categoryIssues 
+                              : categoryIssues.filter(i => i.severity === severity);
+                            
+                            if (filteredIssues.length === 0) return null;
+                            
+                            return (
+                              <div key={category} className="border rounded-lg overflow-hidden">
+                                <div className="bg-muted/50 p-3 flex items-center justify-between border-b">
+                                  <h3 className="font-bold flex items-center gap-2">
+                                    {category === 'privacy_policy' && <FileText className="w-4 h-4 text-primary" />}
+                                    {category === 'terms_conditions' && <ScrollText className="w-4 h-4 text-primary" />}
+                                    {category === 'cookie_consent' && <Cookie className="w-4 h-4 text-primary" />}
+                                    {category === 'contact_info' && <Settings className="w-4 h-4 text-primary" />}
+                                    {getCategoryLabel(category)}
+                                  </h3>
+                                  <Badge variant="outline">{filteredIssues.length} مخالفة</Badge>
                                 </div>
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <div className="space-y-4">
-                                  {filteredIssues.map((issue, index) => (
-                                    <Card key={issue.id} data-testid={`issue-${issue.id}`}>
-                                      <CardHeader>
-                                        <div className="flex items-start justify-between">
-                                          <div className="flex items-start gap-3">
-                                            {getSeverityIcon(issue.severity)}
-                                            <div>
-                                              <CardTitle className="text-base">{issue.title}</CardTitle>
-                                              {issue.articleReference && (
-                                                <Badge variant="outline" className="mt-2">
-                                                  {issue.articleReference}
-                                                </Badge>
-                                              )}
-                                            </div>
-                                          </div>
-                                          {getSeverityBadge(issue.severity)}
-                                        </div>
-                                      </CardHeader>
-                                      <CardContent>
-                                        <div className="space-y-4">
+                                <div className="divide-y">
+                                  {filteredIssues.map((issue) => (
+                                    <div key={issue.id} className="p-4" data-testid={`issue-${issue.id}`}>
+                                      {/* Issue Header */}
+                                      <div className="flex items-start justify-between gap-4 mb-3">
+                                        <div className="flex items-start gap-3">
+                                          {getSeverityIcon(issue.severity)}
                                           <div>
-                                            <h4 className="font-semibold text-sm mb-2">الوصف:</h4>
-                                            <p className="text-sm text-muted-foreground">
-                                              {issue.description}
-                                            </p>
-                                          </div>
-                                          {issue.violatingText && (
-                                            <div>
-                                              <h4 className="font-semibold text-sm mb-2 text-destructive">النص المخالف:</h4>
-                                              <blockquote className="text-sm bg-destructive/10 text-destructive-foreground p-3 rounded border-r-4 border-destructive">
-                                                "{issue.violatingText}"
-                                              </blockquote>
-                                            </div>
-                                          )}
-                                          {issue.regulation && (
-                                            <div>
-                                              <h4 className="font-semibold text-sm mb-2">اللائحة المخالفة:</h4>
-                                              <p className="text-sm text-muted-foreground">
-                                                {issue.regulation}
-                                              </p>
-                                            </div>
-                                          )}
-                                          <div>
-                                            <h4 className="font-semibold text-sm mb-2">التوصية للمعالجة:</h4>
-                                            <p className="text-sm text-muted-foreground">
-                                              {issue.remediation}
-                                            </p>
-                                          </div>
-                                          <div className="flex flex-wrap gap-2 pt-2 border-t">
-                                            {issue.documentType && (
-                                              <Badge variant="outline" className="gap-1">
-                                                <FileText className="w-3 h-3" />
-                                                {getDocumentTypeLabel(issue.documentType)}
-                                              </Badge>
-                                            )}
-                                            {issue.requirementId && (
-                                              <Badge variant="secondary" className="font-mono text-xs">
-                                                {issue.requirementId}
-                                              </Badge>
-                                            )}
-                                            {issue.affectedElement && (
-                                              <Badge variant="outline" className="text-xs">
-                                                {issue.affectedElement}
+                                            <h4 className="font-bold text-base">{issue.title}</h4>
+                                            {issue.articleReference && (
+                                              <Badge variant="outline" className="mt-1 text-xs">
+                                                {issue.articleReference}
                                               </Badge>
                                             )}
                                           </div>
                                         </div>
-                                      </CardContent>
-                                    </Card>
+                                        {getSeverityBadge(issue.severity)}
+                                      </div>
+                                      
+                                      {/* Issue Details Grid */}
+                                      <div className="grid gap-3 mr-8">
+                                        {/* Description */}
+                                        <div className="bg-muted/30 p-3 rounded-lg">
+                                          <h5 className="font-semibold text-sm mb-1 flex items-center gap-1">
+                                            <Info className="w-3 h-3" />
+                                            ما هي المخالفة؟
+                                          </h5>
+                                          <p className="text-sm text-muted-foreground">
+                                            {issue.description}
+                                          </p>
+                                        </div>
+                                        
+                                        {/* Violating Text */}
+                                        {issue.violatingText && (
+                                          <div className="bg-red-50 dark:bg-red-950/30 p-3 rounded-lg border border-red-200">
+                                            <h5 className="font-semibold text-sm mb-1 flex items-center gap-1 text-destructive">
+                                              <XCircle className="w-3 h-3" />
+                                              النص المخالف:
+                                            </h5>
+                                            <blockquote className="text-sm italic border-r-4 border-destructive pr-3 mr-2">
+                                              "{issue.violatingText}"
+                                            </blockquote>
+                                          </div>
+                                        )}
+                                        
+                                        {/* Regulation */}
+                                        {issue.regulation && (
+                                          <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200">
+                                            <h5 className="font-semibold text-sm mb-1 flex items-center gap-1 text-blue-700 dark:text-blue-400">
+                                              <Shield className="w-3 h-3" />
+                                              المادة القانونية المخالفة:
+                                            </h5>
+                                            <p className="text-sm text-muted-foreground">
+                                              {issue.regulation}
+                                            </p>
+                                          </div>
+                                        )}
+                                        
+                                        {/* Remediation */}
+                                        <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-lg border border-green-200">
+                                          <h5 className="font-semibold text-sm mb-1 flex items-center gap-1 text-green-700 dark:text-green-400">
+                                            <CheckCircle className="w-3 h-3" />
+                                            كيف تصلح هذه المخالفة؟
+                                          </h5>
+                                          <p className="text-sm text-muted-foreground">
+                                            {issue.remediation}
+                                          </p>
+                                        </div>
+                                        
+                                        {/* Tags */}
+                                        <div className="flex flex-wrap gap-2 pt-2">
+                                          {issue.documentType && (
+                                            <Badge variant="outline" className="gap-1 text-xs">
+                                              <FileText className="w-3 h-3" />
+                                              {getDocumentTypeLabel(issue.documentType)}
+                                            </Badge>
+                                          )}
+                                          {issue.requirementId && (
+                                            <Badge variant="secondary" className="font-mono text-xs">
+                                              معرّف: {issue.requirementId}
+                                            </Badge>
+                                          )}
+                                          {issue.affectedElement && (
+                                            <Badge variant="outline" className="text-xs">
+                                              العنصر: {issue.affectedElement}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
                                   ))}
                                 </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          );
-                        })}
-                      </Accordion>
-                      
-                      {Object.keys(issuesByCategory).length === 0 && (
-                        <div className="text-center py-12">
-                          <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
-                          <p className="text-lg font-medium">لا توجد مخالفات في هذه الفئة</p>
-                          <p className="text-sm text-muted-foreground mt-2">
-                            الموقع متوافق في هذا الجانب
-                          </p>
+                              </div>
+                            );
+                          })}
                         </div>
-                      )}
-                    </TabsContent>
-                  ))}
-                </Tabs>
+                        
+                        {/* Empty state for filtered tabs */}
+                        {severity !== "all" && 
+                          Object.entries(issuesByCategory).every(([_, categoryIssues]) => 
+                            categoryIssues.filter(i => i.severity === severity).length === 0
+                          ) && (
+                          <div className="text-center py-8 bg-muted/30 rounded-lg">
+                            <CheckCircle className="w-10 h-10 text-green-600 mx-auto mb-3" />
+                            <p className="font-medium">لا توجد مخالفات من هذا النوع</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {severity === "critical" && "لا توجد مخالفات حرجة - ممتاز!"}
+                              {severity === "warning" && "لا توجد تحذيرات"}
+                              {severity === "suggestion" && "لا توجد اقتراحات إضافية"}
+                            </p>
+                          </div>
+                        )}
+                      </TabsContent>
+                    ))}
+                  </Tabs>
+                )}
               </CardContent>
             </Card>
           </>
