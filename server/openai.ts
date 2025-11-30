@@ -24,6 +24,7 @@ export interface ComplianceAnalysisResult {
     hasDataCollectionForms: boolean;
     hasContactInfo: boolean;
   };
+  isPartialAnalysis?: boolean; // True when AI analysis failed and only DOM detection was used
   issues: Array<{
     severity: "critical" | "warning" | "suggestion";
     category: string;
@@ -1342,71 +1343,122 @@ ${prepareHtmlForAnalysis(htmlContent)}
     console.error("Error analyzing website compliance:", error);
     console.error("API Error details:", error.message);
     
-    // Return direct detection with PROPORTIONAL scoring based on detected elements
-    console.warn("Using fallback: direct detection with proportional scoring due to OpenAI API error");
+    // IMPORTANT: When AI analysis fails, we can only verify EXISTENCE of elements, not their CONTENT
+    // This means we cannot verify if policies meet PDPL requirements
+    // Therefore, scores must be CONSERVATIVE (capped) to reflect incomplete analysis
+    console.warn("Using fallback: CONSERVATIVE scoring due to OpenAI API error (AI content analysis skipped)");
     
-    // Calculate proportional score based on detected elements (same logic as main flow)
-    let fallbackScore = 100;
+    // Start with base score for detected elements only
+    // Maximum fallback score is 60% because content quality cannot be verified
+    const MAX_FALLBACK_SCORE = 60;
+    
+    let detectedElements = 0;
+    let totalElements = 4; // privacy, terms, cookie, contact
     const fallbackIssues: any[] = [];
     
-    // Deduct for missing elements
-    if (!directDetection.hasPrivacyPolicy) {
-      fallbackScore -= 30;
+    // Count detected elements and add issues for missing ones
+    if (directDetection.hasPrivacyPolicy) {
+      detectedElements++;
+      // Add warning that content was not verified
+      fallbackIssues.push({
+        severity: "warning" as const,
+        category: "privacy_policy",
+        title: "سياسة الخصوصية موجودة - لم يتم التحقق من المحتوى",
+        description: "تم العثور على رابط سياسة الخصوصية، لكن لم يتم التحقق من اكتمال محتواها وفقاً لمتطلبات نظام حماية البيانات الشخصية (المادة 12).",
+        articleReference: "المادة الثانية عشرة",
+        regulation: "نظام حماية البيانات الشخصية",
+        remediation: "تحقق يدوياً من أن سياسة الخصوصية تتضمن: اسم الجهة، البيانات المجمعة، غرض الجمع، حقوق صاحب البيانات، آلية الشكاوى",
+        affectedElement: directDetection.privacyPolicyUrl || "سياسة الخصوصية"
+      });
+    } else {
       fallbackIssues.push({
         severity: "critical" as const,
         category: "privacy_policy",
         title: "سياسة الخصوصية غير موجودة",
-        description: "لم يتم العثور على سياسة خصوصية واضحة في الموقع.",
-        articleReference: "المادة الثالثة عشرة",
+        description: "لم يتم العثور على سياسة خصوصية واضحة في الموقع. هذا مخالف للمادة 12 من نظام حماية البيانات الشخصية.",
+        articleReference: "المادة الثانية عشرة",
         regulation: "نظام حماية البيانات الشخصية",
-        remediation: "أضف صفحة سياسة خصوصية شاملة",
+        remediation: "أضف صفحة سياسة خصوصية شاملة تتضمن جميع المتطلبات النظامية",
         affectedElement: "الموقع بالكامل"
       });
     }
-    if (!directDetection.hasTermsAndConditions) {
-      fallbackScore -= 30;
+    
+    if (directDetection.hasTermsAndConditions) {
+      detectedElements++;
+      // Add warning that content was not verified
+      fallbackIssues.push({
+        severity: "warning" as const,
+        category: "terms_and_conditions",
+        title: "الشروط والأحكام موجودة - لم يتم التحقق من المحتوى",
+        description: "تم العثور على رابط الشروط والأحكام، لكن لم يتم التحقق من وجود سياسة الاستبدال والاسترجاع المطلوبة للمتاجر الإلكترونية.",
+        articleReference: "قائمة التقييم الذاتي - النقطة 4",
+        regulation: "نظام التجارة الإلكترونية",
+        remediation: "تحقق يدوياً من وجود سياسة استبدال واسترجاع واضحة ومفصلة",
+        affectedElement: directDetection.termsAndConditionsUrl || "الشروط والأحكام"
+      });
+    } else {
       fallbackIssues.push({
         severity: "critical" as const,
         category: "terms_and_conditions",
-        title: "شروط الاستخدام غير موجودة",
-        description: "لم يتم العثور على صفحة شروط وأحكام الاستخدام.",
-        articleReference: "المادة الرابعة عشرة",
-        regulation: "نظام حماية البيانات الشخصية",
-        remediation: "أضف صفحة شروط وأحكام واضحة",
+        title: "الشروط والأحكام غير موجودة",
+        description: "لم يتم العثور على صفحة شروط وأحكام الاستخدام. يجب أن تتضمن سياسة الاستبدال والاسترجاع للمتاجر الإلكترونية.",
+        articleReference: "قائمة التقييم الذاتي - النقطة 4",
+        regulation: "نظام التجارة الإلكترونية",
+        remediation: "أضف صفحة شروط وأحكام واضحة تتضمن سياسة الاستبدال والاسترجاع",
         affectedElement: "الموقع بالكامل"
       });
     }
-    if (!directDetection.hasCookieBanner) {
-      fallbackScore -= 10;
+    
+    if (directDetection.hasCookieBanner) {
+      detectedElements++;
+    } else {
       fallbackIssues.push({
         severity: "warning" as const,
         category: "cookies",
         title: "عدم وجود لافتة الكوكيز",
-        description: "لم يتم العثور على لافتة موافقة على ملفات تعريف الارتباط.",
-        articleReference: "المادة السادسة",
+        description: "لم يتم العثور على لافتة موافقة على ملفات تعريف الارتباط. ملاحظة: بعض المواقع تستخدم لافتات ديناميكية لا يمكن كشفها.",
+        articleReference: "المادة الخامسة والسادسة",
         regulation: "نظام حماية البيانات الشخصية",
-        remediation: "أضف لافتة موافقة على الكوكيز",
+        remediation: "أضف لافتة موافقة واضحة على الكوكيز مع خيارات قبول/رفض",
         affectedElement: "الموقع بالكامل"
       });
     }
-    if (!directDetection.hasContactInfo) {
-      fallbackScore -= 10;
+    
+    if (directDetection.hasContactInfo) {
+      detectedElements++;
+    } else {
       fallbackIssues.push({
         severity: "warning" as const,
         category: "contact",
         title: "معلومات الاتصال غير واضحة",
-        description: "لم يتم العثور على معلومات اتصال واضحة للشكاوى.",
-        articleReference: "المادة الرابعة",
-        regulation: "نظام حماية البيانات الشخصية",
-        remediation: "أضف معلومات اتصال واضحة",
+        description: "لم يتم العثور على معلومات اتصال واضحة لتقديم الشكاوى.",
+        articleReference: "قائمة التقييم الذاتي - النقطة 2",
+        regulation: "نظام التجارة الإلكترونية",
+        remediation: "أضف معلومات اتصال واضحة (بريد إلكتروني، هاتف، عنوان)",
         affectedElement: "الموقع بالكامل"
       });
     }
     
-    // Calculate compliance level
-    const fallbackLevel = fallbackScore >= 70 ? "high" : fallbackScore >= 40 ? "medium" : "low";
+    // Add critical issue about incomplete analysis
+    fallbackIssues.unshift({
+      severity: "critical" as const,
+      category: "analysis",
+      title: "تحليل غير مكتمل - يتطلب مراجعة يدوية",
+      description: "تم الفحص بناءً على كشف الروابط فقط. لم يتم التحقق من محتوى السياسات ومدى امتثالها لمتطلبات نظام حماية البيانات الشخصية. النتيجة قد تكون أعلى أو أقل من الواقع.",
+      articleReference: "جميع المواد",
+      regulation: "نظام حماية البيانات الشخصية",
+      remediation: "أعد الفحص لاحقاً للحصول على تحليل كامل، أو قم بمراجعة يدوية للسياسات",
+      affectedElement: "الموقع بالكامل"
+    });
     
-    console.log(`Fallback proportional score: privacy=${directDetection.hasPrivacyPolicy?'✓':'-30'}, terms=${directDetection.hasTermsAndConditions?'✓':'-30'}, cookie=${directDetection.hasCookieBanner?'✓':'-10'}, contact=${directDetection.hasContactInfo?'✓':'-10'}, final=${fallbackScore}`);
+    // Calculate proportional score within the cap
+    // Each detected element = 15% (max 60% if all 4 detected)
+    const fallbackScore = Math.min(MAX_FALLBACK_SCORE, Math.round((detectedElements / totalElements) * MAX_FALLBACK_SCORE));
+    
+    // Compliance level based on capped score
+    const fallbackLevel = fallbackScore >= 50 ? "medium" : "low";
+    
+    console.log(`Fallback CONSERVATIVE score: elements=${detectedElements}/${totalElements}, privacy=${directDetection.hasPrivacyPolicy?'✓':'✗'}, terms=${directDetection.hasTermsAndConditions?'✓':'✗'}, cookie=${directDetection.hasCookieBanner?'✓':'✗'}, contact=${directDetection.hasContactInfo?'✓':'✗'}, final=${fallbackScore}% (capped at ${MAX_FALLBACK_SCORE}%)`);
     
     return {
       overallScore: fallbackScore,
@@ -1420,7 +1472,8 @@ ${prepareHtmlForAnalysis(htmlContent)}
         hasDataCollectionForms: true,
         hasContactInfo: directDetection.hasContactInfo,
       },
-      issues: fallbackIssues
+      issues: fallbackIssues,
+      isPartialAnalysis: true // Flag to indicate incomplete analysis
     };
   }
 }

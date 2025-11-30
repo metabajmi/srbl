@@ -35,6 +35,8 @@ The Smart Customer Assistant utilizes a Retrieval Augmented Generation (RAG) arc
 - **PDPL Knowledge Base:** Includes `compliance-requirements.json` with Saudi legal requirements for e-commerce, privacy policy elements (PDPL Article 12), data subject rights (PDPL Article 4), and cookie consent.
 - **Hybrid Detection Architecture:** Combines OpenAI intelligence for content analysis with DOM detection (using cheerio) for exact phrase matching, ensuring accurate detection of compliance elements.
 - **Deterministic Scoring System:** Starts from a baseline of 100 and deducts points only for missing elements and detected issues (critical, warning, suggestion), providing compliance levels (High ≥70%, Medium 40-69%, Low <40%).
+- **Conservative Fallback Scoring:** When AI analysis fails (rate limits, quota), scores are capped at 60% maximum with explicit "Partial Analysis" warning. Each detected element contributes 15% (4 elements × 15% = 60% max). This prevents inflated scores when content quality cannot be verified.
+- **Partial Analysis Detection:** Frontend displays orange warning banner when AI analysis was skipped, with clear Arabic messaging about incomplete verification and option to re-scan.
 - **Frontend UI:** Displays compliance level badges, findings cards, and error handling with specific Arabic messages.
 - **Export Functionality:** Generates PDF/HTML/JSON reports with concurrent request protection, visual feedback, and toast notifications.
 

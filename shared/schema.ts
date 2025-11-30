@@ -4,8 +4,8 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Custom type for pgvector
-const vector = customType<{ data: number[]; driverData: string }>({
-  dataType(config) {
+const vector = customType<{ data: number[]; driverData: string; config: { dimensions: number } }>({
+  dataType(config: { dimensions: number } | undefined) {
     return `vector(${config?.dimensions ?? 1536})`;
   },
   toDriver(value: number[]): string {

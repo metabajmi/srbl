@@ -116,6 +116,12 @@ export default function ScanResultsPage() {
     warning: issues.filter(i => i.severity === "warning").length,
     suggestion: issues.filter(i => i.severity === "suggestion").length,
   };
+  
+  // Check if this is a partial analysis (AI analysis was skipped)
+  const isPartialAnalysis = issues.some(i => 
+    i.category === "analysis" && 
+    i.title?.includes("تحليل غير مكتمل")
+  );
 
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
@@ -161,6 +167,8 @@ export default function ScanResultsPage() {
       third_party: "الأطراف الثالثة",
       user_rights: "حقوق المستخدم",
       cookies: "ملفات تعريف الارتباط",
+      contact: "معلومات الاتصال",
+      analysis: "حالة التحليل",
       general: "عام",
     };
     return labels[category] || category;
@@ -319,6 +327,44 @@ export default function ScanResultsPage() {
         {/* Results */}
         {scan.status === "completed" && (
           <>
+            {/* Partial Analysis Warning */}
+            {isPartialAnalysis && (
+              <Card className="mb-6 border-orange-500 bg-orange-50 dark:bg-orange-950/30">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-6 h-6 text-orange-500 flex-shrink-0 mt-1" />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-orange-700 dark:text-orange-400 mb-1">
+                        تحليل جزئي - النتيجة قد تختلف عن الواقع
+                      </h3>
+                      <p className="text-sm text-orange-600 dark:text-orange-300 mb-3">
+                        تم الفحص بناءً على كشف الروابط فقط دون التحقق من محتوى السياسات. 
+                        لم يتم التأكد من اكتمال سياسة الخصوصية أو الشروط وفقاً لمتطلبات نظام حماية البيانات الشخصية.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => {
+                            refetch();
+                            refetchIssues();
+                          }}
+                          className="border-orange-500 text-orange-700 hover:bg-orange-100 dark:hover:bg-orange-900"
+                          data-testid="button-rescan"
+                        >
+                          <RefreshCw className="w-4 h-4 ml-1" />
+                          إعادة الفحص
+                        </Button>
+                        <span className="text-xs text-orange-500 self-center">
+                          أو قم بمراجعة السياسات يدوياً
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Compliance Level & Score Summary */}
             <div className="grid gap-6 mb-6 md:grid-cols-2">
               {/* Compliance Level Card */}
