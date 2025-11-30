@@ -1439,16 +1439,16 @@ ${prepareHtmlForAnalysis(htmlContent)}
       });
     }
     
-    // Add critical issue about incomplete analysis
+    // Add informational issue about partial analysis - NOT critical, just informational
     fallbackIssues.unshift({
-      severity: "critical" as const,
+      severity: "suggestion" as const,
       category: "analysis",
-      title: "تحليل غير مكتمل - يتطلب مراجعة يدوية",
-      description: "تم الفحص بناءً على كشف الروابط فقط. لم يتم التحقق من محتوى السياسات ومدى امتثالها لمتطلبات نظام حماية البيانات الشخصية. النتيجة قد تكون أعلى أو أقل من الواقع.",
-      articleReference: "جميع المواد",
-      regulation: "نظام حماية البيانات الشخصية",
-      remediation: "أعد الفحص لاحقاً للحصول على تحليل كامل، أو قم بمراجعة يدوية للسياسات",
-      affectedElement: "الموقع بالكامل"
+      title: "تحليل أولي - اضغط 'إعادة الفحص' للتحليل الكامل",
+      description: "تم اكتشاف العناصر الأساسية بنجاح. للحصول على تحليل عميق لمحتوى السياسات والتحقق من اكتمالها، اضغط على زر 'إعادة الفحص' في الأعلى.",
+      articleReference: null,
+      regulation: null,
+      remediation: "اضغط على زر 'إعادة الفحص' للحصول على تحليل كامل بالذكاء الاصطناعي",
+      affectedElement: null
     });
     
     // Calculate proportional score within the cap
