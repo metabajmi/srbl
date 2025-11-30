@@ -1342,11 +1342,75 @@ ${prepareHtmlForAnalysis(htmlContent)}
     console.error("Error analyzing website compliance:", error);
     console.error("API Error details:", error.message);
     
-    // Return direct detection + mock issues on API error
-    console.warn("Using fallback: direct detection + mock issues due to OpenAI API error");
+    // Return direct detection with PROPORTIONAL scoring based on detected elements
+    console.warn("Using fallback: direct detection with proportional scoring due to OpenAI API error");
+    
+    // Calculate proportional score based on detected elements (same logic as main flow)
+    let fallbackScore = 100;
+    const fallbackIssues: any[] = [];
+    
+    // Deduct for missing elements
+    if (!directDetection.hasPrivacyPolicy) {
+      fallbackScore -= 30;
+      fallbackIssues.push({
+        severity: "critical" as const,
+        category: "privacy_policy",
+        title: "سياسة الخصوصية غير موجودة",
+        description: "لم يتم العثور على سياسة خصوصية واضحة في الموقع.",
+        articleReference: "المادة الثالثة عشرة",
+        regulation: "نظام حماية البيانات الشخصية",
+        remediation: "أضف صفحة سياسة خصوصية شاملة",
+        affectedElement: "الموقع بالكامل"
+      });
+    }
+    if (!directDetection.hasTermsAndConditions) {
+      fallbackScore -= 30;
+      fallbackIssues.push({
+        severity: "critical" as const,
+        category: "terms_and_conditions",
+        title: "شروط الاستخدام غير موجودة",
+        description: "لم يتم العثور على صفحة شروط وأحكام الاستخدام.",
+        articleReference: "المادة الرابعة عشرة",
+        regulation: "نظام حماية البيانات الشخصية",
+        remediation: "أضف صفحة شروط وأحكام واضحة",
+        affectedElement: "الموقع بالكامل"
+      });
+    }
+    if (!directDetection.hasCookieBanner) {
+      fallbackScore -= 10;
+      fallbackIssues.push({
+        severity: "warning" as const,
+        category: "cookies",
+        title: "عدم وجود لافتة الكوكيز",
+        description: "لم يتم العثور على لافتة موافقة على ملفات تعريف الارتباط.",
+        articleReference: "المادة السادسة",
+        regulation: "نظام حماية البيانات الشخصية",
+        remediation: "أضف لافتة موافقة على الكوكيز",
+        affectedElement: "الموقع بالكامل"
+      });
+    }
+    if (!directDetection.hasContactInfo) {
+      fallbackScore -= 10;
+      fallbackIssues.push({
+        severity: "warning" as const,
+        category: "contact",
+        title: "معلومات الاتصال غير واضحة",
+        description: "لم يتم العثور على معلومات اتصال واضحة للشكاوى.",
+        articleReference: "المادة الرابعة",
+        regulation: "نظام حماية البيانات الشخصية",
+        remediation: "أضف معلومات اتصال واضحة",
+        affectedElement: "الموقع بالكامل"
+      });
+    }
+    
+    // Calculate compliance level
+    const fallbackLevel = fallbackScore >= 70 ? "high" : fallbackScore >= 40 ? "medium" : "low";
+    
+    console.log(`Fallback proportional score: privacy=${directDetection.hasPrivacyPolicy?'✓':'-30'}, terms=${directDetection.hasTermsAndConditions?'✓':'-30'}, cookie=${directDetection.hasCookieBanner?'✓':'-10'}, contact=${directDetection.hasContactInfo?'✓':'-10'}, final=${fallbackScore}`);
+    
     return {
-      overallScore: directDetection.hasPrivacyPolicy && directDetection.hasTermsAndConditions ? 65 : 35,
-      complianceLevel: directDetection.hasPrivacyPolicy && directDetection.hasTermsAndConditions ? "medium" : "low",
+      overallScore: fallbackScore,
+      complianceLevel: fallbackLevel,
       findings: {
         hasPrivacyPolicy: directDetection.hasPrivacyPolicy,
         privacyPolicyUrl: directDetection.privacyPolicyUrl,
@@ -1356,38 +1420,7 @@ ${prepareHtmlForAnalysis(htmlContent)}
         hasDataCollectionForms: true,
         hasContactInfo: directDetection.hasContactInfo,
       },
-      issues: [
-        ...(!directDetection.hasPrivacyPolicy ? [{
-          severity: "critical" as const,
-          category: "privacy_policy",
-          title: "سياسة الخصوصية غير موجودة",
-          description: "لم يتم العثور على سياسة خصوصية واضحة في الموقع.",
-          articleReference: "المادة الثالثة عشرة",
-          regulation: "نظام حماية البيانات الشخصية",
-          remediation: "أضف صفحة سياسة خصوصية شاملة",
-          affectedElement: "الموقع بالكامل"
-        }] : []),
-        ...(!directDetection.hasTermsAndConditions ? [{
-          severity: "critical" as const,
-          category: "terms_and_conditions",
-          title: "شروط الاستخدام غير موجودة",
-          description: "لم يتم العثور على صفحة شروط وأحكام الاستخدام.",
-          articleReference: "المادة الرابعة عشرة",
-          regulation: "نظام حماية البيانات الشخصية",
-          remediation: "أضف صفحة شروط وأحكام واضحة",
-          affectedElement: "الموقع بالكامل"
-        }] : []),
-        {
-          severity: "warning",
-          category: "consent",
-          title: "آلية موافقة غير واضحة",
-          description: "لا توجد آلية واضحة للحصول على موافقة المستخدم",
-          articleReference: "المادة السادسة",
-          regulation: "نظام حماية البيانات الشخصية",
-          remediation: "أضف نموذج موافقة صريحة",
-          affectedElement: "نماذج جمع البيانات"
-        }
-      ]
+      issues: fallbackIssues
     };
   }
 }
