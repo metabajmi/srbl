@@ -459,7 +459,7 @@ export default function ScanResultsPage() {
               <Card className="border-2">
                 <CardHeader>
                   <CardTitle className="text-lg">نتائج الفحص التفصيلية</CardTitle>
-                  <CardDescription>العناصر الموجودة والمفقودة في موقعك</CardDescription>
+                  <CardDescription>العناصر الموجودة والمفقودة في موقعك (يتم فحص المحتوى بالتفصيل)</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -672,6 +672,140 @@ export default function ScanResultsPage() {
                     <strong>ملاحظة:</strong> تم حفظ بيانات موقعك ({scan.url}) تلقائياً. 
                     عند استخدام أي أداة، ستجد البيانات المتاحة معبأة مسبقاً للمراجعة والتأكيد.
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* What We Check - Detailed Analysis Info */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-primary" />
+                  ماذا يفحص الماسح؟
+                </CardTitle>
+                <CardDescription>
+                  تفاصيل العناصر التي يتم تحليلها في محتوى موقعك
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Privacy Policy Checks */}
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-bold mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-primary" />
+                      سياسة الخصوصية (المادة 12 من PDPL)
+                    </h4>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>هوية جهة التحكم ونشاطها</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>بيانات التواصل (بريد، هاتف، عنوان)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>أنواع البيانات الشخصية المجمعة</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>أغراض جمع ومعالجة البيانات</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>المسوغ النظامي للمعالجة</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>الجهات التي تُشارَك معها البيانات</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>النقل الدولي للبيانات والضمانات</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>مدة الاحتفاظ بالبيانات</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>حقوق صاحب البيانات (الوصول، التصحيح، الحذف، الاعتراض)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>آلية تقديم الشكاوى</span>
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  {/* Terms & Conditions Checks */}
+                  <div className="p-4 border rounded-lg">
+                    <h4 className="font-bold mb-3 flex items-center gap-2">
+                      <ScrollText className="w-4 h-4 text-primary" />
+                      الشروط والأحكام (نظام التجارة الإلكترونية)
+                    </h4>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>سياسة الاستبدال والاسترجاع (7 أيام)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>شروط استخدام الموقع والخدمات</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>حدود المسؤولية لكل طرف</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>القانون الحاكم (السعودي)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>الاختصاص القضائي</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>حقوق الملكية الفكرية</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>الضمانات على المنتجات/الخدمات</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span>إجراءات التظلم والشكاوى</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                
+                {/* Additional Elements */}
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className="p-4 border rounded-lg bg-muted/30">
+                    <h4 className="font-bold mb-2 flex items-center gap-2">
+                      <Cookie className="w-4 h-4 text-primary" />
+                      لافتة الكوكيز
+                    </h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>• وجود لافتة موافقة على الكوكيز</li>
+                      <li>• خيارات قبول/رفض واضحة</li>
+                      <li>• رابط لسياسة الكوكيز التفصيلية</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 border rounded-lg bg-muted/30">
+                    <h4 className="font-bold mb-2 flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-primary" />
+                      معلومات الاتصال
+                    </h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>• بريد إلكتروني للتواصل</li>
+                      <li>• رقم هاتف للدعم</li>
+                      <li>• عنوان فعلي (للمتاجر)</li>
+                    </ul>
+                  </div>
                 </div>
               </CardContent>
             </Card>
