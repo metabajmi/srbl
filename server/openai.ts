@@ -1284,13 +1284,14 @@ ${prepareHtmlForAnalysis(htmlContent)}
     }
     
     // Additional deductions based on issue severity (from OpenAI analysis)
+    // More aggressive scoring to reflect actual compliance issues
     const criticalCount = issues.filter((i: any) => i.severity === "critical").length;
     const warningCount = issues.filter((i: any) => i.severity === "warning").length;
     const suggestionCount = issues.filter((i: any) => i.severity === "suggestion").length;
     
-    deterministicScore -= (criticalCount * 5); // -5 per critical issue
-    deterministicScore -= (warningCount * 3);   // -3 per warning
-    deterministicScore -= (suggestionCount * 1); // -1 per suggestion
+    deterministicScore -= (criticalCount * 10); // -10 per critical issue (was 5)
+    deterministicScore -= (warningCount * 5);   // -5 per warning (was 3)
+    deterministicScore -= (suggestionCount * 2); // -2 per suggestion (was 1)
     
     // DEEP CONTENT ANALYSIS: Fetch and analyze policy content for specific violations
     console.log("[DEEP_ANALYSIS] Starting deep content analysis...");
@@ -1323,15 +1324,16 @@ ${prepareHtmlForAnalysis(htmlContent)}
     const deepWarningCount = deepIssues.filter((i: any) => i.severity === "warning").length;
     const deepSuggestionCount = deepIssues.filter((i: any) => i.severity === "suggestion").length;
     
-    // Adjust score for deep violations (less severe deductions since policy exists)
-    deterministicScore -= (deepCriticalCount * 3); // -3 per critical content violation
-    deterministicScore -= (deepWarningCount * 2);   // -2 per warning
-    deterministicScore -= (deepSuggestionCount * 1); // -1 per suggestion
+    // Adjust score for deep violations (policy exists but content issues)
+    deterministicScore -= (deepCriticalCount * 8); // -8 per critical content violation (was 3)
+    deterministicScore -= (deepWarningCount * 4);   // -4 per warning (was 2)
+    deterministicScore -= (deepSuggestionCount * 2); // -2 per suggestion (was 1)
     
     const finalScore = Math.max(0, Math.min(100, deterministicScore));
-    const finalLevel = finalScore >= 70 ? "high" : finalScore >= 40 ? "medium" : "low";
+    // Stricter compliance levels: high only for 85%+, medium 50-84%, low <50%
+    const finalLevel = finalScore >= 85 ? "high" : finalScore >= 50 ? "medium" : "low";
     
-    console.log(`Deterministic score: privacy=${mergedFindings.hasPrivacyPolicy?'✓':'-30'}, terms=${mergedFindings.hasTermsAndConditions?'✓':'-30'}, cookie=${mergedFindings.hasCookieBanner?'✓':'-10'}, contact=${mergedFindings.hasContactInfo?'✓':'-10'}, detection_issues=(critical:${criticalCount}×-5, warnings:${warningCount}×-3, suggestions:${suggestionCount}×-1), content_issues=(critical:${deepCriticalCount}×-3, warnings:${deepWarningCount}×-2, suggestions:${deepSuggestionCount}×-1), final=${finalScore}`);
+    console.log(`Deterministic score: privacy=${mergedFindings.hasPrivacyPolicy?'✓':'-30'}, terms=${mergedFindings.hasTermsAndConditions?'✓':'-30'}, cookie=${mergedFindings.hasCookieBanner?'✓':'-10'}, contact=${mergedFindings.hasContactInfo?'✓':'-10'}, detection_issues=(critical:${criticalCount}×-10, warnings:${warningCount}×-5, suggestions:${suggestionCount}×-2), content_issues=(critical:${deepCriticalCount}×-8, warnings:${deepWarningCount}×-4, suggestions:${deepSuggestionCount}×-2), final=${finalScore}, level=${finalLevel}`);
     
     return {
       overallScore: finalScore,
