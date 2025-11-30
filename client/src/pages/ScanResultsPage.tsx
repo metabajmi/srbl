@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertCircle, AlertTriangle, Info, FileText, Download, ArrowRight, CheckCircle, XCircle, Globe, Home, RefreshCw, Wrench, ScrollText, Cookie, Settings } from "lucide-react";
+import { Shield, AlertCircle, AlertTriangle, Info, FileText, Download, ArrowRight, CheckCircle, XCircle, Globe, Home, RefreshCw, Wrench, ScrollText, Cookie, Settings, ExternalLink } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
 import { useState, useEffect, useRef } from "react";
 import { BackButton } from "@/components/BackButton";
@@ -455,77 +455,161 @@ export default function ScanResultsPage() {
                 </CardContent>
               </Card>
 
-              {/* Compliance Findings Card */}
+              {/* Compliance Findings Card - Detailed */}
               <Card className="border-2">
                 <CardHeader>
                   <CardTitle className="text-lg">نتائج الفحص التفصيلية</CardTitle>
-                  <CardDescription>العناصر الموجودة والمفقودة في موقعك (يتم فحص المحتوى بالتفصيل)</CardDescription>
+                  <CardDescription>العناصر المفحوصة ومحتوياتها التفصيلية</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    <div className={`flex items-center justify-between p-3 rounded-lg ${scan.hasPrivacyPolicy ? 'bg-green-50 dark:bg-green-950' : 'bg-destructive/10'}`}>
-                      <div className="flex items-center gap-2">
+                  <div className="space-y-4">
+                    
+                    {/* Privacy Policy - Detailed */}
+                    <div className={`rounded-lg border ${scan.hasPrivacyPolicy ? 'border-green-300 bg-green-50/50 dark:bg-green-950/30' : 'border-destructive/50 bg-destructive/5'}`}>
+                      <div className="flex items-center justify-between p-3 border-b border-inherit">
+                        <div className="flex items-center gap-2">
+                          {scan.hasPrivacyPolicy ? (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-destructive" />
+                          )}
+                          <span className="font-bold">سياسة الخصوصية</span>
+                          <span className="text-xs text-muted-foreground">(المادة 12 من PDPL)</span>
+                        </div>
                         {scan.hasPrivacyPolicy ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
                         ) : (
-                          <XCircle className="w-5 h-5 text-destructive" />
+                          <Badge variant="destructive">مفقودة</Badge>
                         )}
-                        <span className="font-medium">سياسة الخصوصية</span>
                       </div>
-                      {scan.hasPrivacyPolicy ? (
-                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
-                      ) : (
-                        <Badge variant="destructive">مفقودة</Badge>
+                      {scan.hasPrivacyPolicy && scan.privacyPolicyUrl && (
+                        <div className="px-3 py-2 border-b border-inherit bg-muted/30">
+                          <a href={scan.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" 
+                             className="text-sm text-primary hover:underline flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />
+                            {scan.privacyPolicyUrl}
+                          </a>
+                        </div>
                       )}
+                      <div className="p-3">
+                        <p className="text-xs text-muted-foreground mb-2 font-medium">العناصر المفحوصة (10 عناصر إلزامية):</p>
+                        <div className="grid grid-cols-2 gap-1 text-xs">
+                          <div className="flex items-center gap-1"><span className="text-primary">pp1:</span> هوية جهة التحكم</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">pp2:</span> بيانات التواصل</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">pp3:</span> أنواع البيانات المجمعة</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">pp4:</span> أغراض المعالجة</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">pp5:</span> المسوغ النظامي</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">pp6:</span> مشاركة البيانات</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">pp7:</span> النقل الدولي</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">pp8:</span> مدة الاحتفاظ</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">pp9:</span> حقوق صاحب البيانات (7 حقوق)</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">pp10:</span> آلية الشكاوى</div>
+                        </div>
+                      </div>
                     </div>
                     
-                    <div className={`flex items-center justify-between p-3 rounded-lg ${scan.hasTermsAndConditions ? 'bg-green-50 dark:bg-green-950' : 'bg-destructive/10'}`}>
-                      <div className="flex items-center gap-2">
+                    {/* Terms & Conditions - Detailed */}
+                    <div className={`rounded-lg border ${scan.hasTermsAndConditions ? 'border-green-300 bg-green-50/50 dark:bg-green-950/30' : 'border-destructive/50 bg-destructive/5'}`}>
+                      <div className="flex items-center justify-between p-3 border-b border-inherit">
+                        <div className="flex items-center gap-2">
+                          {scan.hasTermsAndConditions ? (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-destructive" />
+                          )}
+                          <span className="font-bold">الشروط والأحكام</span>
+                          <span className="text-xs text-muted-foreground">(نظام التجارة الإلكترونية)</span>
+                        </div>
                         {scan.hasTermsAndConditions ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
                         ) : (
-                          <XCircle className="w-5 h-5 text-destructive" />
+                          <Badge variant="destructive">مفقودة</Badge>
                         )}
-                        <span className="font-medium">شروط الاستخدام</span>
                       </div>
-                      {scan.hasTermsAndConditions ? (
-                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
-                      ) : (
-                        <Badge variant="destructive">مفقودة</Badge>
+                      {scan.hasTermsAndConditions && scan.termsAndConditionsUrl && (
+                        <div className="px-3 py-2 border-b border-inherit bg-muted/30">
+                          <a href={scan.termsAndConditionsUrl} target="_blank" rel="noopener noreferrer" 
+                             className="text-sm text-primary hover:underline flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />
+                            {scan.termsAndConditionsUrl}
+                          </a>
+                        </div>
                       )}
+                      <div className="p-3">
+                        <p className="text-xs text-muted-foreground mb-2 font-medium">العناصر المفحوصة (8 عناصر إلزامية):</p>
+                        <div className="grid grid-cols-2 gap-1 text-xs">
+                          <div className="flex items-center gap-1"><span className="text-primary">tc1:</span> الاستبدال والاسترجاع (7 أيام)</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">tc2:</span> شروط الاستخدام</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">tc3:</span> حدود المسؤولية</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">tc4:</span> القانون الحاكم (السعودي)</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">tc5:</span> الاختصاص القضائي</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">tc6:</span> حقوق الملكية الفكرية</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">tc7:</span> الضمانات</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">tc8:</span> إجراءات الشكاوى</div>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className={`flex items-center justify-between p-3 rounded-lg ${scan.hasCookieBanner ? 'bg-green-50 dark:bg-green-950' : 'bg-orange-50 dark:bg-orange-950'}`}>
-                      <div className="flex items-center gap-2">
+                    {/* Cookie Banner - Detailed */}
+                    <div className={`rounded-lg border ${scan.hasCookieBanner ? 'border-green-300 bg-green-50/50 dark:bg-green-950/30' : 'border-orange-300 bg-orange-50/50 dark:bg-orange-950/30'}`}>
+                      <div className="flex items-center justify-between p-3 border-b border-inherit">
+                        <div className="flex items-center gap-2">
+                          {scan.hasCookieBanner ? (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <AlertTriangle className="w-5 h-5 text-orange-500" />
+                          )}
+                          <span className="font-bold">لافتة الكوكيز</span>
+                          <span className="text-xs text-muted-foreground">(موافقة ملفات تعريف الارتباط)</span>
+                        </div>
                         {scan.hasCookieBanner ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
                         ) : (
-                          <AlertTriangle className="w-5 h-5 text-orange-500" />
+                          <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">مفقودة</Badge>
                         )}
-                        <span className="font-medium">لافتة الكوكيز</span>
                       </div>
-                      {scan.hasCookieBanner ? (
-                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">مفقودة</Badge>
-                      )}
+                      <div className="p-3">
+                        <p className="text-xs text-muted-foreground mb-2 font-medium">طرق الكشف المستخدمة (6 طرق):</p>
+                        <div className="grid grid-cols-2 gap-1 text-xs">
+                          <div className="flex items-center gap-1"><span className="text-primary">1.</span> منصات إدارة الكوكيز (OneTrust, Cookiebot...)</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">2.</span> منصات Zid, Salla السعودية</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">3.</span> عناصر CSS (class/id=cookie, consent)</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">4.</span> نصوص عربية/إنجليزية للموافقة</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">5.</span> أزرار قبول/رفض/إعدادات</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">6.</span> عناصر fixed/sticky بـ z-index عالي</div>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className={`flex items-center justify-between p-3 rounded-lg ${scan.hasContactInfo ? 'bg-green-50 dark:bg-green-950' : 'bg-orange-50 dark:bg-orange-950'}`}>
-                      <div className="flex items-center gap-2">
+                    {/* Contact Info - Detailed */}
+                    <div className={`rounded-lg border ${scan.hasContactInfo ? 'border-green-300 bg-green-50/50 dark:bg-green-950/30' : 'border-orange-300 bg-orange-50/50 dark:bg-orange-950/30'}`}>
+                      <div className="flex items-center justify-between p-3 border-b border-inherit">
+                        <div className="flex items-center gap-2">
+                          {scan.hasContactInfo ? (
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <AlertTriangle className="w-5 h-5 text-orange-500" />
+                          )}
+                          <span className="font-bold">معلومات الاتصال</span>
+                          <span className="text-xs text-muted-foreground">(بيانات التواصل)</span>
+                        </div>
                         {scan.hasContactInfo ? (
-                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
                         ) : (
-                          <AlertTriangle className="w-5 h-5 text-orange-500" />
+                          <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">مفقودة</Badge>
                         )}
-                        <span className="font-medium">معلومات الاتصال</span>
                       </div>
-                      {scan.hasContactInfo ? (
-                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">موجودة</Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300">مفقودة</Badge>
-                      )}
+                      <div className="p-3">
+                        <p className="text-xs text-muted-foreground mb-2 font-medium">العناصر المفحوصة:</p>
+                        <div className="grid grid-cols-2 gap-1 text-xs">
+                          <div className="flex items-center gap-1"><span className="text-primary">•</span> بريد إلكتروني (نمط Regex)</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">•</span> روابط mailto:</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">•</span> رقم هاتف (أنماط دولية)</div>
+                          <div className="flex items-center gap-1"><span className="text-primary">•</span> صفحة "اتصل بنا" / "تواصل"</div>
+                        </div>
+                      </div>
                     </div>
+
                   </div>
                 </CardContent>
               </Card>
