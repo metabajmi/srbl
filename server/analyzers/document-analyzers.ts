@@ -50,16 +50,20 @@ const TERMS_PATTERNS = {
   
   // tc3 - Limitation of liability
   liabilityLimitation: [
-    // Arabic - Extended
+    // Arabic - Extended (with future-tense negation patterns)
     'حدود المسؤولية', 'إخلاء المسؤولية', 'لا نتحمل مسؤولية', 'لسنا مسؤولين',
     'المسؤولية محدودة', 'دون ضمان', 'كما هي', 'التعويضات',
     'حد أقصى للمسؤولية', 'لا نضمن', 'لا ضمان', 'الإعفاء من المسؤولية',
     'المسؤولية القانونية', 'لا نتحمل أي مسؤولية', 'غير مسؤولين عن',
     'استثناء المسؤولية', 'تقييد المسؤولية', 'الضرر غير المباشر',
+    'لن نكون مسؤولين', 'لن تتحمل الشركة', 'لن نتحمل', 'لا نعتبر مسؤولين',
+    'نخلي مسؤوليتنا', 'تخلي الشركة مسؤوليتها', 'الشركة غير مسؤولة',
+    'لا تتحمل المنصة', 'لا يتحمل الموقع', 'لا نقدم أي ضمان',
     // English
     'limitation of liability', 'disclaimer', 'we are not liable', 'not responsible for',
     'liability is limited', 'as is', 'without warranty', 'indemnification',
-    'maximum liability', 'disclaimers', 'no warranties'
+    'maximum liability', 'disclaimers', 'no warranties', 'shall not be liable',
+    'will not be responsible', 'we will not be held responsible'
   ],
   
   // tc4 - Governing law
@@ -174,12 +178,12 @@ const COOKIE_PATTERNS = {
   
   // cp2 - Cookie types
   cookieTypes: [
-    // Arabic - Extended
+    // Arabic - Extended (deduplicated)
     'أنواع الكوكيز', 'ملفات ضرورية', 'ملفات تحليلية', 'ملفات إعلانية',
     'كوكيز الجلسة', 'كوكيز دائمة', 'كوكيز وظيفية', 'كوكيز أساسية',
     'كوكيز التسويق', 'كوكيز الأداء', 'كوكيز التفضيلات',
     'الكوكيز الضرورية', 'الكوكيز الإعلانية', 'كوكيز التحليل',
-    'ملفات ضرورية', 'ملفات اختيارية', 'أنواع ملفات تعريف الارتباط',
+    'ملفات اختيارية', 'أنواع ملفات تعريف الارتباط',
     // English
     'types of cookies', 'essential cookies', 'analytics cookies', 'advertising cookies',
     'session cookies', 'persistent cookies', 'functional cookies', 'performance cookies',
@@ -201,11 +205,12 @@ const COOKIE_PATTERNS = {
   
   // cp4 - Cookie duration
   cookieDuration: [
-    // Arabic - Extended
+    // Arabic - Extended (fixed: removed return-policy term)
     'مدة الصلاحية', 'تنتهي صلاحيتها', 'مدة البقاء', 'فترة الاحتفاظ',
-    'تحذف تلقائياً', 'عند إغلاق المتصفح', 'مدة الإرجاع', 'فترة الصلاحية',
+    'تحذف تلقائياً', 'عند إغلاق المتصفح', 'فترة الصلاحية',
     'تنتهي بعد', 'صالحة لمدة', 'لمدة سنة', 'لمدة شهر', 'لمدة أسبوع',
     'كوكيز مؤقتة', 'كوكيز طويلة الأمد', 'عمر الكوكي',
+    'مدة الاحتفاظ بالكوكيز', 'مدة صلاحية الكوكي', 'فترة بقاء الكوكي',
     // English
     'cookie duration', 'expiry', 'how long', 'retention period',
     'automatically deleted', 'when you close browser', 'session expires',
