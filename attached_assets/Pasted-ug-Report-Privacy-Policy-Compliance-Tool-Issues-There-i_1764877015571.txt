@@ -1,0 +1,34 @@
+ug Report: Privacy Policy & Compliance Tool Issues
+
+There is an issue with the Compliance Checker and the Privacy Policy evaluation.  
+The tool reports that the policy is complete with no missing elements, while several critical sections are actually missing.  
+Below are the errors that should have been detected by the compliance system:
+
+1) Missing specification of the types of personal data collected
+   - The policy does not clearly define what categories of personal data are collected 
+     (e.g., identity data, contact information, technical data, browsing data, cookies, etc.).
+   - This is a mandatory component in any compliant privacy policy and should be flagged as incomplete.
+
+2) Missing explanation of Data Subject Rights
+   - The policy does not outline the user’s legal rights, such as:
+     • Right of access  
+     • Right to rectification  
+     • Right to deletion (erasure)  
+     • Right to object to processing  
+     • Right to data portability  
+     • How to submit complaints or contact the Data Protection Officer  
+   - These rights are essential under data protection regulations and must be included.  
+     The compliance checker should identify their absence.
+
+3) Use of personal data for marketing without obtaining consent
+   - The policy states that personal data may be used for marketing, offers, or promotional messages.  
+   - However, it does NOT mention obtaining prior explicit user consent (opt-in) before using personal data for marketing purposes.  
+   - This is a compliance violation, and the tool should have flagged it.
+
+Summary:
+The compliance checker is currently giving an inaccurate evaluation by marking the policy as complete, even though it is missing:
+- A clear list of personal data types collected  
+- A full explanation of data subject rights  
+- A consent requirement for marketing activities
+
+Please review and update the compliance detection logic so that these missing elements are properly flagged as errors in the privacy policy.
