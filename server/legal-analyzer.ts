@@ -181,36 +181,23 @@ function isNegatedContext(text: string, keyword: string): boolean {
 }
 
 // Deterministic check for affirmative data collection statements with specific types
+// REQUIRES: collection verb AND specific data types IN SAME CONTEXT (within 300 chars)
 function hasAffirmativeDataTypeCollection(textLower: string): boolean {
-  // Affirmative collection patterns (positive statements)
-  const affirmativePatterns = [
-    // Arabic - affirmative collection
-    'نجمع المعلومات التالية', 'نجمع البيانات التالية', 'البيانات التي نجمعها',
-    'المعلومات التي نجمعها', 'نحصل على المعلومات', 'نقوم بجمع',
-    'تشمل البيانات المجمعة', 'نجمع منك', 'نجمع عنك',
-    // English - affirmative collection  
-    'we collect the following', 'we collect information', 'we may collect',
-    'we gather information', 'information we collect', 'data we collect',
-    'we obtain information', 'types of data we collect', 'data types we collect'
+  // Affirmative collection verbs
+  const collectionVerbs = [
+    // Arabic
+    'نجمع', 'نحصل على', 'نقوم بجمع', 'البيانات التي نجمعها', 'المعلومات التي نجمعها',
+    'تشمل البيانات المجمعة', 'البيانات المجمعة تشمل', 'نجمع منك', 'نجمع عنك',
+    // English
+    'we collect', 'we gather', 'we obtain', 'we may collect', 'information we collect',
+    'data we collect', 'types of data we collect', 'data types we collect',
+    'types of information', 'personal data we collect'
   ];
   
-  // Check for affirmative collection patterns
-  const hasAffirmativePattern = affirmativePatterns.some(p => textLower.includes(p.toLowerCase()));
-  
-  // If we found an affirmative pattern, verify it's not negated
-  if (hasAffirmativePattern) {
-    // Check that it's not in a negation context
-    for (const pattern of affirmativePatterns) {
-      if (textLower.includes(pattern.toLowerCase()) && !isNegatedContext(textLower, pattern)) {
-        return true;
-      }
-    }
-  }
-  
-  // Specific data types (not generic phrases)
+  // Specific data types
   const specificDataTypes = [
     // Arabic - identity
-    'الاسم', 'الاسم الكامل', 'اسمك', 'أسماء',
+    'الاسم', 'الاسم الكامل', 'اسمك',
     // Arabic - contact
     'البريد الإلكتروني', 'الإيميل', 'بريدك',
     'رقم الهاتف', 'رقم الجوال', 'هاتفك', 
@@ -223,9 +210,9 @@ function hasAffirmativeDataTypeCollection(textLower: string): boolean {
     // Arabic - account
     'اسم المستخدم', 'كلمة المرور',
     // English - identity
-    'full name', 'first name', 'last name',
+    'full name', 'first name', 'last name', 'your name',
     // English - contact
-    'email address', 'phone number', 'postal address',
+    'email address', 'phone number', 'postal address', 'mailing address',
     // English - technical
     'ip address', 'browser type', 'device information', 'operating system',
     // English - financial
@@ -233,20 +220,47 @@ function hasAffirmativeDataTypeCollection(textLower: string): boolean {
     // English - account
     'username', 'password',
     // Categories
-    'بيانات الهوية', 'بيانات الاتصال', 'بيانات تقنية',
-    'identity data', 'contact data', 'technical data'
+    'بيانات الهوية', 'بيانات الاتصال', 'بيانات تقنية', 'بيانات مالية',
+    'identity data', 'contact data', 'technical data', 'financial data'
   ];
   
-  // Count how many specific data types are mentioned in AFFIRMATIVE context (not negated)
-  let affirmativeDataTypes = 0;
-  for (const dataType of specificDataTypes) {
-    if (textLower.includes(dataType.toLowerCase()) && !isNegatedContext(textLower, dataType)) {
-      affirmativeDataTypes++;
+  // For each collection verb occurrence, check if there's a data type nearby
+  for (const verb of collectionVerbs) {
+    const verbLower = verb.toLowerCase();
+    let searchStart = 0;
+    
+    // Find ALL occurrences of this verb
+    while (true) {
+      const verbIndex = textLower.indexOf(verbLower, searchStart);
+      if (verbIndex === -1) break;
+      
+      searchStart = verbIndex + 1; // Move past this occurrence for next iteration
+      
+      // Check if this occurrence is negated
+      const contextStart = Math.max(0, verbIndex - 50);
+      const beforeContext = textLower.substring(contextStart, verbIndex);
+      const negations = ['لا ', 'لن ', 'لم ', 'ليس', 'دون', 'بدون', 'do not', 'don\'t', 'does not', 'doesn\'t', 'never', 'will not', 'won\'t'];
+      const isNegated = negations.some(neg => beforeContext.includes(neg.toLowerCase()));
+      
+      if (isNegated) continue; // Skip negated occurrences
+      
+      // Look for data types within 300 characters AFTER the collection verb
+      const contextEnd = Math.min(textLower.length, verbIndex + 300);
+      const afterContext = textLower.substring(verbIndex, contextEnd);
+      
+      // Check if any specific data type is in this context
+      for (const dataType of specificDataTypes) {
+        if (afterContext.includes(dataType.toLowerCase())) {
+          // Found collection verb + data type in same context
+          console.log(`[DETERMINISTIC] Found "${verb}" + "${dataType}" in same context`);
+          return true;
+        }
+      }
     }
   }
   
-  // Need at least one specific data type in affirmative context
-  return affirmativeDataTypes >= 1;
+  // No co-located collection verb + data type found
+  return false;
 }
 
 // Deterministic check for specific rights mentioned
@@ -396,22 +410,30 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
   }
   
   // pp11 - Marketing consent
-  // AI reported violation - verify deterministically
+  // AI reported violation - verify deterministically with negation handling
   if (reqId === 'pp11') {
     const marketingCheck = hasMarketingWithConsentMechanism(textLower);
     
+    // If marketing not mentioned at all, no consent needed
     if (!marketingCheck.mentionsMarketing) {
       console.log(`[RAG_VERIFY] pp11: OVERRIDE AI - marketing not mentioned, no consent needed`);
-      return false; // False positive - no marketing = no consent needed
+      return false; // False positive
     }
     
+    // If marketing is explicitly negated ("we do not use for marketing"), no consent needed
+    if (marketingCheck.marketingNegated) {
+      console.log(`[RAG_VERIFY] pp11: OVERRIDE AI - marketing explicitly negated`);
+      return false; // False positive - negated marketing
+    }
+    
+    // If marketing mentioned WITH consent/opt-out mechanism, compliant
     if (marketingCheck.hasConsent) {
-      console.log(`[RAG_VERIFY] pp11: OVERRIDE AI - marketing mentioned WITH consent mechanism`);
-      return false; // False positive - has consent mechanism
+      console.log(`[RAG_VERIFY] pp11: OVERRIDE AI - marketing WITH consent mechanism`);
+      return false; // False positive - has consent
     }
     
     console.log(`[RAG_VERIFY] pp11: AI violation CONFIRMED - marketing without consent mechanism`);
-    return true; // Real violation - marketing without consent
+    return true; // Real violation
   }
   
   // Check for cookies info - c1-c4
