@@ -17,6 +17,13 @@ import {
   DeterministicScanResult,
   ExtractedCookie,
 } from '@shared/schema';
+import {
+  analyzeTermsDeterministic,
+  analyzeCookiePolicyDeterministic,
+  analyzeReturnPolicyDeterministic,
+  type ComprehensiveAnalysisResult,
+  type DocumentAnalysisReport
+} from '../legal-analyzer';
 
 export interface AnalysisOptions {
   timeout?: number;
