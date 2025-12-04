@@ -160,6 +160,179 @@ export function loadLegalKnowledgeBase(): LegalArticle[] {
     }
   }
   
+  // Load Data Protection Officer (DPO) Requirements
+  if (data.dataProtectionOfficerRequirements) {
+    const dpoData = data.dataProtectionOfficerRequirements;
+    
+    // Mandatory appointment cases
+    if (dpoData.mandatoryAppointmentCases) {
+      for (const req of dpoData.mandatoryAppointmentCases) {
+        articles.push({
+          id: req.id,
+          category: "dpo_requirements",
+          textAr: req.ar,
+          textEn: req.en,
+          source: dpoData.source,
+          severity: req.severity || "critical",
+          description: dpoData.legalBasis,
+        });
+      }
+    }
+    
+    // Large-scale processing criteria
+    if (dpoData.largeScaleCriteria) {
+      for (const criterion of dpoData.largeScaleCriteria) {
+        articles.push({
+          id: criterion.id,
+          category: "dpo_large_scale_criteria",
+          textAr: criterion.ar,
+          textEn: criterion.en,
+          source: dpoData.source,
+          severity: "warning",
+        });
+      }
+    }
+    
+    // Regular monitoring examples
+    if (dpoData.regularMonitoringExamples) {
+      for (const example of dpoData.regularMonitoringExamples) {
+        articles.push({
+          id: example.id,
+          category: "dpo_monitoring_examples",
+          textAr: example.ar,
+          textEn: example.en,
+          source: dpoData.source,
+          severity: "suggestion",
+        });
+      }
+    }
+    
+    // DPO Tasks
+    if (dpoData.dpoTasks) {
+      for (const task of dpoData.dpoTasks) {
+        articles.push({
+          id: task.id,
+          category: "dpo_tasks",
+          textAr: task.ar,
+          textEn: task.en,
+          source: dpoData.source,
+          severity: "warning",
+        });
+      }
+    }
+    
+    // Documentation requirements
+    if (dpoData.documentationRequirements) {
+      for (const req of dpoData.documentationRequirements) {
+        articles.push({
+          id: req.id,
+          category: "dpo_documentation",
+          textAr: req.ar,
+          textEn: req.en,
+          source: dpoData.source,
+          severity: req.severity || "critical",
+        });
+      }
+    }
+  }
+  
+  // Load Cross-Border Data Transfer Requirements
+  if (data.crossBorderDataTransferRequirements) {
+    const cbData = data.crossBorderDataTransferRequirements;
+    
+    // Appropriate safeguards
+    if (cbData.appropriateSafeguards) {
+      for (const safeguard of cbData.appropriateSafeguards) {
+        articles.push({
+          id: safeguard.id,
+          category: "cross_border_safeguards",
+          textAr: safeguard.ar,
+          textEn: safeguard.en,
+          source: cbData.source,
+          severity: "critical",
+          description: safeguard.description,
+        });
+      }
+    }
+    
+    // Exemption cases
+    if (cbData.exemptionCases) {
+      for (const exemption of cbData.exemptionCases) {
+        articles.push({
+          id: exemption.id,
+          category: "cross_border_exemptions",
+          textAr: exemption.ar,
+          textEn: exemption.en,
+          source: cbData.source,
+          severity: "warning",
+          description: exemption.condition,
+        });
+      }
+    }
+    
+    // Risk assessment elements
+    if (cbData.riskAssessmentElements) {
+      for (const element of cbData.riskAssessmentElements) {
+        articles.push({
+          id: element.id,
+          category: "cross_border_risk_assessment",
+          textAr: element.ar,
+          textEn: element.en,
+          source: cbData.source,
+          severity: "warning",
+        });
+      }
+    }
+  }
+  
+  // Load Data Sharing Policy Requirements
+  if (data.dataSharingPolicyRequirements) {
+    const dsData = data.dataSharingPolicyRequirements;
+    
+    // Principles
+    if (dsData.principles) {
+      for (const principle of dsData.principles) {
+        articles.push({
+          id: principle.id,
+          category: "data_sharing_principles",
+          textAr: principle.ar,
+          textEn: principle.en,
+          source: dsData.source,
+          severity: "warning",
+          description: principle.description,
+        });
+      }
+    }
+    
+    // General rules
+    if (dsData.generalRules) {
+      for (const rule of dsData.generalRules) {
+        articles.push({
+          id: rule.id,
+          category: "data_sharing_rules",
+          textAr: rule.ar,
+          textEn: rule.en,
+          source: dsData.source,
+          severity: "warning",
+        });
+      }
+    }
+    
+    // Data retention rules
+    if (dsData.dataRetentionRules) {
+      for (const rule of dsData.dataRetentionRules) {
+        articles.push({
+          id: rule.id,
+          category: "data_retention_rules",
+          textAr: rule.ar,
+          textEn: rule.en,
+          source: dsData.source,
+          severity: "warning",
+        });
+      }
+    }
+  }
+  
   legalKnowledgeBase = articles;
   console.log(`[LEGAL_KB] Loaded ${articles.length} legal requirements`);
   return articles;

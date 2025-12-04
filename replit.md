@@ -69,8 +69,8 @@ Includes database tables for users, client policies, and requests, with backend 
 **Admin Portal:**
 Features a secure admin portal with database tables for admin users (with roles) and audit logs. The backend provides 13 secure admin API endpoints with session-based authentication, role-based access control (requireAuth, requireAdminAuth, requireAdminRole, requireAdminOrLegal), Zod validation, and audit logging. The frontend includes 7 pages (Login, Dashboard, Users, Requests, Policies, Audit Logs, Management) with features like role-based access, audit logging, and statistics.
 
-**Compliance Requirements Knowledge Base (v2.0 - Dec 2025):**
-The compliance requirements knowledge base (`server/knowledge/pdpl/compliance-requirements.json`) contains 18 sections of regulatory requirements extracted from official Saudi regulatory documents:
+**Compliance Requirements Knowledge Base (v3.0 - Dec 2025):**
+The compliance requirements knowledge base (`server/knowledge/pdpl/compliance-requirements.json`) contains 21 sections of regulatory requirements extracted from 22+ official Saudi regulatory documents:
 - **E-Commerce Compliance Checklist:** 20-point self-assessment from Ministry of Commerce (Jan 2022)
 - **Privacy Policy Requirements:** 11 mandatory elements from SDAIA Privacy Policy Guideline (Aug 2024)
 - **Minimum Data Requirements:** 6 principles + 3 controller obligations from Data Minimization Guideline (Aug 2024)
@@ -81,7 +81,10 @@ The compliance requirements knowledge base (`server/knowledge/pdpl/compliance-re
 - **Return/Refund Policy Requirements:** 8 requirements from E-Commerce Law Article 13
 - **Legal Basis for Processing:** 10 legal bases from PDPL Articles 5, 6, and 10
 - **Consumer Rights:** 7 rights from Ministry of Commerce Consumer Guide
-- **Arabic/English Keywords:** Comprehensive keyword lists for pattern matching
+- **Data Protection Officer (DPO) Requirements:** 3 mandatory appointment cases, 5 large-scale processing criteria, 6 DPO tasks, 3 documentation requirements from SDAIA DPO Guidelines
+- **Cross-Border Data Transfer Requirements:** 3 appropriate safeguards, 5 exemption cases, 6 risk assessment elements from PDPL Article 29 and Transfer Regulations
+- **Data Sharing Policy Requirements:** 8 principles, 6 general rules, 3 data retention rules from SDAIA Data Sharing Policy
+- **Arabic/English Keywords:** Comprehensive keyword lists for pattern matching including cross-border, DPO, and data sharing terms
 
 ## External Dependencies
 
