@@ -156,7 +156,8 @@ function formatRequirementsForPrompt(requirements: LegalArticle[]): string {
   ).join('\n\n');
 }
 
-// False positive detection - check if element actually exists in text
+// False positive detection - check if element actually exists in text with STRICT validation
+// For complex checks (pp3, pp8, pp11), we trust AI's judgment since it can understand context better
 function verifyViolationAgainstText(violation: LegalViolation, textLower: string): boolean {
   const title = violation.title;
   const reqId = violation.requirementId;
@@ -170,8 +171,8 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
     if (hasCompanyName) return false;
   }
   
-  // Check for contact info - pp10 or ecom2
-  if (reqId === 'pp10' || reqId === 'ecom2' || title.includes('معلومات اتصال') || title.includes('تواصل')) {
+  // Check for contact info - pp2 or ecom2
+  if (reqId === 'pp2' || reqId === 'ecom2' || title.includes('معلومات اتصال') || title.includes('تواصل')) {
     const hasContactInfo = 
       /@[a-z0-9.-]+\.[a-z]{2,}/i.test(textLower) || // email
       /\d{9,}/i.test(textLower) || // phone
@@ -182,17 +183,16 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
     if (hasContactInfo) return false;
   }
   
-  // Check for update date - pp6
-  if (reqId === 'pp6' || title.includes('تحديث') || title.includes('سجل')) {
-    const hasUpdateDate = 
-      /تاريخ التحديث|آخر تحديث|تم التحديث|last updated/i.test(textLower) ||
-      /\d{1,2}[\s\-\/]\w+[\s\-\/]\d{4}/.test(textLower) || // date pattern
-      /\d{4}[\s\-\/]\d{1,2}[\s\-\/]\d{1,2}/.test(textLower);
-    if (hasUpdateDate) return false;
+  // pp3 - Data types specification: Let AI handle this check
+  // AI can understand context better (e.g., "we collect X, Y, Z" vs just mentioning keywords)
+  // Keep AI's decision for this requirement
+  if (reqId === 'pp3') {
+    console.log(`[RAG_VERIFY] pp3 (data types): AI reported missing data types specification - KEEPING VIOLATION`);
+    return true; // Trust AI's judgment on this complex check
   }
   
-  // Check for data collection methods - pp2
-  if (reqId === 'pp2' || title.includes('طرق جمع') || title.includes('جمع البيانات')) {
+  // Check for data collection methods - pp4
+  if (reqId === 'pp4' || title.includes('طرق جمع') || title.includes('جمع البيانات')) {
     const hasCollectionInfo = 
       textLower.includes('نجمع') ||
       textLower.includes('جمع المعلومات') ||
@@ -202,8 +202,8 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
     if (hasCollectionInfo) return false;
   }
   
-  // Check for data usage purposes - pp3
-  if (reqId === 'pp3' || title.includes('غرض') || title.includes('استخدام')) {
+  // Check for data processing purposes - pp5
+  if (reqId === 'pp5' || title.includes('غرض') || title.includes('معالجة')) {
     const hasUsageInfo = 
       textLower.includes('نستخدم') ||
       textLower.includes('كيف نستخدم') ||
@@ -213,8 +213,8 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
     if (hasUsageInfo) return false;
   }
   
-  // Check for data sharing - pp4
-  if (reqId === 'pp4' || title.includes('مشاركة') || title.includes('أطراف')) {
+  // Check for data sharing - pp6
+  if (reqId === 'pp6' || title.includes('مشاركة') || title.includes('أطراف')) {
     const hasSharingInfo = 
       textLower.includes('نشارك') ||
       textLower.includes('مشاركة') ||
@@ -225,8 +225,8 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
     if (hasSharingInfo) return false;
   }
   
-  // Check for data retention - pp5
-  if (reqId === 'pp5' || title.includes('احتفاظ') || title.includes('تخزين') || title.includes('إتلاف')) {
+  // Check for data retention - pp7
+  if (reqId === 'pp7' || title.includes('احتفاظ') || title.includes('تخزين') || title.includes('إتلاف')) {
     const hasRetentionInfo = 
       textLower.includes('نحتفظ') ||
       textLower.includes('الاحتفاظ') ||
@@ -238,21 +238,24 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
     if (hasRetentionInfo) return false;
   }
   
-  // Check for data subject rights - pp7, r1-r5
-  if (reqId === 'pp7' || reqId?.startsWith('r') || title.includes('حقوق')) {
-    const hasRightsInfo = 
-      textLower.includes('حقوقك') ||
-      textLower.includes('يحق لك') ||
-      textLower.includes('الحق في') ||
-      textLower.includes('your rights') ||
-      textLower.includes('تغيير معلوماتهم') ||
-      textLower.includes('إلغاء اشتراكهم') ||
-      textLower.includes('إلغاء أو حذف');
-    if (hasRightsInfo) return false;
+  // pp8 - Data subject rights: Let AI handle this check
+  // AI can understand context better (listing rights vs just mentioning "your rights")
+  // Keep AI's decision for this requirement
+  if (reqId === 'pp8' || reqId?.startsWith('r')) {
+    console.log(`[RAG_VERIFY] pp8/rights (data subject rights): AI reported missing rights explanation - KEEPING VIOLATION`);
+    return true; // Trust AI's judgment on this complex check
   }
   
-  // Check for cookies info - pp8, c1-c4
-  if (reqId === 'pp8' || reqId?.startsWith('c') || title.includes('ملفات تعريف الارتباط') || title.includes('كوكيز')) {
+  // pp11 - Marketing consent: Let AI handle this check
+  // AI can understand context better (marketing use with/without consent)
+  // Keep AI's decision for this requirement
+  if (reqId === 'pp11') {
+    console.log(`[RAG_VERIFY] pp11 (marketing consent): AI reported missing marketing consent - KEEPING VIOLATION`);
+    return true; // Trust AI's judgment on this complex check
+  }
+  
+  // Check for cookies info - c1-c4
+  if (reqId?.startsWith('c') || title.includes('ملفات تعريف الارتباط') || title.includes('كوكيز')) {
     const hasCookieInfo = 
       textLower.includes('ملفات تعريف الارتباط') ||
       textLower.includes('سجلات المتصفح') ||
@@ -262,18 +265,15 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
     if (hasCookieInfo) {
       // Cookie refusal/consent issues should be suppressed when analyzing policy text
       // because the cookie banner check is done at homepage level, not policy level
-      // If cookie banner is missing, we already report that issue separately
       console.log(`[RAG_VERIFY] Skipping cookie-related issue (handled at homepage level): ${title}`);
       return false;
     }
   }
   
   // Skip cookie-related issues entirely when analyzing policy documents
-  // The cookie banner is checked at the homepage level, not in the privacy policy
   if (title.includes('ملفات تعريف الارتباط') || title.includes('كوكيز') || 
       title.includes('رفض') && title.includes('ملفات') ||
       title.includes('سحب الموافقة')) {
-    // Check if text mentions any way to control cookies
     const hasCookieControl = 
       textLower.includes('إعدادات المتصفح') ||
       textLower.includes('browser settings') ||
@@ -397,24 +397,39 @@ export async function analyzeWithRAG(
 - إذا وجدت معلومات الاتصال (بريد، هاتف، عنوان) = العنصر موجود ✓
 - إذا وجدت اسم الشركة/الجهة بأي شكل = العنصر موجود ✓
 - إذا وجدت تاريخ تحديث بأي صيغة = العنصر موجود ✓
-- إذا وجدت شرحاً لجمع البيانات أو استخدامها = العنصر موجود ✓
 
-### 2. أمثلة على ما يُعتبر موجوداً (لا تبلغ عنه كمخالفة):
+### 2. فحوصات صارمة إلزامية (أبلغ عنها كـ critical إذا غابت):
+
+#### pp3 - تحديد أنواع البيانات الشخصية:
+- يجب وجود قائمة واضحة بفئات البيانات المجمعة
+- مثال على ما هو مطلوب: "نجمع: بيانات الهوية (الاسم)، بيانات الاتصال (البريد، الهاتف)، بيانات تقنية (IP)..."
+- ❌ عبارة "نجمع معلوماتك" وحدها ليست كافية - يجب تحديد أنواع البيانات بالتفصيل
+- أبلغ عن مخالفة إذا لم تجد 3+ أنواع محددة من البيانات
+
+#### pp8 - شرح حقوق أصحاب البيانات:
+- يجب شرح كل حق بشكل منفصل ومفصل
+- الحقوق المطلوب شرحها: الوصول، التصحيح، الحذف، الاعتراض، نقل البيانات
+- ❌ عبارة "لك الحق في حماية بياناتك" وحدها ليست كافية
+- أبلغ عن مخالفة إذا لم تجد شرحاً لـ 3+ حقوق محددة
+
+#### pp11 - الموافقة على التسويق:
+- إذا ذُكر استخدام البيانات للتسويق/الترويج/الإعلانات، يجب:
+  - توضيح أن الموافقة اختيارية وصريحة (opt-in)
+  - وجود آلية إلغاء الاشتراك (unsubscribe/opt-out)
+- ❌ ذكر "قد نرسل لك عروض" بدون ذكر الموافقة = مخالفة
+
+### 3. أمثلة على ما يُعتبر موجوداً (لا تبلغ عنه كمخالفة):
 - "مكتبة جرير" أو أي اسم شركة = هوية الجهة موجودة ✓
 - "[email protected]" أو أي بريد = معلومات اتصال موجودة ✓
-- "شارع العليا" أو أي عنوان = معلومات اتصال موجودة ✓
 - "920000089" أو أي رقم = معلومات اتصال موجودة ✓
-- "تاريخ التحديث: ..." = سجل التحديثات موجود ✓
-- "نجمع المعلومات عندما..." = طرق الجمع مذكورة ✓
-- "نستخدم المعلومات من أجل..." = أغراض الاستخدام مذكورة ✓
 - "للتواصل معنا..." = قنوات التواصل موجودة ✓
 
-### 3. متى تُبلغ عن مخالفة فقط:
+### 4. متى تُبلغ عن مخالفة فقط:
 - فقط إذا بحثت جيداً ولم تجد العنصر نهائياً في كامل النص
 - استخدم confidence منخفض (0.5-0.7) إذا لم تكن متأكداً
-- إذا كان العنصر موجوداً جزئياً، اقترح تحسينه بـ severity: "suggestion" بدلاً من "critical"
+- إذا كان العنصر موجوداً جزئياً، اقترح تحسينه بـ severity: "warning" بدلاً من "critical"
 
-### 4. المعرّفات المسموحة فقط:
+### 5. المعرّفات المسموحة فقط:
 استخدم هذه المعرّفات بالضبط: ${relevantRequirements.map(r => r.id).join(', ')}
 
 ## المتطلبات القانونية الواجب فحصها:
