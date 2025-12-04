@@ -1315,3 +1315,210 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
     references: [adminUsers.id],
   }),
 }));
+
+// ====================================
+// Deterministic Scanner Types
+// أنواع الماسح الحتمي
+// ====================================
+
+// Extracted Cookie Data
+export interface ExtractedCookie {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  expires?: string;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: string;
+  thirdParty: boolean;
+  category?: 'necessary' | 'analytics' | 'marketing' | 'performance' | 'unknown';
+}
+
+// Extracted Script Data
+export interface ExtractedScript {
+  type: 'inline' | 'external';
+  src?: string;
+  content?: string;
+  async: boolean;
+  defer: boolean;
+  position: 'head' | 'body';
+}
+
+// Detected Tracking Technology
+export interface DetectedTracker {
+  name: string;
+  type: 'analytics' | 'advertising' | 'social' | 'heatmap' | 'other';
+  detected_via: 'script' | 'cookie' | 'network' | 'dom';
+  evidence: string;
+  thirdParty: boolean;
+  vendor?: string;
+}
+
+// Form Field with Personal Data
+export interface ExtractedFormField {
+  name: string;
+  type: string;
+  id?: string;
+  placeholder?: string;
+  required: boolean;
+  dataCategory: 'name' | 'email' | 'phone' | 'address' | 'id_number' | 'financial' | 'health' | 'other';
+  formAction?: string;
+  formMethod?: string;
+}
+
+// Third Party Service
+export interface ThirdPartyService {
+  name: string;
+  domain: string;
+  type: 'cdn' | 'analytics' | 'advertising' | 'social' | 'payment' | 'other';
+  dataShared: boolean;
+  crossBorder: boolean;
+  country?: string;
+}
+
+// Security Headers
+export interface SecurityHeaders {
+  https: boolean;
+  hsts: boolean;
+  hstsMaxAge?: number;
+  csp: boolean;
+  cspValue?: string;
+  xFrameOptions: boolean;
+  xContentTypeOptions: boolean;
+  referrerPolicy: boolean;
+  referrerPolicyValue?: string;
+}
+
+// Privacy Policy Detection Result
+export interface PrivacyPolicyResult {
+  found: boolean;
+  url?: string;
+  detection_method: 'link_text' | 'url_pattern' | 'meta_tag' | 'not_found';
+  content_accessible: boolean;
+  content_length?: number;
+  language?: string;
+  elements_found: string[];
+  elements_missing: string[];
+}
+
+// Terms Detection Result
+export interface TermsResult {
+  found: boolean;
+  url?: string;
+  detection_method: 'link_text' | 'url_pattern' | 'meta_tag' | 'not_found';
+  content_accessible: boolean;
+  content_length?: number;
+}
+
+// Cookie Banner Detection Result
+export interface CookieBannerResult {
+  found: boolean;
+  detection_method: 'dom_element' | 'script' | 'css_class' | 'text_content' | 'not_found';
+  has_accept_button: boolean;
+  has_reject_button: boolean;
+  has_settings_option: boolean;
+  consent_mechanism: 'opt_in' | 'opt_out' | 'implied' | 'none';
+  evidence?: string;
+}
+
+// Contact Info Detection Result
+export interface ContactInfoResult {
+  found: boolean;
+  email?: string;
+  phone?: string;
+  address?: string;
+  form_found: boolean;
+  detection_methods: string[];
+}
+
+// PDPL Rule Evaluation Result
+export interface PDPLRuleResult {
+  rule_id: string;
+  rule_name: string;
+  article: string;
+  data_source: string;
+  condition: string;
+  result: 'pass' | 'fail' | 'not_applicable' | 'unable_to_detect';
+  explanation: string;
+  severity: 'critical' | 'warning' | 'suggestion';
+  evidence?: string;
+}
+
+// Full Extraction Result
+export interface ScanExtractionResult {
+  url: string;
+  scan_timestamp: string;
+  scan_duration_ms: number;
+  
+  // Raw Extracted Data
+  html_length: number;
+  scripts: ExtractedScript[];
+  cookies: ExtractedCookie[];
+  trackers: DetectedTracker[];
+  forms: ExtractedFormField[];
+  third_party_services: ThirdPartyService[];
+  security: SecurityHeaders;
+  
+  // Detection Results
+  privacy_policy: PrivacyPolicyResult;
+  terms_and_conditions: TermsResult;
+  cookie_banner: CookieBannerResult;
+  contact_info: ContactInfoResult;
+  
+  // Errors
+  scan_errors: string[];
+}
+
+// Final Deterministic Analysis Result
+export interface DeterministicScanResult {
+  url: string;
+  scan_timestamp: string;
+  scan_duration_ms: number;
+  
+  // Extracted Data Summary
+  privacy_policy: PrivacyPolicyResult;
+  cookies: {
+    total: number;
+    first_party: number;
+    third_party: number;
+    secure_cookies: number;
+    http_only_cookies: number;
+    session_cookies: number;
+    persistent_cookies: number;
+    by_category: Record<string, number>;
+    list: ExtractedCookie[];
+  };
+  tracking: DetectedTracker[];
+  personal_data_collection: {
+    forms_count: number;
+    fields: ExtractedFormField[];
+    sensitive_data_types: string[];
+  };
+  data_transfers: {
+    third_party_services: ThirdPartyService[];
+    cross_border_transfers: ThirdPartyService[];
+  };
+  security: SecurityHeaders & {
+    secure_cookie_percentage: number;
+    overall_security_score: number;
+  };
+  
+  // PDPL Compliance
+  pdpl_violations: PDPLRuleResult[];
+  pdpl_passed_rules: PDPLRuleResult[];
+  
+  // Scoring
+  overall_score: number;
+  compliance_level: 'high' | 'medium' | 'low';
+  score_breakdown: {
+    privacy_policy_score: number;
+    consent_score: number;
+    security_score: number;
+    transparency_score: number;
+  };
+  
+  // Errors
+  scan_errors: string[];
+  partial_analysis: boolean;
+}
