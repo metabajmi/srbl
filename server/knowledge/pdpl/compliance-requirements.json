@@ -313,33 +313,176 @@
     "requirements": [
       {
         "id": "tc1",
-        "ar": "سياسة الاستبدال والاسترجاع",
-        "en": "Exchange and return policy",
+        "ar": "شروط الاستخدام العامة",
+        "en": "General terms of use",
+        "description": "توضيح شروط استخدام الموقع/التطبيق بما في ذلك الأهلية القانونية وقواعد السلوك",
         "severity": "critical"
       },
       {
         "id": "tc2",
-        "ar": "شروط الاستخدام",
-        "en": "Terms of use",
+        "ar": "وصف الخدمات المقدمة",
+        "en": "Description of services provided",
+        "description": "توضيح طبيعة الخدمات المقدمة ونطاقها",
         "severity": "critical"
       },
       {
         "id": "tc3",
-        "ar": "حدود المسؤولية",
-        "en": "Limitation of liability",
-        "severity": "warning"
+        "ar": "حدود المسؤولية وإخلاء المسؤولية",
+        "en": "Limitation of liability and disclaimers",
+        "description": "توضيح حدود مسؤولية الموقع تجاه المستخدمين",
+        "severity": "critical"
       },
       {
         "id": "tc4",
         "ar": "القانون الحاكم والاختصاص القضائي",
         "en": "Governing law and jurisdiction",
-        "severity": "warning"
+        "description": "تحديد القانون المطبق والمحكمة المختصة (السعودية)",
+        "severity": "critical"
       },
       {
         "id": "tc5",
         "ar": "حقوق الملكية الفكرية",
         "en": "Intellectual property rights",
+        "description": "حماية حقوق الملكية الفكرية للموقع والمحتوى",
         "severity": "warning"
+      },
+      {
+        "id": "tc6",
+        "ar": "سياسة إنهاء الحساب والخدمة",
+        "en": "Account and service termination policy",
+        "description": "شروط إنهاء أو تعليق الحساب والخدمة",
+        "severity": "warning"
+      },
+      {
+        "id": "tc7",
+        "ar": "آلية تعديل الشروط والإخطار",
+        "en": "Terms modification and notification mechanism",
+        "description": "كيفية إخطار المستخدمين بتعديلات الشروط",
+        "severity": "warning"
+      },
+      {
+        "id": "tc8",
+        "ar": "آلية حل النزاعات",
+        "en": "Dispute resolution mechanism",
+        "description": "توضيح آلية حل النزاعات (تحكيم، وساطة، محاكم)",
+        "severity": "warning"
+      }
+    ]
+  },
+
+  "cookiePolicyRequirements": {
+    "source": "نظام حماية البيانات الشخصية - المادة 12 واللائحة التنفيذية",
+    "requirements": [
+      {
+        "id": "cp1",
+        "ar": "تعريف ملفات تعريف الارتباط",
+        "en": "Cookie definition and explanation",
+        "description": "شرح ماهية ملفات تعريف الارتباط وكيفية عملها",
+        "severity": "critical"
+      },
+      {
+        "id": "cp2",
+        "ar": "أنواع ملفات تعريف الارتباط المستخدمة",
+        "en": "Types of cookies used",
+        "description": "تصنيف الكوكيز: ضرورية، تحليلية، إعلانية، وظيفية",
+        "severity": "critical"
+      },
+      {
+        "id": "cp3",
+        "ar": "الغرض من كل نوع من الكوكيز",
+        "en": "Purpose of each cookie type",
+        "description": "توضيح الغرض من استخدام كل نوع من الكوكيز",
+        "severity": "critical"
+      },
+      {
+        "id": "cp4",
+        "ar": "مدة صلاحية الكوكيز",
+        "en": "Cookie duration/expiry",
+        "description": "توضيح مدة بقاء كل نوع من الكوكيز",
+        "severity": "warning"
+      },
+      {
+        "id": "cp5",
+        "ar": "آلية التحكم والإدارة",
+        "en": "Control and management mechanism",
+        "description": "كيفية قبول أو رفض أو إدارة الكوكيز",
+        "severity": "critical"
+      },
+      {
+        "id": "cp6",
+        "ar": "كوكيز الطرف الثالث",
+        "en": "Third-party cookies disclosure",
+        "description": "الإفصاح عن كوكيز الأطراف الثالثة (تحليلات، إعلانات)",
+        "severity": "critical"
+      },
+      {
+        "id": "cp7",
+        "ar": "تأثير رفض الكوكيز",
+        "en": "Impact of refusing cookies",
+        "description": "توضيح تأثير رفض الكوكيز على تجربة الاستخدام",
+        "severity": "warning"
+      }
+    ]
+  },
+
+  "returnRefundPolicyRequirements": {
+    "source": "نظام التجارة الإلكترونية - المادة 13 واللائحة التنفيذية",
+    "requirements": [
+      {
+        "id": "rp1",
+        "ar": "حق الإرجاع خلال 7 أيام",
+        "en": "7-day return right",
+        "description": "حق المستهلك في إرجاع المنتج خلال 7 أيام من الاستلام دون إبداء أسباب",
+        "severity": "critical"
+      },
+      {
+        "id": "rp2",
+        "ar": "شروط الإرجاع",
+        "en": "Return conditions",
+        "description": "توضيح شروط قبول الإرجاع (الحالة الأصلية، عدم الاستخدام، إلخ)",
+        "severity": "critical"
+      },
+      {
+        "id": "rp3",
+        "ar": "استثناءات الإرجاع",
+        "en": "Return exceptions",
+        "description": "المنتجات المستثناة من الإرجاع (مخصصة، قابلة للتلف، إلخ)",
+        "severity": "critical"
+      },
+      {
+        "id": "rp4",
+        "ar": "آلية طلب الإرجاع",
+        "en": "Return request process",
+        "description": "خطوات تقديم طلب الإرجاع",
+        "severity": "critical"
+      },
+      {
+        "id": "rp5",
+        "ar": "سياسة الاسترداد المالي",
+        "en": "Refund policy",
+        "description": "مدة ووسيلة استرداد المبلغ",
+        "severity": "critical"
+      },
+      {
+        "id": "rp6",
+        "ar": "تكاليف الشحن للإرجاع",
+        "en": "Return shipping costs",
+        "description": "توضيح من يتحمل تكاليف شحن الإرجاع",
+        "severity": "warning"
+      },
+      {
+        "id": "rp7",
+        "ar": "سياسة الاستبدال",
+        "en": "Exchange policy",
+        "description": "شروط وإجراءات استبدال المنتجات",
+        "severity": "warning"
+      },
+      {
+        "id": "rp8",
+        "ar": "حالات عدم المطابقة والعيوب",
+        "en": "Non-conformity and defects",
+        "description": "حقوق المستهلك عند استلام منتج معيب أو غير مطابق",
+        "severity": "critical"
       }
     ]
   },
