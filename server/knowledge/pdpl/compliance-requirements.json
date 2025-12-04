@@ -1,5 +1,5 @@
 {
-  "version": "2.0",
+  "version": "3.0",
   "lastUpdated": "2025-12-04",
   "jurisdiction": "المملكة العربية السعودية",
   "regulatoryAuthority": "الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا)",
@@ -716,6 +716,319 @@
     ]
   },
 
+  "dataProtectionOfficerRequirements": {
+    "source": "قواعد تعيين مسؤول حماية البيانات الشخصية - سدايا",
+    "legalBasis": "المادة الثانية والثلاثون من اللائحة التنفيذية لنظام حماية البيانات الشخصية",
+    "mandatoryAppointmentCases": [
+      {
+        "id": "dpo1",
+        "ar": "جهة عامة تقدم خدمات تتضمن معالجة بيانات شخصية على نطاق واسع",
+        "en": "Public entity providing services involving large-scale personal data processing",
+        "severity": "critical"
+      },
+      {
+        "id": "dpo2",
+        "ar": "الأنشطة الأساسية تقوم على عمليات معالجة تتطلب مراقبة منتظمة وممنهجة لأصحاب البيانات",
+        "en": "Core activities require regular and systematic monitoring of data subjects",
+        "severity": "critical"
+      },
+      {
+        "id": "dpo3",
+        "ar": "الأنشطة الأساسية تقوم على معالجة بيانات حساسة",
+        "en": "Core activities involve processing of sensitive data",
+        "severity": "critical"
+      }
+    ],
+    "largeScaleCriteria": [
+      {
+        "id": "lsc1",
+        "ar": "عدد أصحاب البيانات الشخصية",
+        "en": "Number of data subjects"
+      },
+      {
+        "id": "lsc2",
+        "ar": "حجم البيانات الشخصية",
+        "en": "Volume of personal data"
+      },
+      {
+        "id": "lsc3",
+        "ar": "نوع البيانات الشخصية",
+        "en": "Type of personal data"
+      },
+      {
+        "id": "lsc4",
+        "ar": "النطاق الجغرافي للمعالجة",
+        "en": "Geographic scope of processing"
+      },
+      {
+        "id": "lsc5",
+        "ar": "مجموعة مختلفة من فئات أصحاب البيانات الشخصية",
+        "en": "Different categories of data subjects"
+      }
+    ],
+    "regularMonitoringExamples": [
+      {
+        "id": "rm1",
+        "ar": "جمع البيانات المتعلقة بالصحة واللياقة البدنية باستخدام الأجهزة القابلة للارتداء",
+        "en": "Health and fitness data collection using wearable devices"
+      },
+      {
+        "id": "rm2",
+        "ar": "استخدام تقنيات التحليل السلوكي لأغراض تقييم المخاطر",
+        "en": "Behavioral analysis techniques for risk assessment"
+      },
+      {
+        "id": "rm3",
+        "ar": "تتبع الموقع وملفات تعريف الارتباط وكاميرات المراقبة",
+        "en": "Location tracking, cookies, and surveillance cameras"
+      }
+    ],
+    "dpoTasks": [
+      {
+        "id": "dt1",
+        "ar": "تقديم الدعم والمشورة في جميع جوانب حماية البيانات الشخصية",
+        "en": "Provide support and advice on all aspects of personal data protection"
+      },
+      {
+        "id": "dt2",
+        "ar": "المشاركة في الأنشطة التوعوية وتدريب منسوبي جهة التحكم",
+        "en": "Participate in awareness activities and train controller employees"
+      },
+      {
+        "id": "dt3",
+        "ar": "المساهمة في مراجعة خطط الاستجابة لحوادث تسرب البيانات الشخصية",
+        "en": "Contribute to reviewing data breach response plans"
+      },
+      {
+        "id": "dt4",
+        "ar": "إعداد تقارير دورية حيال أنشطة معالجة البيانات الشخصية",
+        "en": "Prepare periodic reports on personal data processing activities"
+      },
+      {
+        "id": "dt5",
+        "ar": "متابعة ما يصدر عن الجهة المختصة من وثائق تنظيمية",
+        "en": "Follow up on regulatory documents issued by the competent authority"
+      },
+      {
+        "id": "dt6",
+        "ar": "تقديم الدعم للمسؤولين عن تطوير وتشغيل الأنظمة التقنية الحديثة",
+        "en": "Support those responsible for developing and operating modern technical systems"
+      }
+    ],
+    "documentationRequirements": [
+      {
+        "id": "dr1",
+        "ar": "توثيق تعيين مسؤول حماية البيانات كتابياً",
+        "en": "Document DPO appointment in writing",
+        "severity": "critical"
+      },
+      {
+        "id": "dr2",
+        "ar": "الإعلان الفوري داخل جهة التحكم عن التعيين ووسيلة التواصل",
+        "en": "Immediate internal announcement of appointment and contact method",
+        "severity": "critical"
+      },
+      {
+        "id": "dr3",
+        "ar": "تزويد الجهة المختصة ببيانات التواصل عبر منصة حوكمة البيانات الوطنية",
+        "en": "Provide contact details to competent authority via National Data Governance Platform",
+        "severity": "critical"
+      }
+    ]
+  },
+
+  "crossBorderDataTransferRequirements": {
+    "source": "لائحة نقل البيانات الشخصية إلى خارج المملكة",
+    "legalBasis": "المادة التاسعة والعشرون من نظام حماية البيانات الشخصية",
+    "appropriateSafeguards": [
+      {
+        "id": "cbdt1",
+        "ar": "البنود التعاقدية القياسية",
+        "en": "Standard contractual clauses",
+        "description": "بنود معتمدة من الجهة المختصة تضمن مستوى حماية مناسب"
+      },
+      {
+        "id": "cbdt2",
+        "ar": "القواعد المشتركة الملزمة",
+        "en": "Binding corporate rules",
+        "description": "قواعد داخلية ملزمة لمجموعات الكيانات متعددة الجنسيات"
+      },
+      {
+        "id": "cbdt3",
+        "ar": "شهادة الاعتماد",
+        "en": "Certification",
+        "description": "شهادة صادرة من جهة مرخصة من الجهة المختصة"
+      }
+    ],
+    "exemptionCases": [
+      {
+        "id": "ec1",
+        "ar": "النقل بين الجهات العامة لتنفيذ اتفاقية تكون المملكة طرفاً فيها",
+        "en": "Transfer between public entities to execute an agreement where KSA is a party",
+        "condition": "يجب تضمين بنود قياسية لحماية البيانات في الاتفاقيات"
+      },
+      {
+        "id": "ec2",
+        "ar": "النقل بصفة غير متكررة ولفترة محدودة ولعدد محدود من أصحاب البيانات",
+        "en": "Non-recurring transfer for limited period and limited number of data subjects",
+        "condition": "لا تشمل البيانات الحساسة"
+      },
+      {
+        "id": "ec3",
+        "ar": "النقل الضروري للعمليات التشغيلية المركزية للكيانات متعددة الجنسيات",
+        "en": "Transfer necessary for centralized operations of multinational entities",
+        "condition": "الالتزام بالقواعد المشتركة الملزمة أو البنود التعاقدية القياسية"
+      },
+      {
+        "id": "ec4",
+        "ar": "النقل لتقديم خدمة أو منفعة مباشرة لصاحب البيانات",
+        "en": "Transfer to provide direct service or benefit to data subject",
+        "condition": "لا يخالف توقعات صاحب البيانات أو مصالحه"
+      },
+      {
+        "id": "ec5",
+        "ar": "النقل الضروري للبحوث والدراسات العلمية",
+        "en": "Transfer necessary for scientific research and studies",
+        "condition": "الاقتصار على الحد الأدنى من البيانات ولا تشمل البيانات الحساسة"
+      }
+    ],
+    "riskAssessmentElements": [
+      {
+        "id": "rae1",
+        "ar": "الغرض من عملية النقل والمسوغ النظامي",
+        "en": "Purpose of transfer and legal justification"
+      },
+      {
+        "id": "rae2",
+        "ar": "وصف لطبيعة عملية النقل وأنشطة المعالجة والنطاق الجغرافي",
+        "en": "Description of transfer nature, processing activities, and geographic scope"
+      },
+      {
+        "id": "rae3",
+        "ar": "الوسائل والضمانات المناسبة المتخذة ومدى كفايتها",
+        "en": "Means and appropriate safeguards and their adequacy"
+      },
+      {
+        "id": "rae4",
+        "ar": "التدابير المتبعة للاقتصار على الحد الأدنى من البيانات",
+        "en": "Measures to ensure data minimization"
+      },
+      {
+        "id": "rae5",
+        "ar": "الآثار المادية أو المعنوية المحتملة واحتمالية حدوثها",
+        "en": "Potential material or moral effects and their likelihood"
+      },
+      {
+        "id": "rae6",
+        "ar": "التدابير أو الضوابط لمنع المخاطر المحتملة أو الحد من آثارها",
+        "en": "Measures to prevent or mitigate potential risks"
+      }
+    ]
+  },
+
+  "dataSharingPolicyRequirements": {
+    "source": "سياسة مشاركة البيانات - الهيئة السعودية للبيانات والذكاء الاصطناعي",
+    "principles": [
+      {
+        "id": "dsp1",
+        "ar": "تعزيز ثقافة المشاركة",
+        "en": "Promote sharing culture",
+        "description": "مشاركة البيانات لتحقيق التكامل بين الجهات الحكومية"
+      },
+      {
+        "id": "dsp2",
+        "ar": "مبدأ المرة الواحدة",
+        "en": "Once-only principle",
+        "description": "جمع البيانات مرة واحدة مع إمكانية مشاركتها وإعادة استخدامها"
+      },
+      {
+        "id": "dsp3",
+        "ar": "مشروعية الغرض",
+        "en": "Purpose legitimacy",
+        "description": "المشاركة لأغراض مشروعة مبنية على أساس نظامي أو احتياج عملي مبرر"
+      },
+      {
+        "id": "dsp4",
+        "ar": "الاطلاع المصرح به",
+        "en": "Authorized access",
+        "description": "تحديد المخولين بالاطلاع على البيانات والتأكد من موثوقيتهم"
+      },
+      {
+        "id": "dsp5",
+        "ar": "الشفافية",
+        "en": "Transparency",
+        "description": "إتاحة المعلومات الضرورية لجميع أطراف عملية المشاركة"
+      },
+      {
+        "id": "dsp6",
+        "ar": "المسؤولية المشتركة",
+        "en": "Shared responsibility",
+        "description": "جميع الأطراف مسؤولون عن قرارات مشاركة البيانات"
+      },
+      {
+        "id": "dsp7",
+        "ar": "أمن البيانات",
+        "en": "Data security",
+        "description": "تطبيق الضوابط الأمنية المناسبة لحماية البيانات"
+      },
+      {
+        "id": "dsp8",
+        "ar": "الاستخدام الأخلاقي",
+        "en": "Ethical use",
+        "description": "استخدام البيانات في إطار المسؤولية والعدالة والنزاهة والأمانة"
+      }
+    ],
+    "generalRules": [
+      {
+        "id": "dsr1",
+        "ar": "استخدام قناة التكامل الحكومية للمشاركة الآلية بين الجهات الحكومية",
+        "en": "Use government integration channel for automated sharing between government entities"
+      },
+      {
+        "id": "dsr2",
+        "ar": "استخدام وسيلة مشاركة آمنة عند تعذر القناة الحكومية",
+        "en": "Use secure sharing method when government channel is unavailable"
+      },
+      {
+        "id": "dsr3",
+        "ar": "إرفاق البيانات الوصفية عند المشاركة مع إيضاح مستويات التصنيف",
+        "en": "Attach metadata when sharing with classification levels"
+      },
+      {
+        "id": "dsr4",
+        "ar": "الحصول على موافقة الجهة المصدر قبل مشاركة البيانات التشغيلية",
+        "en": "Obtain source entity approval before sharing operational data"
+      },
+      {
+        "id": "dsr5",
+        "ar": "الالتزام بأحكام المنافسة وعدم الإخلال بالأحكام النظامية",
+        "en": "Comply with competition regulations"
+      },
+      {
+        "id": "dsr6",
+        "ar": "توقيع اتفاقية مشاركة البيانات للبيانات السرية",
+        "en": "Sign data sharing agreement for confidential data"
+      }
+    ],
+    "dataRetentionRules": [
+      {
+        "id": "drr1",
+        "ar": "الاحتفاظ بالبيانات للحد الأدنى اللازم لتحقيق الغرض",
+        "en": "Retain data for minimum period necessary to achieve purpose"
+      },
+      {
+        "id": "drr2",
+        "ar": "إتلاف البيانات بعد انتهاء الغرض من الحصول عليها",
+        "en": "Destroy data after purpose is fulfilled"
+      },
+      {
+        "id": "drr3",
+        "ar": "المشاركة عبر وسيلة آلية آمنة أو موثوقة",
+        "en": "Share via secure automated or trusted method"
+      }
+    ]
+  },
+
   "arabicKeywords": {
     "privacyPolicy": [
       "سياسة الخصوصية",
@@ -798,6 +1111,34 @@
       "رقم الهوية الوطنية",
       "رقم الإقامة",
       "رقم الجواز"
+    ],
+    "crossBorderTransfer": [
+      "نقل البيانات",
+      "نقل البيانات خارج المملكة",
+      "النقل عبر الحدود",
+      "البنود التعاقدية القياسية",
+      "القواعد المشتركة الملزمة",
+      "شهادة الاعتماد",
+      "ضمانات مناسبة",
+      "تقويم المخاطر"
+    ],
+    "dataProtectionOfficer": [
+      "مسؤول حماية البيانات",
+      "مسؤول حماية البيانات الشخصية",
+      "DPO",
+      "تعيين مسؤول",
+      "معالجة على نطاق واسع",
+      "مراقبة منتظمة",
+      "بيانات حساسة"
+    ],
+    "dataSharing": [
+      "مشاركة البيانات",
+      "تبادل البيانات",
+      "قناة التكامل الحكومية",
+      "اتفاقية مشاركة",
+      "تفويض المشاركة",
+      "الاستخدام الأخلاقي",
+      "أمن البيانات"
     ]
   },
 
@@ -840,6 +1181,33 @@
       "decline",
       "explicit consent",
       "withdraw consent"
+    ],
+    "crossBorderTransfer": [
+      "data transfer",
+      "cross-border transfer",
+      "international transfer",
+      "standard contractual clauses",
+      "binding corporate rules",
+      "certification",
+      "adequate safeguards",
+      "risk assessment"
+    ],
+    "dataProtectionOfficer": [
+      "data protection officer",
+      "DPO",
+      "DPO appointment",
+      "large-scale processing",
+      "regular monitoring",
+      "sensitive data processing"
+    ],
+    "dataSharing": [
+      "data sharing",
+      "data exchange",
+      "government integration",
+      "sharing agreement",
+      "authorized access",
+      "ethical use",
+      "data security"
     ]
   }
 }
