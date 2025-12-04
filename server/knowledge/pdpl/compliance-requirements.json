@@ -1,8 +1,13 @@
 {
-  "version": "1.0",
-  "lastUpdated": "2025-11-29",
+  "version": "2.0",
+  "lastUpdated": "2025-12-04",
   "jurisdiction": "المملكة العربية السعودية",
   "regulatoryAuthority": "الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا)",
+  "complementaryAuthorities": [
+    "وزارة التجارة",
+    "هيئة الزكاة والضريبة والجمارك",
+    "وزارة الموارد البشرية والتنمية الاجتماعية"
+  ],
   
   "ecommerceComplianceChecklist": {
     "source": "قائمة التقييم الذاتي لامتثال المتاجر الإلكترونية - يناير 2022",
@@ -233,6 +238,69 @@
         "en": "Explicit consent for marketing use of data",
         "description": "عند ذكر استخدام البيانات لأغراض تسويقية أو ترويجية، يجب توضيح آلية الحصول على موافقة صريحة مسبقة (opt-in) وإمكانية إلغاء الاشتراك",
         "severity": "critical"
+      }
+    ]
+  },
+
+  "minimumDataRequirements": {
+    "source": "الدليل الاسترشادي لتحديد الحد الأدنى من البيانات الشخصية - أغسطس 2024",
+    "legalBasis": "المادة الحادية عشرة من نظام حماية البيانات الشخصية",
+    "principles": [
+      {
+        "id": "md1",
+        "ar": "الاحتياج الفعلي",
+        "en": "Actual need",
+        "description": "تقييم كل عنصر من عناصر البيانات الشخصية لتحديد ما إذا كانت ضرورية بشكل مباشر لتحقيق الغرض"
+      },
+      {
+        "id": "md2",
+        "ar": "الارتباط بالغرض",
+        "en": "Purpose linkage",
+        "description": "أن يرتبط الغرض ارتباطاً مباشراً بالبيانات الشخصية المجمعة وأن يكون ذا علاقة بأغراض جهة التحكم"
+      },
+      {
+        "id": "md3",
+        "ar": "ملاءمة طرق الجمع",
+        "en": "Collection method appropriateness",
+        "description": "أن تكون طرق ووسائل جمع البيانات مباشرة وواضحة وآمنة وخالية من الخداع أو التضليل"
+      },
+      {
+        "id": "md4",
+        "ar": "ملاءمة المحتوى",
+        "en": "Content appropriateness",
+        "description": "أن يكون المحتوى ملائماً ومقتصراً على الحد الأدنى اللازم لتحقيق الغرض"
+      },
+      {
+        "id": "md5",
+        "ar": "الإتلاف عند انتفاء الحاجة",
+        "en": "Destruction when no longer needed",
+        "description": "إتلاف البيانات الشخصية التي لم تعد ضرورية لتحقيق الغرض"
+      },
+      {
+        "id": "md6",
+        "ar": "تقييد الاحتفاظ والوصول",
+        "en": "Retention and access restriction",
+        "description": "الاحتفاظ بالحد الأدنى من البيانات مع تقييد صلاحيات الوصول وفق الاحتياج الفعلي"
+      }
+    ],
+    "controllerObligations": [
+      {
+        "id": "co1",
+        "ar": "المراجعة الدورية",
+        "en": "Periodic review",
+        "description": "تدقيق ومراجعة عمليات معالجة البيانات بشكل دوري للتأكد من الالتزام بمبدأ الحد الأدنى"
+      },
+      {
+        "id": "co2",
+        "ar": "توثيق الإجراءات",
+        "en": "Procedure documentation",
+        "description": "توثيق كافة الإجراءات التي تحدد محتوى البيانات عند المعالجة لغرض آخر"
+      },
+      {
+        "id": "co3",
+        "ar": "تدريب الموظفين",
+        "en": "Employee training",
+        "description": "التأكد من أن الموظفين المسؤولين عن جمع البيانات يتلقون التدريب المناسب"
       }
     ]
   },
@@ -541,6 +609,113 @@
     ]
   },
 
+  "legalBasisForProcessing": {
+    "source": "المادة الخامسة والسادسة والعاشرة من نظام حماية البيانات الشخصية",
+    "bases": [
+      {
+        "id": "lb1",
+        "ar": "موافقة صاحب البيانات",
+        "en": "Data subject consent",
+        "article": "المادة 5 - الفقرة 1"
+      },
+      {
+        "id": "lb2",
+        "ar": "المصلحة المتحققة لصاحب البيانات",
+        "en": "Realized interest of data subject",
+        "article": "المادة 5 - الفقرة 2"
+      },
+      {
+        "id": "lb3",
+        "ar": "المتطلب النظامي",
+        "en": "Regulatory requirement",
+        "article": "المادة 5 - الفقرة 3"
+      },
+      {
+        "id": "lb4",
+        "ar": "تنفيذ اتفاق يكون صاحب البيانات طرفاً فيه",
+        "en": "Contract performance",
+        "article": "المادة 5 - الفقرة 4"
+      },
+      {
+        "id": "lb5",
+        "ar": "المصلحة العامة",
+        "en": "Public interest",
+        "article": "المادة 5 - الفقرة 5"
+      },
+      {
+        "id": "lb6",
+        "ar": "الأغراض الأمنية",
+        "en": "Security purposes",
+        "article": "المادة 6"
+      },
+      {
+        "id": "lb7",
+        "ar": "المتطلبات القضائية",
+        "en": "Judicial requirements",
+        "article": "المادة 6"
+      },
+      {
+        "id": "lb8",
+        "ar": "حماية الصحة العامة أو السلامة العامة",
+        "en": "Public health or safety protection",
+        "article": "المادة 10"
+      },
+      {
+        "id": "lb9",
+        "ar": "المصالح الحيوية للأفراد",
+        "en": "Vital interests of individuals",
+        "article": "المادة 10"
+      },
+      {
+        "id": "lb10",
+        "ar": "المصالح المشروعة لجهة التحكم",
+        "en": "Legitimate interests of controller",
+        "article": "المادة 5 - الفقرة 6"
+      }
+    ]
+  },
+
+  "consumerRights": {
+    "source": "دليل حقوق وواجبات المستهلك - وزارة التجارة",
+    "rights": [
+      {
+        "id": "cr1",
+        "ar": "حق الحماية من الغش والخداع",
+        "en": "Protection from fraud and deception"
+      },
+      {
+        "id": "cr2",
+        "ar": "حق المعرفة بالمنتج",
+        "en": "Right to product information"
+      },
+      {
+        "id": "cr3",
+        "ar": "حق الاختيار الحر",
+        "en": "Right to free choice"
+      },
+      {
+        "id": "cr4",
+        "ar": "حق التعويض",
+        "en": "Right to compensation"
+      },
+      {
+        "id": "cr5",
+        "ar": "حق التمثيل والمشاركة",
+        "en": "Right to representation"
+      },
+      {
+        "id": "cr6",
+        "ar": "حق التثقيف الاستهلاكي",
+        "en": "Right to consumer education"
+      },
+      {
+        "id": "cr7",
+        "ar": "حق التراجع عن الشراء",
+        "en": "Right to withdrawal"
+      }
+    ]
+  },
+
   "arabicKeywords": {
     "privacyPolicy": [
       "سياسة الخصوصية",
@@ -550,7 +725,12 @@
       "بيانات المستخدم",
       "جمع البيانات",
       "معالجة البيانات",
-      "حقوق صاحب البيانات"
+      "حقوق صاحب البيانات",
+      "جهة التحكم",
+      "جهة المعالجة",
+      "الإفصاح عن البيانات",
+      "نقل البيانات",
+      "مسؤول حماية البيانات"
     ],
     "termsConditions": [
       "الشروط والأحكام",
@@ -560,20 +740,106 @@
       "اتفاقية الاستخدام",
       "سياسة الاستبدال",
       "سياسة الاسترجاع",
-      "سياسة الإرجاع"
+      "سياسة الإرجاع",
+      "حدود المسؤولية",
+      "إخلاء المسؤولية",
+      "الملكية الفكرية",
+      "القانون الحاكم",
+      "الاختصاص القضائي",
+      "تسوية النزاعات"
     ],
     "cookies": [
       "ملفات تعريف الارتباط",
       "الكوكيز",
       "ملفات الكوكيز",
-      "سياسة ملفات تعريف الارتباط"
+      "سياسة ملفات تعريف الارتباط",
+      "ملفات الارتباط الضرورية",
+      "ملفات الارتباط التحليلية",
+      "ملفات الارتباط الإعلانية",
+      "ملفات الارتباط الوظيفية"
     ],
     "consent": [
       "موافقة",
       "الموافقة",
       "أوافق",
       "قبول",
-      "رفض"
+      "رفض",
+      "موافقة صريحة",
+      "سحب الموافقة",
+      "إدارة التفضيلات"
+    ],
+    "returnRefund": [
+      "الاسترجاع",
+      "الإرجاع",
+      "الاستبدال",
+      "استرداد المبلغ",
+      "إعادة المنتج",
+      "سياسة الإرجاع",
+      "حق الإرجاع",
+      "7 أيام",
+      "سبعة أيام"
+    ],
+    "legalInfo": [
+      "السجل التجاري",
+      "الرقم الضريبي",
+      "رقم الترخيص",
+      "رقم التصريح",
+      "شهادة المعروف"
+    ],
+    "dataTypes": [
+      "البيانات الشخصية",
+      "بيانات الهوية",
+      "بيانات الاتصال",
+      "البيانات المالية",
+      "البيانات الصحية",
+      "البيانات الحساسة",
+      "البيانات الوراثية",
+      "البيانات البيومترية",
+      "رقم الهوية الوطنية",
+      "رقم الإقامة",
+      "رقم الجواز"
+    ]
+  },
+
+  "englishKeywords": {
+    "privacyPolicy": [
+      "privacy policy",
+      "data protection",
+      "personal data",
+      "privacy",
+      "user data",
+      "data collection",
+      "data processing",
+      "data subject rights",
+      "data controller",
+      "data processor"
+    ],
+    "termsConditions": [
+      "terms and conditions",
+      "terms of service",
+      "terms of use",
+      "user agreement",
+      "service agreement",
+      "return policy",
+      "refund policy",
+      "exchange policy"
+    ],
+    "cookies": [
+      "cookies",
+      "cookie policy",
+      "essential cookies",
+      "analytics cookies",
+      "marketing cookies",
+      "functional cookies"
+    ],
+    "consent": [
+      "consent",
+      "agree",
+      "accept",
+      "reject",
+      "decline",
+      "explicit consent",
+      "withdraw consent"
     ]
   }
 }
