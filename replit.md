@@ -30,13 +30,30 @@ The Smart Customer Assistant utilizes a Retrieval Augmented Generation (RAG) arc
 - **Unified Internal Compliance Workspace:** A single page (`/internal-compliance`) integrates ROPA, DSAR, and DPIA tools into tab-based navigation with RTL support.
 - **Internal Compliance Module:** Provides full CRUD operations and dedicated pages for ROPA, DSAR, and DPIA, with database schemas and APIs. DSAR includes due date calculation (30 days per PDPL).
 
-**Website Scanner:**
-- **Comprehensive Compliance Checking:** Scans for Privacy Policy, Terms & Conditions, Cookie Banner, and Contact Info, with compliance fields in the database schema.
-- **PDPL Knowledge Base:** Includes `compliance-requirements.json` with Saudi legal requirements for e-commerce, privacy policy elements (PDPL Article 12), data subject rights (PDPL Article 4), and cookie consent.
-- **Hybrid Detection Architecture:** Combines OpenAI intelligence for content analysis with DOM detection (using cheerio) for exact phrase matching, ensuring accurate detection of compliance elements.
-- **Deterministic Scoring System:** Starts from a baseline of 100 and deducts points only for missing elements and detected issues (critical, warning, suggestion), providing compliance levels (High ≥70%, Medium 40-69%, Low <40%).
-- **Conservative Fallback Scoring:** When AI analysis fails (rate limits, quota), scores are capped at 60% maximum with explicit "Partial Analysis" warning. Each detected element contributes 15% (4 elements × 15% = 60% max). This prevents inflated scores when content quality cannot be verified.
-- **Partial Analysis Detection:** Frontend displays orange warning banner when AI analysis was skipped, with clear Arabic messaging about incomplete verification and option to re-scan.
+**Website Scanner (Deterministic Rule-Based):**
+- **100% Deterministic Analysis:** Eliminates AI hallucinations by using rule-based evaluation instead of AI for compliance scanning.
+- **Puppeteer-Powered Extraction:** Uses headless Chromium browser for runtime JavaScript execution, cookie collection, and network request monitoring.
+- **Comprehensive Data Extraction:**
+  - Cookies: First-party, third-party, security flags (Secure, HttpOnly, SameSite), categorization (analytics, marketing, necessary)
+  - Scripts: Inline and external, async/defer attributes, position (head/body)
+  - Tracking Technologies: Detection of 30+ trackers (Google Analytics, Meta Pixel, TikTok, Hotjar, etc.)
+  - Forms: Personal data field detection (name, email, phone, ID, financial, health)
+  - Third-Party Services: CDN, analytics, payment, advertising, social media detection
+  - Security Headers: HTTPS, HSTS, CSP, X-Frame-Options, Referrer-Policy
+- **PDPL Rule Engine:** 12+ deterministic rules mapped to specific PDPL articles (Art 4, 5, 6, 12, 17, 19, 29):
+  - Privacy Policy presence and accessibility
+  - Cookie consent mechanisms
+  - Data collection transparency
+  - Cross-border data transfer disclosure
+  - Security requirements (HTTPS, HSTS, cookie security)
+  - Contact information availability
+- **Structured Output:** Returns consistent JSON with exact evidence, rule evaluations, and scoring breakdown.
+- **Scoring System:** Starts from 100, deducts based on severity (critical: 15pts, warning: 8pts, suggestion: 3pts). Levels: High ≥80%, Medium 50-79%, Low <50%.
+- **Modular Architecture:**
+  - `server/scanner/browser.ts`: Puppeteer lifecycle management
+  - `server/scanner/extractors.ts`: Data extraction functions
+  - `server/rules/pdpl-rules.ts`: PDPL rule definitions and evaluators
+  - `server/services/complianceAnalyzer.ts`: Orchestration pipeline
 - **Frontend UI:** Displays compliance level badges, findings cards, and error handling with specific Arabic messages.
 - **Export Functionality:** Generates PDF/HTML/JSON reports with concurrent request protection, visual feedback, and toast notifications.
 

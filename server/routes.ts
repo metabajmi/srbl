@@ -20,7 +20,6 @@ import {
   updateDpiaAssessmentSchema
 } from "@shared/schema";
 import { 
-  analyzeWebsiteCompliance, 
   generateComplianceReport, 
   generatePrivacyPolicy, 
   generateTermsAndConditions,
@@ -28,6 +27,7 @@ import {
   generateChatResponse, 
   type RetrievedContext 
 } from "./openai";
+import { analyzeSite, convertToLegacyFormat } from "./services/complianceAnalyzer";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
@@ -120,35 +120,39 @@ async function fetchWebsiteContent(url: string): Promise<string> {
   }
 }
 
-// Background scan processor
+// Background scan processor - Deterministic Rule-Based Analysis
 async function processScan(scanId: string) {
   try {
+    console.log(`[Scanner] Starting deterministic scan for ID: ${scanId}`);
+    
     // Update scan status to scanning
     await storage.updateScan(scanId, { status: "scanning" });
     
     const scan = await storage.getScan(scanId);
-    if (!scan) return;
+    if (!scan) {
+      console.error(`[Scanner] Scan not found: ${scanId}`);
+      return;
+    }
     
-    // Fetch website content
-    const htmlContent = await fetchWebsiteContent(scan.url);
-    
-    // Store the page content
-    await storage.updateScan(scanId, { 
-      pageContent: htmlContent.substring(0, 50000) // Store first 50KB
+    // Run deterministic analysis with Puppeteer
+    console.log(`[Scanner] Analyzing URL: ${scan.url}`);
+    const deterministicResult = await analyzeSite(scan.url, {
+      timeout: 30000,
+      retryCount: 2,
     });
     
-    // Analyze with OpenAI
-    const analysisResult = await analyzeWebsiteCompliance(htmlContent, scan.url);
+    // Convert to legacy format for backward compatibility
+    const legacyResult = convertToLegacyFormat(deterministicResult);
     
     // Delete existing issues for this scan
     await storage.deleteIssuesByScanId(scanId);
     
-    // Create issues from analysis
+    // Create issues from PDPL violations
     let criticalCount = 0;
     let warningCount = 0;
     let suggestionCount = 0;
     
-    for (const issue of analysisResult.issues) {
+    for (const issue of legacyResult.issues) {
       await storage.createIssue({
         scanId,
         severity: issue.severity,
@@ -156,9 +160,9 @@ async function processScan(scanId: string) {
         title: issue.title,
         description: issue.description,
         articleReference: issue.articleReference || null,
-        regulation: issue.regulation || null,
+        regulation: issue.articleReference || null,
         remediation: issue.remediation,
-        affectedElement: issue.affectedElement || null,
+        affectedElement: null,
       });
       
       // Count by severity
@@ -167,29 +171,35 @@ async function processScan(scanId: string) {
       else if (issue.severity === "suggestion") suggestionCount++;
     }
     
-    // Update scan with results including new findings
+    // Determine if data collection forms exist
+    const hasDataCollectionForms = deterministicResult.personal_data_collection.forms_count > 0;
+    
+    // Update scan with deterministic results
     await storage.updateScan(scanId, {
       status: "completed",
       completedAt: new Date(),
-      overallScore: analysisResult.overallScore,
-      complianceLevel: analysisResult.complianceLevel,
-      issuesCount: analysisResult.issues.length,
+      overallScore: deterministicResult.overall_score,
+      complianceLevel: deterministicResult.compliance_level,
+      issuesCount: legacyResult.issues.length,
       criticalCount,
       warningCount,
       suggestionCount,
       // Store compliance findings
-      hasPrivacyPolicy: analysisResult.findings.hasPrivacyPolicy,
-      privacyPolicyUrl: analysisResult.findings.privacyPolicyUrl || null,
-      hasTermsAndConditions: analysisResult.findings.hasTermsAndConditions,
-      termsAndConditionsUrl: analysisResult.findings.termsAndConditionsUrl || null,
-      hasCookieBanner: analysisResult.findings.hasCookieBanner,
-      hasDataCollectionForms: analysisResult.findings.hasDataCollectionForms,
-      hasContactInfo: analysisResult.findings.hasContactInfo,
-      analysisResult: analysisResult as any,
+      hasPrivacyPolicy: deterministicResult.privacy_policy.found,
+      privacyPolicyUrl: deterministicResult.privacy_policy.url || null,
+      hasTermsAndConditions: legacyResult.scan.hasTermsAndConditions,
+      termsAndConditionsUrl: legacyResult.scan.termsAndConditionsUrl,
+      hasCookieBanner: legacyResult.scan.hasCookieBanner,
+      hasDataCollectionForms,
+      hasContactInfo: legacyResult.scan.hasContactInfo,
+      // Store full deterministic result
+      analysisResult: deterministicResult as any,
     });
     
+    console.log(`[Scanner] Scan completed: Score=${deterministicResult.overall_score}, Level=${deterministicResult.compliance_level}`);
+    
   } catch (error: any) {
-    console.error("Error processing scan:", error);
+    console.error("[Scanner] Error processing scan:", error);
     
     // Extract user-friendly error message
     let errorMessage = "حدث خطأ غير متوقع أثناء الفحص";
@@ -199,8 +209,10 @@ async function processScan(scanId: string) {
         errorMessage = error.message;
       } else if (error.message.includes('timeout')) {
         errorMessage = "انتهت مهلة الفحص. قد يكون الموقع بطيئاً. حاول مرة أخرى.";
-      } else if (error.message.includes('fetch')) {
+      } else if (error.message.includes('fetch') || error.message.includes('browser')) {
         errorMessage = "فشل في الوصول إلى الموقع. تأكد من صحة الرابط.";
+      } else if (error.message.includes('Protocol error') || error.message.includes('chromium')) {
+        errorMessage = "خطأ في المتصفح. يرجى المحاولة مرة أخرى.";
       }
     }
     

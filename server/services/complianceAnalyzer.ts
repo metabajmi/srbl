@@ -283,23 +283,45 @@ export function convertToLegacyFormat(result: DeterministicScanResult): {
     description: string;
     remediation: string;
     articleReference?: string;
+    evidence?: string;
+    affectedElement?: string;
+    regulation?: string;
   }>;
 } {
+  const getCategoryFromRule = (ruleId: string): string => {
+    const id = ruleId.toLowerCase();
+    if (id.includes('privacy')) return 'privacy_policy';
+    if (id.includes('cookie') || id.includes('consent')) return 'cookies';
+    if (id.includes('security') || id.includes('https') || id.includes('hsts')) return 'security';
+    if (id.includes('contact')) return 'contact_info';
+    if (id.includes('terms')) return 'terms_and_conditions';
+    if (id.includes('transfer')) return 'data_transfer';
+    if (id.includes('tracker') || id.includes('third-party')) return 'tracking';
+    if (id.includes('data-collection') || id.includes('transparency')) return 'data_collection';
+    return 'general';
+  };
+  
   const issues = result.pdpl_violations.map(v => ({
     severity: v.severity,
-    category: v.rule_id.toLowerCase().includes('privacy') ? 'privacy_policy' :
-              v.rule_id.toLowerCase().includes('cookie') || v.rule_id.toLowerCase().includes('consent') ? 'cookies' :
-              v.rule_id.toLowerCase().includes('security') ? 'security' :
-              v.rule_id.toLowerCase().includes('contact') ? 'contact_info' :
-              v.rule_id.toLowerCase().includes('terms') ? 'terms_and_conditions' :
-              v.rule_id.toLowerCase().includes('transfer') ? 'data_transfer' :
-              v.rule_id.toLowerCase().includes('tracker') ? 'tracking' :
-              'general',
+    category: getCategoryFromRule(v.rule_id),
     title: v.rule_name,
-    description: v.explanation,
+    description: v.explanation + (v.evidence ? ` [الدليل: ${v.evidence}]` : ''),
     remediation: getRemediation(v.rule_id),
     articleReference: v.article,
+    evidence: v.evidence,
+    affectedElement: v.data_source,
+    regulation: `نظام حماية البيانات الشخصية - ${v.article}`,
   }));
+  
+  const hasCookieBannerIssue = result.pdpl_violations.some(v => 
+    v.rule_id.includes('COOKIE') && v.result === 'fail'
+  );
+  const hasContactIssue = result.pdpl_violations.some(v => 
+    v.rule_id.includes('CONTACT') && v.result === 'fail'
+  );
+  
+  const needsCookieBanner = result.tracking.length > 0 || 
+    result.cookies.list.some(c => c.category === 'analytics' || c.category === 'marketing');
   
   return {
     scan: {
@@ -307,10 +329,10 @@ export function convertToLegacyFormat(result: DeterministicScanResult): {
       complianceLevel: result.compliance_level,
       hasPrivacyPolicy: result.privacy_policy.found,
       privacyPolicyUrl: result.privacy_policy.url || null,
-      hasTermsAndConditions: result.cookies.total > 0 ? true : false,
+      hasTermsAndConditions: result.pdpl_passed_rules.some(r => r.rule_id.includes('TERMS')),
       termsAndConditionsUrl: null,
-      hasCookieBanner: result.tracking.length > 0 ? result.pdpl_violations.filter(v => v.rule_id.includes('COOKIE')).length === 0 : true,
-      hasContactInfo: result.pdpl_violations.filter(v => v.rule_id.includes('CONTACT')).length === 0,
+      hasCookieBanner: needsCookieBanner ? !hasCookieBannerIssue : true,
+      hasContactInfo: !hasContactIssue,
       partialAnalysis: result.partial_analysis,
     },
     issues,
