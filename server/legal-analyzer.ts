@@ -4,6 +4,23 @@ import * as path from "path";
 import * as cheerio from "cheerio";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import { 
+  splitIntoSentences, 
+  findColocatedTerms, 
+  findSentencesWithTerms,
+  hasTopicWithConsent,
+  countAffirmativeTerms,
+  type Sentence 
+} from "./utils/text-processor";
+import {
+  analyzeTermsDocument,
+  analyzeCookiePolicy,
+  analyzeReturnPolicy,
+  analyzeDocument,
+  type DocumentType,
+  type DocumentAnalysisReport,
+  type AnalysisResult
+} from "./analyzers/document-analyzers";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -113,6 +130,36 @@ export function loadLegalKnowledgeBase(): LegalArticle[] {
     }
   }
   
+  // Load Cookie Policy Requirements
+  if (data.cookiePolicyRequirements?.requirements) {
+    for (const req of data.cookiePolicyRequirements.requirements) {
+      articles.push({
+        id: req.id,
+        category: "cookie_policy",
+        textAr: req.ar,
+        textEn: req.en,
+        source: data.cookiePolicyRequirements.source,
+        severity: req.severity,
+        description: req.description,
+      });
+    }
+  }
+  
+  // Load Return/Refund Policy Requirements
+  if (data.returnRefundPolicyRequirements?.requirements) {
+    for (const req of data.returnRefundPolicyRequirements.requirements) {
+      articles.push({
+        id: req.id,
+        category: "return_policy",
+        textAr: req.ar,
+        textEn: req.en,
+        source: data.returnRefundPolicyRequirements.source,
+        severity: req.severity,
+        description: req.description,
+      });
+    }
+  }
+  
   legalKnowledgeBase = articles;
   console.log(`[LEGAL_KB] Loaded ${articles.length} legal requirements`);
   return articles;
@@ -180,135 +227,144 @@ function isNegatedContext(text: string, keyword: string): boolean {
   return negations.some(neg => context.includes(neg.toLowerCase()));
 }
 
+// Collection verbs for data collection analysis
+const COLLECTION_VERBS = [
+  // Arabic
+  'نجمع', 'نحصل على', 'نقوم بجمع', 'البيانات التي نجمعها', 'المعلومات التي نجمعها',
+  'تشمل البيانات المجمعة', 'البيانات المجمعة تشمل', 'نجمع منك', 'نجمع عنك',
+  'قد نجمع', 'يتم جمع', 'البيانات المجموعة',
+  // English
+  'we collect', 'we gather', 'we obtain', 'we may collect', 'information we collect',
+  'data we collect', 'types of data we collect', 'data types we collect',
+  'types of information', 'personal data we collect', 'data collected'
+];
+
+// Specific data types to look for
+const SPECIFIC_DATA_TYPES = [
+  // Arabic - identity
+  'الاسم', 'الاسم الكامل', 'اسمك',
+  // Arabic - contact
+  'البريد الإلكتروني', 'الإيميل', 'بريدك',
+  'رقم الهاتف', 'رقم الجوال', 'هاتفك', 
+  'العنوان البريدي', 'عنوانك',
+  // Arabic - technical
+  'عنوان ip', 'عنوان الـ ip',
+  'نوع المتصفح', 'معلومات الجهاز', 'نظام التشغيل',
+  // Arabic - financial
+  'معلومات الدفع', 'بيانات الدفع', 'بطاقة الائتمان',
+  // Arabic - account
+  'اسم المستخدم', 'كلمة المرور',
+  // English - identity
+  'full name', 'first name', 'last name', 'your name',
+  // English - contact
+  'email address', 'phone number', 'postal address', 'mailing address',
+  // English - technical
+  'ip address', 'browser type', 'device information', 'operating system',
+  // English - financial
+  'payment information', 'credit card', 'billing information',
+  // English - account
+  'username', 'password',
+  // Categories
+  'بيانات الهوية', 'بيانات الاتصال', 'بيانات تقنية', 'بيانات مالية',
+  'identity data', 'contact data', 'technical data', 'financial data'
+];
+
 // Deterministic check for affirmative data collection statements with specific types
-// REQUIRES: collection verb AND specific data types IN SAME CONTEXT (within 300 chars)
-function hasAffirmativeDataTypeCollection(textLower: string): boolean {
-  // Affirmative collection verbs
-  const collectionVerbs = [
-    // Arabic
-    'نجمع', 'نحصل على', 'نقوم بجمع', 'البيانات التي نجمعها', 'المعلومات التي نجمعها',
-    'تشمل البيانات المجمعة', 'البيانات المجمعة تشمل', 'نجمع منك', 'نجمع عنك',
-    // English
-    'we collect', 'we gather', 'we obtain', 'we may collect', 'information we collect',
-    'data we collect', 'types of data we collect', 'data types we collect',
-    'types of information', 'personal data we collect'
-  ];
+// USES SENTENCE-LEVEL ANALYSIS: collection verb AND data type must be in SAME SENTENCE
+function hasAffirmativeDataTypeCollection(text: string): boolean {
+  // Split text into sentences for precise analysis
+  const sentences = splitIntoSentences(text);
   
-  // Specific data types
-  const specificDataTypes = [
-    // Arabic - identity
-    'الاسم', 'الاسم الكامل', 'اسمك',
-    // Arabic - contact
-    'البريد الإلكتروني', 'الإيميل', 'بريدك',
-    'رقم الهاتف', 'رقم الجوال', 'هاتفك', 
-    'العنوان البريدي', 'عنوانك',
-    // Arabic - technical
-    'عنوان ip', 'عنوان الـ ip',
-    'نوع المتصفح', 'معلومات الجهاز', 'نظام التشغيل',
-    // Arabic - financial
-    'معلومات الدفع', 'بيانات الدفع', 'بطاقة الائتمان',
-    // Arabic - account
-    'اسم المستخدم', 'كلمة المرور',
-    // English - identity
-    'full name', 'first name', 'last name', 'your name',
-    // English - contact
-    'email address', 'phone number', 'postal address', 'mailing address',
-    // English - technical
-    'ip address', 'browser type', 'device information', 'operating system',
-    // English - financial
-    'payment information', 'credit card', 'billing information',
-    // English - account
-    'username', 'password',
-    // Categories
-    'بيانات الهوية', 'بيانات الاتصال', 'بيانات تقنية', 'بيانات مالية',
-    'identity data', 'contact data', 'technical data', 'financial data'
-  ];
+  // Find sentences with BOTH collection verb AND data type (excluding negated and contact sections)
+  const matches = findColocatedTerms(
+    sentences,
+    COLLECTION_VERBS,
+    SPECIFIC_DATA_TYPES,
+    { excludeNegated: true, excludeContactSections: true }
+  );
   
-  // For each collection verb occurrence, check if there's a data type nearby
-  for (const verb of collectionVerbs) {
-    const verbLower = verb.toLowerCase();
-    let searchStart = 0;
-    
-    // Find ALL occurrences of this verb
-    while (true) {
-      const verbIndex = textLower.indexOf(verbLower, searchStart);
-      if (verbIndex === -1) break;
-      
-      searchStart = verbIndex + 1; // Move past this occurrence for next iteration
-      
-      // Check if this occurrence is negated
-      const contextStart = Math.max(0, verbIndex - 50);
-      const beforeContext = textLower.substring(contextStart, verbIndex);
-      const negations = ['لا ', 'لن ', 'لم ', 'ليس', 'دون', 'بدون', 'do not', 'don\'t', 'does not', 'doesn\'t', 'never', 'will not', 'won\'t'];
-      const isNegated = negations.some(neg => beforeContext.includes(neg.toLowerCase()));
-      
-      if (isNegated) continue; // Skip negated occurrences
-      
-      // Look for data types within 300 characters AFTER the collection verb
-      const contextEnd = Math.min(textLower.length, verbIndex + 300);
-      const afterContext = textLower.substring(verbIndex, contextEnd);
-      
-      // Check if any specific data type is in this context
-      for (const dataType of specificDataTypes) {
-        if (afterContext.includes(dataType.toLowerCase())) {
-          // Found collection verb + data type in same context
-          console.log(`[DETERMINISTIC] Found "${verb}" + "${dataType}" in same context`);
-          return true;
-        }
-      }
+  if (matches.length > 0) {
+    console.log(`[DETERMINISTIC] Found ${matches.length} sentence(s) with collection verb + data type:`);
+    for (const match of matches.slice(0, 3)) { // Log first 3 matches
+      console.log(`  - "${match.sentence.text.substring(0, 100)}..." [terms: ${match.matchedTerms.join(', ')}]`);
     }
+    return true;
   }
   
-  // No co-located collection verb + data type found
+  console.log(`[DETERMINISTIC] No sentence found with collection verb + data type in affirmative context`);
   return false;
 }
 
+// Rights terms for data subject rights analysis
+const SPECIFIC_RIGHTS = [
+  // Arabic
+  'حق الوصول', 'حق الاطلاع', 'الوصول إلى بياناتك',
+  'حق التصحيح', 'تصحيح بياناتك', 'تعديل بياناتك',
+  'حق الحذف', 'حق الإتلاف', 'حذف بياناتك', 'إتلاف بياناتك',
+  'حق الاعتراض', 'الاعتراض على المعالجة',
+  'حق نقل البيانات', 'نقل بياناتك',
+  'سحب الموافقة', 'سحب موافقتك', 'إلغاء الموافقة',
+  'حق العلم', 'حق طلب الحصول',
+  // English
+  'right to access', 'right of access', 'access your data',
+  'right to rectification', 'right to correct', 'correct your data', 'update your data',
+  'right to erasure', 'right to deletion', 'right to delete', 'delete your data',
+  'right to object', 'object to processing',
+  'right to data portability', 'data portability', 'export your data',
+  'withdraw consent', 'revoke consent', 'right to be informed'
+];
+
+// Marketing terms
+const MARKETING_KEYWORDS = [
+  'تسويق', 'ترويج', 'إعلان', 'عروض ترويجية', 'رسائل ترويجية', 
+  'رسائل إعلانية', 'نشرة إخبارية',
+  'marketing', 'promotional', 'advertising', 'newsletter'
+];
+
+// Consent mechanism terms
+const CONSENT_KEYWORDS = [
+  // Opt-in
+  'موافقة صريحة', 'موافقتك المسبقة', 'موافقة مسبقة', 'opt-in', 'opt in', 
+  'explicit consent', 'بموافقتك', 'الموافقة المسبقة',
+  // Opt-out
+  'إلغاء الاشتراك', 'unsubscribe', 'opt-out', 'opt out', 
+  'إيقاف الرسائل', 'إلغاء الموافقة', 'withdraw consent', 'cancel subscription',
+  'رابط إلغاء', 'unsubscribe link'
+];
+
 // Deterministic check for specific rights mentioned
-function hasSpecificRightsMentioned(textLower: string): boolean {
-  const specificRights = [
-    // Arabic
-    'حق الوصول', 'حق الاطلاع', 'الوصول إلى بياناتك',
-    'حق التصحيح', 'تصحيح بياناتك', 'تعديل بياناتك',
-    'حق الحذف', 'حق الإتلاف', 'حذف بياناتك', 'إتلاف بياناتك',
-    'حق الاعتراض', 'الاعتراض على المعالجة',
-    'حق نقل البيانات', 'نقل بياناتك',
-    'سحب الموافقة', 'سحب موافقتك', 'إلغاء الموافقة',
-    // English
-    'right to access', 'right of access', 'access your data',
-    'right to rectification', 'right to correct', 'correct your data', 'update your data',
-    'right to erasure', 'right to deletion', 'right to delete', 'delete your data',
-    'right to object', 'object to processing',
-    'right to data portability', 'data portability', 'export your data',
-    'withdraw consent', 'revoke consent'
-  ];
+// USES SENTENCE-LEVEL ANALYSIS with negation handling
+function hasSpecificRightsMentioned(text: string): boolean {
+  const sentences = splitIntoSentences(text);
   
-  return specificRights.some(r => textLower.includes(r.toLowerCase()));
+  // Find non-negated sentences mentioning rights
+  const matches = findSentencesWithTerms(sentences, SPECIFIC_RIGHTS, { excludeNegated: true });
+  
+  if (matches.length > 0) {
+    console.log(`[DETERMINISTIC] Found ${matches.length} sentence(s) mentioning rights:`);
+    for (const match of matches.slice(0, 3)) {
+      console.log(`  - Rights found: ${match.matchedTerms.join(', ')}`);
+    }
+    return true;
+  }
+  
+  return false;
 }
 
-// Deterministic check for marketing consent mechanism - respects negations
-function hasMarketingWithConsentMechanism(textLower: string): { mentionsMarketing: boolean; marketingNegated: boolean; hasConsent: boolean } {
-  const marketingKeywords = ['تسويق', 'ترويج', 'إعلان', 'عروض ترويجية', 'رسائل ترويجية', 'marketing', 'promotional', 'advertising'];
-  const consentKeywords = [
-    // Opt-in
-    'موافقة صريحة', 'موافقتك المسبقة', 'موافقة مسبقة', 'opt-in', 'opt in', 'explicit consent', 'بموافقتك',
-    // Opt-out
-    'إلغاء الاشتراك', 'unsubscribe', 'opt-out', 'opt out', 'إيقاف الرسائل', 'إلغاء الموافقة', 'withdraw consent', 'cancel subscription'
-  ];
+// Deterministic check for marketing consent mechanism - uses sentence-level analysis
+function hasMarketingWithConsentMechanism(text: string): { mentionsMarketing: boolean; marketingNegated: boolean; hasConsent: boolean } {
+  const sentences = splitIntoSentences(text);
   
-  // Marketing negation patterns - "we do not use for marketing"
-  const marketingNegations = [
-    'لا نستخدم بياناتك للتسويق', 'لن نستخدم بياناتك للتسويق', 
-    'لا نستخدم معلوماتك للتسويق', 'لا نشارك بياناتك لأغراض تسويقية',
-    'do not use your data for marketing', 'don\'t use your data for marketing',
-    'never use for marketing', 'will not use for marketing', 'not used for marketing',
-    'لا نرسل رسائل تسويقية', 'لا نرسل إعلانات'
-  ];
+  // Use the sentence-level topic/consent checker
+  const result = hasTopicWithConsent(sentences, MARKETING_KEYWORDS, CONSENT_KEYWORDS);
   
-  const mentionsMarketing = marketingKeywords.some(k => textLower.includes(k.toLowerCase()));
-  const marketingNegated = marketingNegations.some(n => textLower.includes(n.toLowerCase()));
-  const hasConsent = consentKeywords.some(k => textLower.includes(k.toLowerCase()));
+  console.log(`[DETERMINISTIC] Marketing check: hasTopic=${result.hasTopic}, topicNegated=${result.topicNegated}, hasConsent=${result.hasConsent}`);
   
-  return { mentionsMarketing, marketingNegated, hasConsent };
+  return { 
+    mentionsMarketing: result.hasTopic, 
+    marketingNegated: result.topicNegated, 
+    hasConsent: result.hasConsent 
+  };
 }
 
 // False positive detection - check if element actually exists in text with STRICT validation
@@ -780,3 +836,213 @@ function extractCleanText(html: string): string {
   
   return text;
 }
+
+// ==================== COMPREHENSIVE DOCUMENT ANALYSIS ====================
+
+export interface ComprehensiveAnalysisResult {
+  privacyPolicy?: {
+    url: string;
+    violations: LegalViolation[];
+    complianceScore: number;
+  };
+  termsAndConditions?: {
+    url: string;
+    deterministicReport: DocumentAnalysisReport;
+    violations: LegalViolation[];
+    complianceScore: number;
+  };
+  cookiePolicy?: {
+    url: string;
+    deterministicReport: DocumentAnalysisReport;
+    complianceScore: number;
+  };
+  returnPolicy?: {
+    url: string;
+    deterministicReport: DocumentAnalysisReport;
+    complianceScore: number;
+  };
+  overallScore: number;
+  totalViolations: number;
+  summary: {
+    critical: number;
+    warning: number;
+    suggestion: number;
+  };
+}
+
+/**
+ * Performs deterministic analysis on Terms & Conditions
+ */
+export function analyzeTermsDeterministic(html: string): DocumentAnalysisReport {
+  const cleanText = extractCleanText(html);
+  console.log(`[DETERMINISTIC] Analyzing Terms & Conditions (${cleanText.length} chars)`);
+  return analyzeDocument(cleanText, 'terms');
+}
+
+/**
+ * Performs deterministic analysis on Cookie Policy
+ */
+export function analyzeCookiePolicyDeterministic(html: string): DocumentAnalysisReport {
+  const cleanText = extractCleanText(html);
+  console.log(`[DETERMINISTIC] Analyzing Cookie Policy (${cleanText.length} chars)`);
+  return analyzeDocument(cleanText, 'cookie_policy');
+}
+
+/**
+ * Performs deterministic analysis on Return/Refund Policy
+ */
+export function analyzeReturnPolicyDeterministic(html: string): DocumentAnalysisReport {
+  const cleanText = extractCleanText(html);
+  console.log(`[DETERMINISTIC] Analyzing Return Policy (${cleanText.length} chars)`);
+  return analyzeDocument(cleanText, 'return_policy');
+}
+
+/**
+ * Converts deterministic analysis results to LegalViolation format
+ */
+function convertToViolations(
+  report: DocumentAnalysisReport, 
+  documentUrl: string
+): LegalViolation[] {
+  const kb = loadLegalKnowledgeBase();
+  const violations: LegalViolation[] = [];
+  
+  for (const result of report.details) {
+    if (!result.found) {
+      // Find the requirement details from knowledge base
+      const requirement = kb.find(r => r.id === result.requirementId);
+      if (!requirement) continue;
+      
+      violations.push({
+        requirementId: result.requirementId,
+        articleReference: requirement.source,
+        severity: requirement.severity as "critical" | "warning" | "suggestion",
+        category: requirement.category,
+        title: requirement.textAr,
+        description: requirement.description || requirement.textEn,
+        violatingText: null,
+        remediation: `يجب إضافة: ${requirement.textAr}`,
+        documentType: report.documentType === 'terms' ? 'terms' : 
+                      report.documentType === 'cookie_policy' ? 'cookie_banner' : 'consent',
+        confidence: 1.0 - result.confidence // Higher confidence in violation if lower evidence
+      });
+    }
+  }
+  
+  return violations;
+}
+
+/**
+ * Comprehensive analysis of all legal documents
+ * Combines AI-powered privacy policy analysis with deterministic document analyzers
+ */
+export async function performComprehensiveAnalysis(documents: {
+  privacyPolicy?: { url: string; html: string };
+  terms?: { url: string; html: string };
+  cookiePolicy?: { url: string; html: string };
+  returnPolicy?: { url: string; html: string };
+}): Promise<ComprehensiveAnalysisResult> {
+  console.log("[COMPREHENSIVE] === STARTING COMPREHENSIVE DOCUMENT ANALYSIS ===");
+  
+  const result: ComprehensiveAnalysisResult = {
+    overallScore: 0,
+    totalViolations: 0,
+    summary: { critical: 0, warning: 0, suggestion: 0 }
+  };
+  
+  let totalScore = 0;
+  let documentCount = 0;
+  const allViolations: LegalViolation[] = [];
+  
+  // 1. Privacy Policy (Hybrid: AI + Deterministic verification)
+  if (documents.privacyPolicy) {
+    console.log("[COMPREHENSIVE] Analyzing Privacy Policy...");
+    const cleanText = extractCleanText(documents.privacyPolicy.html);
+    const violations = await analyzeWithRAG(cleanText, documents.privacyPolicy.url, "privacy_policy");
+    
+    const criticalCount = violations.filter(v => v.severity === 'critical').length;
+    const score = Math.max(0, 100 - (criticalCount * 15) - (violations.filter(v => v.severity === 'warning').length * 8));
+    
+    result.privacyPolicy = {
+      url: documents.privacyPolicy.url,
+      violations,
+      complianceScore: score
+    };
+    
+    allViolations.push(...violations);
+    totalScore += score;
+    documentCount++;
+    console.log(`[COMPREHENSIVE] Privacy Policy: ${violations.length} violations, score: ${score}%`);
+  }
+  
+  // 2. Terms & Conditions (Deterministic)
+  if (documents.terms) {
+    console.log("[COMPREHENSIVE] Analyzing Terms & Conditions...");
+    const report = analyzeTermsDeterministic(documents.terms.html);
+    const violations = convertToViolations(report, documents.terms.url);
+    
+    result.termsAndConditions = {
+      url: documents.terms.url,
+      deterministicReport: report,
+      violations,
+      complianceScore: report.complianceScore
+    };
+    
+    allViolations.push(...violations);
+    totalScore += report.complianceScore;
+    documentCount++;
+    console.log(`[COMPREHENSIVE] Terms: ${report.missingRequirements.length} missing, score: ${report.complianceScore}%`);
+  }
+  
+  // 3. Cookie Policy (Deterministic)
+  if (documents.cookiePolicy) {
+    console.log("[COMPREHENSIVE] Analyzing Cookie Policy...");
+    const report = analyzeCookiePolicyDeterministic(documents.cookiePolicy.html);
+    
+    result.cookiePolicy = {
+      url: documents.cookiePolicy.url,
+      deterministicReport: report,
+      complianceScore: report.complianceScore
+    };
+    
+    const violations = convertToViolations(report, documents.cookiePolicy.url);
+    allViolations.push(...violations);
+    totalScore += report.complianceScore;
+    documentCount++;
+    console.log(`[COMPREHENSIVE] Cookie Policy: ${report.missingRequirements.length} missing, score: ${report.complianceScore}%`);
+  }
+  
+  // 4. Return/Refund Policy (Deterministic)
+  if (documents.returnPolicy) {
+    console.log("[COMPREHENSIVE] Analyzing Return Policy...");
+    const report = analyzeReturnPolicyDeterministic(documents.returnPolicy.html);
+    
+    result.returnPolicy = {
+      url: documents.returnPolicy.url,
+      deterministicReport: report,
+      complianceScore: report.complianceScore
+    };
+    
+    const violations = convertToViolations(report, documents.returnPolicy.url);
+    allViolations.push(...violations);
+    totalScore += report.complianceScore;
+    documentCount++;
+    console.log(`[COMPREHENSIVE] Return Policy: ${report.missingRequirements.length} missing, score: ${report.complianceScore}%`);
+  }
+  
+  // Calculate overall results
+  result.overallScore = documentCount > 0 ? Math.round(totalScore / documentCount) : 0;
+  result.totalViolations = allViolations.length;
+  result.summary.critical = allViolations.filter(v => v.severity === 'critical').length;
+  result.summary.warning = allViolations.filter(v => v.severity === 'warning').length;
+  result.summary.suggestion = allViolations.filter(v => v.severity === 'suggestion').length;
+  
+  console.log(`[COMPREHENSIVE] === ANALYSIS COMPLETE ===`);
+  console.log(`[COMPREHENSIVE] Overall Score: ${result.overallScore}%`);
+  console.log(`[COMPREHENSIVE] Total Violations: ${result.totalViolations} (${result.summary.critical} critical, ${result.summary.warning} warnings)`);
+  
+  return result;
+}
+
+// Export for use in routes
+export { DocumentAnalysisReport, AnalysisResult };
