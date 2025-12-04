@@ -156,8 +156,149 @@ function formatRequirementsForPrompt(requirements: LegalArticle[]): string {
   ).join('\n\n');
 }
 
+// Negation detection - check if phrase appears after negation
+function isNegatedContext(text: string, keyword: string): boolean {
+  const keywordIndex = text.indexOf(keyword.toLowerCase());
+  if (keywordIndex === -1) return false;
+  
+  // Check 50 characters before the keyword for negation patterns
+  const contextStart = Math.max(0, keywordIndex - 50);
+  const context = text.substring(contextStart, keywordIndex).toLowerCase();
+  
+  const negations = [
+    // Arabic negations
+    'لا نجمع', 'لن نجمع', 'لم نجمع', 'لا نستخدم', 'لا نحصل', 'لا نشارك',
+    'دون جمع', 'بدون جمع', 'لا يتم جمع', 'لا يتم استخدام',
+    'لا نقوم بجمع', 'لا نقوم باستخدام',
+    // English negations
+    'do not collect', 'don\'t collect', 'does not collect', 'doesn\'t collect',
+    'never collect', 'will not collect', 'won\'t collect',
+    'do not use', 'don\'t use', 'never use', 'without collecting',
+    'we do not', 'we don\'t', 'we never'
+  ];
+  
+  return negations.some(neg => context.includes(neg.toLowerCase()));
+}
+
+// Deterministic check for affirmative data collection statements with specific types
+function hasAffirmativeDataTypeCollection(textLower: string): boolean {
+  // Affirmative collection patterns (positive statements)
+  const affirmativePatterns = [
+    // Arabic - affirmative collection
+    'نجمع المعلومات التالية', 'نجمع البيانات التالية', 'البيانات التي نجمعها',
+    'المعلومات التي نجمعها', 'نحصل على المعلومات', 'نقوم بجمع',
+    'تشمل البيانات المجمعة', 'نجمع منك', 'نجمع عنك',
+    // English - affirmative collection  
+    'we collect the following', 'we collect information', 'we may collect',
+    'we gather information', 'information we collect', 'data we collect',
+    'we obtain information', 'types of data we collect', 'data types we collect'
+  ];
+  
+  // Check for affirmative collection patterns
+  const hasAffirmativePattern = affirmativePatterns.some(p => textLower.includes(p.toLowerCase()));
+  
+  // If we found an affirmative pattern, verify it's not negated
+  if (hasAffirmativePattern) {
+    // Check that it's not in a negation context
+    for (const pattern of affirmativePatterns) {
+      if (textLower.includes(pattern.toLowerCase()) && !isNegatedContext(textLower, pattern)) {
+        return true;
+      }
+    }
+  }
+  
+  // Specific data types (not generic phrases)
+  const specificDataTypes = [
+    // Arabic - identity
+    'الاسم', 'الاسم الكامل', 'اسمك', 'أسماء',
+    // Arabic - contact
+    'البريد الإلكتروني', 'الإيميل', 'بريدك',
+    'رقم الهاتف', 'رقم الجوال', 'هاتفك', 
+    'العنوان البريدي', 'عنوانك',
+    // Arabic - technical
+    'عنوان ip', 'عنوان الـ ip',
+    'نوع المتصفح', 'معلومات الجهاز', 'نظام التشغيل',
+    // Arabic - financial
+    'معلومات الدفع', 'بيانات الدفع', 'بطاقة الائتمان',
+    // Arabic - account
+    'اسم المستخدم', 'كلمة المرور',
+    // English - identity
+    'full name', 'first name', 'last name',
+    // English - contact
+    'email address', 'phone number', 'postal address',
+    // English - technical
+    'ip address', 'browser type', 'device information', 'operating system',
+    // English - financial
+    'payment information', 'credit card', 'billing information',
+    // English - account
+    'username', 'password',
+    // Categories
+    'بيانات الهوية', 'بيانات الاتصال', 'بيانات تقنية',
+    'identity data', 'contact data', 'technical data'
+  ];
+  
+  // Count how many specific data types are mentioned in AFFIRMATIVE context (not negated)
+  let affirmativeDataTypes = 0;
+  for (const dataType of specificDataTypes) {
+    if (textLower.includes(dataType.toLowerCase()) && !isNegatedContext(textLower, dataType)) {
+      affirmativeDataTypes++;
+    }
+  }
+  
+  // Need at least one specific data type in affirmative context
+  return affirmativeDataTypes >= 1;
+}
+
+// Deterministic check for specific rights mentioned
+function hasSpecificRightsMentioned(textLower: string): boolean {
+  const specificRights = [
+    // Arabic
+    'حق الوصول', 'حق الاطلاع', 'الوصول إلى بياناتك',
+    'حق التصحيح', 'تصحيح بياناتك', 'تعديل بياناتك',
+    'حق الحذف', 'حق الإتلاف', 'حذف بياناتك', 'إتلاف بياناتك',
+    'حق الاعتراض', 'الاعتراض على المعالجة',
+    'حق نقل البيانات', 'نقل بياناتك',
+    'سحب الموافقة', 'سحب موافقتك', 'إلغاء الموافقة',
+    // English
+    'right to access', 'right of access', 'access your data',
+    'right to rectification', 'right to correct', 'correct your data', 'update your data',
+    'right to erasure', 'right to deletion', 'right to delete', 'delete your data',
+    'right to object', 'object to processing',
+    'right to data portability', 'data portability', 'export your data',
+    'withdraw consent', 'revoke consent'
+  ];
+  
+  return specificRights.some(r => textLower.includes(r.toLowerCase()));
+}
+
+// Deterministic check for marketing consent mechanism - respects negations
+function hasMarketingWithConsentMechanism(textLower: string): { mentionsMarketing: boolean; marketingNegated: boolean; hasConsent: boolean } {
+  const marketingKeywords = ['تسويق', 'ترويج', 'إعلان', 'عروض ترويجية', 'رسائل ترويجية', 'marketing', 'promotional', 'advertising'];
+  const consentKeywords = [
+    // Opt-in
+    'موافقة صريحة', 'موافقتك المسبقة', 'موافقة مسبقة', 'opt-in', 'opt in', 'explicit consent', 'بموافقتك',
+    // Opt-out
+    'إلغاء الاشتراك', 'unsubscribe', 'opt-out', 'opt out', 'إيقاف الرسائل', 'إلغاء الموافقة', 'withdraw consent', 'cancel subscription'
+  ];
+  
+  // Marketing negation patterns - "we do not use for marketing"
+  const marketingNegations = [
+    'لا نستخدم بياناتك للتسويق', 'لن نستخدم بياناتك للتسويق', 
+    'لا نستخدم معلوماتك للتسويق', 'لا نشارك بياناتك لأغراض تسويقية',
+    'do not use your data for marketing', 'don\'t use your data for marketing',
+    'never use for marketing', 'will not use for marketing', 'not used for marketing',
+    'لا نرسل رسائل تسويقية', 'لا نرسل إعلانات'
+  ];
+  
+  const mentionsMarketing = marketingKeywords.some(k => textLower.includes(k.toLowerCase()));
+  const marketingNegated = marketingNegations.some(n => textLower.includes(n.toLowerCase()));
+  const hasConsent = consentKeywords.some(k => textLower.includes(k.toLowerCase()));
+  
+  return { mentionsMarketing, marketingNegated, hasConsent };
+}
+
 // False positive detection - check if element actually exists in text with STRICT validation
-// For complex checks (pp3, pp8, pp11), we trust AI's judgment since it can understand context better
+// Uses deterministic checks to verify AI findings and reduce false positives
 function verifyViolationAgainstText(violation: LegalViolation, textLower: string): boolean {
   const title = violation.title;
   const reqId = violation.requirementId;
@@ -183,12 +324,16 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
     if (hasContactInfo) return false;
   }
   
-  // pp3 - Data types specification: Let AI handle this check
-  // AI can understand context better (e.g., "we collect X, Y, Z" vs just mentioning keywords)
-  // Keep AI's decision for this requirement
+  // pp3 - Data types specification
+  // AI reported violation - verify deterministically with context
   if (reqId === 'pp3') {
-    console.log(`[RAG_VERIFY] pp3 (data types): AI reported missing data types specification - KEEPING VIOLATION`);
-    return true; // Trust AI's judgment on this complex check
+    // Check if policy actually has collection verb + specific data types
+    if (hasAffirmativeDataTypeCollection(textLower)) {
+      console.log(`[RAG_VERIFY] pp3 (data types): OVERRIDE AI - found affirmative collection with specific types`);
+      return false; // False positive - policy does specify data types
+    }
+    console.log(`[RAG_VERIFY] pp3 (data types): AI violation CONFIRMED - no affirmative data type collection found`);
+    return true; // Real violation
   }
   
   // Check for data collection methods - pp4
@@ -238,20 +383,35 @@ function verifyViolationAgainstText(violation: LegalViolation, textLower: string
     if (hasRetentionInfo) return false;
   }
   
-  // pp8 - Data subject rights: Let AI handle this check
-  // AI can understand context better (listing rights vs just mentioning "your rights")
-  // Keep AI's decision for this requirement
+  // pp8 - Data subject rights
+  // AI reported violation - verify deterministically
   if (reqId === 'pp8' || reqId?.startsWith('r')) {
-    console.log(`[RAG_VERIFY] pp8/rights (data subject rights): AI reported missing rights explanation - KEEPING VIOLATION`);
-    return true; // Trust AI's judgment on this complex check
+    // Check if policy actually mentions specific rights
+    if (hasSpecificRightsMentioned(textLower)) {
+      console.log(`[RAG_VERIFY] pp8/rights: OVERRIDE AI - found specific rights mentioned`);
+      return false; // False positive - policy does mention rights
+    }
+    console.log(`[RAG_VERIFY] pp8/rights: AI violation CONFIRMED - no specific rights found`);
+    return true; // Real violation
   }
   
-  // pp11 - Marketing consent: Let AI handle this check
-  // AI can understand context better (marketing use with/without consent)
-  // Keep AI's decision for this requirement
+  // pp11 - Marketing consent
+  // AI reported violation - verify deterministically
   if (reqId === 'pp11') {
-    console.log(`[RAG_VERIFY] pp11 (marketing consent): AI reported missing marketing consent - KEEPING VIOLATION`);
-    return true; // Trust AI's judgment on this complex check
+    const marketingCheck = hasMarketingWithConsentMechanism(textLower);
+    
+    if (!marketingCheck.mentionsMarketing) {
+      console.log(`[RAG_VERIFY] pp11: OVERRIDE AI - marketing not mentioned, no consent needed`);
+      return false; // False positive - no marketing = no consent needed
+    }
+    
+    if (marketingCheck.hasConsent) {
+      console.log(`[RAG_VERIFY] pp11: OVERRIDE AI - marketing mentioned WITH consent mechanism`);
+      return false; // False positive - has consent mechanism
+    }
+    
+    console.log(`[RAG_VERIFY] pp11: AI violation CONFIRMED - marketing without consent mechanism`);
+    return true; // Real violation - marketing without consent
   }
   
   // Check for cookies info - c1-c4
@@ -401,22 +561,23 @@ export async function analyzeWithRAG(
 ### 2. فحوصات صارمة إلزامية (أبلغ عنها كـ critical إذا غابت):
 
 #### pp3 - تحديد أنواع البيانات الشخصية:
-- يجب وجود قائمة واضحة بفئات البيانات المجمعة
-- مثال على ما هو مطلوب: "نجمع: بيانات الهوية (الاسم)، بيانات الاتصال (البريد، الهاتف)، بيانات تقنية (IP)..."
-- ❌ عبارة "نجمع معلوماتك" وحدها ليست كافية - يجب تحديد أنواع البيانات بالتفصيل
-- أبلغ عن مخالفة إذا لم تجد 3+ أنواع محددة من البيانات
+- يجب ذكر أنواع/فئات البيانات المحددة التي يتم جمعها
+- أمثلة على تحديد صحيح: "نجمع الاسم والبريد الإلكتروني" أو "بيانات الهوية وبيانات الاتصال"
+- ❌ عبارة "نجمع معلوماتك الشخصية" وحدها ليست كافية
+- ✓ يكفي ذكر نوع واحد أو أكثر (حسب ما يجمعه الموقع فعلياً)
+- أبلغ عن مخالفة فقط إذا لم تجد أي تحديد لأنواع البيانات (عبارات عامة فقط)
 
 #### pp8 - شرح حقوق أصحاب البيانات:
-- يجب شرح كل حق بشكل منفصل ومفصل
-- الحقوق المطلوب شرحها: الوصول، التصحيح، الحذف، الاعتراض، نقل البيانات
+- يجب ذكر بعض الحقوق المحددة (الوصول، التصحيح، الحذف، الاعتراض، أو النقل)
 - ❌ عبارة "لك الحق في حماية بياناتك" وحدها ليست كافية
-- أبلغ عن مخالفة إذا لم تجد شرحاً لـ 3+ حقوق محددة
+- ✓ يكفي ذكر حق واحد أو أكثر بشكل محدد
+- أبلغ عن مخالفة فقط إذا لم تجد أي ذكر لحقوق محددة
 
-#### pp11 - الموافقة على التسويق:
-- إذا ذُكر استخدام البيانات للتسويق/الترويج/الإعلانات، يجب:
-  - توضيح أن الموافقة اختيارية وصريحة (opt-in)
-  - وجود آلية إلغاء الاشتراك (unsubscribe/opt-out)
-- ❌ ذكر "قد نرسل لك عروض" بدون ذكر الموافقة = مخالفة
+#### pp11 - الموافقة على التسويق (ينطبق فقط إذا ذُكر التسويق):
+- إذا ذُكر استخدام البيانات للتسويق/الترويج/الإعلانات، تحقق من:
+  - وجود آلية موافقة أو إلغاء اشتراك (opt-in/opt-out)
+- ❌ ذكر "قد نرسل لك عروض" بدون ذكر آلية الموافقة/الإلغاء = مخالفة
+- ✓ إذا لم يُذكر التسويق نهائياً = لا مخالفة (لا حاجة للموافقة)
 
 ### 3. أمثلة على ما يُعتبر موجوداً (لا تبلغ عنه كمخالفة):
 - "مكتبة جرير" أو أي اسم شركة = هوية الجهة موجودة ✓
