@@ -575,6 +575,11 @@ export function detectCookieBanner(html: string): CookieBannerResult {
     'cookie-disclaimer', 'cookie-warning', 'cookie-info', 'cookie-notification',
     'cky-consent', 'cky-banner', 'termly-consent', 'iubenda-cs-container',
     'cmplz-cookiebanner', 'moove-gdpr', 'cli-modal', 'catapult-cookie-bar',
+    'bhr-consent', 'bhr-consent__container', 'bhr-cookie', 'riyadh-consent',
+    'consent-container', 'consent-wrapper', 'consent-overlay', 'consent-modal',
+    'privacy-consent', 'data-consent', 'tracking-consent', 'cookie-overlay',
+    'cookie-layer', 'cookie-wrapper', 'cookie-container', 'cookie-box',
+    'cookies-overlay', 'cookies-modal', 'cookies-wrapper', 'cookies-container',
   ];
   
   const bannerIds = [
@@ -688,6 +693,60 @@ export function detectCookieBanner(html: string): CookieBannerResult {
           evidence = `Found cookie consent script: ${scriptPattern}`;
           return false;
         }
+      }
+    });
+  }
+  
+  if (!found) {
+    const cookieKeywords = ['cookie', 'كوكي', 'ملفات تعريف', 'ملفات الارتباط', 'consent', 'موافقة'];
+    const acceptKeywords = ['قبول', 'أوافق', 'موافق', 'accept', 'agree', 'ok', 'allow', 'got it', 'فهمت'];
+    
+    $('div, section, aside, footer, [role="dialog"], [role="alertdialog"], [aria-modal="true"]').each((_, container) => {
+      if (found) return false;
+      
+      const containerText = $(container).text().toLowerCase();
+      const containerHtml = $(container).html()?.toLowerCase() || '';
+      
+      const hasCookieKeyword = cookieKeywords.some(kw => containerText.includes(kw.toLowerCase()));
+      
+      if (hasCookieKeyword) {
+        const buttons = $(container).find('button, a, [role="button"], input[type="submit"], input[type="button"]');
+        let hasAcceptBtn = false;
+        
+        buttons.each((_, btn) => {
+          const btnText = $(btn).text().toLowerCase().trim();
+          if (acceptKeywords.some(kw => btnText.includes(kw.toLowerCase()))) {
+            hasAcceptBtn = true;
+            return false;
+          }
+        });
+        
+        if (hasAcceptBtn) {
+          found = true;
+          detectionMethod = 'text_content';
+          evidence = `Found semantic cookie consent: container with cookie keywords and accept button`;
+          return false;
+        }
+      }
+    });
+  }
+  
+  if (!found) {
+    const classAttrPatterns = ['consent', 'cookie', 'gdpr', 'privacy', 'banner', 'popup', 'modal', 'overlay'];
+    
+    $('*').each((_, el) => {
+      if (found) return false;
+      
+      const classAttr = $(el).attr('class') || '';
+      const idAttr = $(el).attr('id') || '';
+      const combined = (classAttr + ' ' + idAttr).toLowerCase();
+      
+      const matchCount = classAttrPatterns.filter(p => combined.includes(p)).length;
+      if (matchCount >= 2) {
+        found = true;
+        detectionMethod = 'css_class';
+        evidence = `Found element with multiple consent-related attributes: ${combined.substring(0, 100)}`;
+        return false;
       }
     });
   }
