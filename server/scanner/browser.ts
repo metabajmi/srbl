@@ -53,8 +53,8 @@ const BROWSER_OPTIONS = {
 };
 
 const PAGE_OPTIONS = {
-  timeout: 30000,
-  waitUntil: 'networkidle2' as const,
+  timeout: 60000,
+  waitUntil: 'domcontentloaded' as const,
 };
 
 export async function getBrowser(): Promise<Browser> {
@@ -129,7 +129,17 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     });
     
     console.log(`[Scanner] Navigating to ${url}...`);
-    const response = await page.goto(url, PAGE_OPTIONS);
+    let response;
+    try {
+      response = await page.goto(url, PAGE_OPTIONS);
+    } catch (navError) {
+      console.log(`[Scanner] Initial navigation failed, trying with longer wait...`);
+      try {
+        response = await page.goto(url, { timeout: 90000, waitUntil: 'load' });
+      } catch (retryError) {
+        console.log(`[Scanner] Retry also failed, attempting to get partial content...`);
+      }
+    }
     
     if (response) {
       const headers = response.headers();
@@ -137,7 +147,13 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       console.log(`[Scanner] Page loaded with status: ${response.status()}`);
     }
     
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      await page.waitForSelector('body', { timeout: 10000 });
+    } catch (e) {
+      console.log(`[Scanner] Body selector wait timed out, continuing anyway...`);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     const finalUrl = page.url();
     console.log(`[Scanner] Final URL after redirects: ${finalUrl}`);
