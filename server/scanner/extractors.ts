@@ -570,22 +570,44 @@ export function detectCookieBanner(html: string): CookieBannerResult {
     'cookie-banner', 'cookie-consent', 'cookie-notice', 'cookie-popup',
     'gdpr-banner', 'gdpr-consent', 'consent-banner', 'consent-popup',
     'privacy-banner', 'cc-banner', 'cookieconsent', 'cookie-law',
+    'cookies-banner', 'cookies-notice', 'cookies-popup', 'cookie-modal',
+    'cookie-dialog', 'cookie-alert', 'cookie-bar', 'cookie-message',
+    'cookie-disclaimer', 'cookie-warning', 'cookie-info', 'cookie-notification',
+    'cky-consent', 'cky-banner', 'termly-consent', 'iubenda-cs-container',
+    'cmplz-cookiebanner', 'moove-gdpr', 'cli-modal', 'catapult-cookie-bar',
   ];
   
   const bannerIds = [
     'cookie-banner', 'cookie-consent', 'gdpr-banner', 'consent-banner',
     'cookie-notice', 'privacy-banner', 'cookieconsent', 'cc-popup',
+    'cookies-banner', 'cookie-modal', 'cookie-dialog', 'cookie-alert',
+    'cookie-bar', 'cookie-message', 'CybotCookiebotDialog',
+    'onetrust-consent-sdk', 'onetrust-banner-sdk', 'ot-sdk-container',
+    'cky-consent-container', 'termly-code-snippet-support',
+    'iubenda-cs-banner', 'cmplz-cookiebanner', 'cookie-law-info-bar',
   ];
   
   const textPatterns = [
     'نستخدم ملفات تعريف الارتباط',
     'نستخدم الكوكيز',
     'ملفات الارتباط',
+    'ملفات تعريف الإرتباط',
+    'سياسة ملفات تعريف الارتباط',
+    'سياسة الكوكيز',
+    'الكوكيز',
     'we use cookies',
     'this website uses cookies',
+    'this site uses cookies',
+    'our website uses cookies',
     'cookie policy',
     'accept cookies',
     'accept all cookies',
+    'cookies help us',
+    'cookies to improve',
+    'by continuing to use',
+    'consent to cookies',
+    'cookie preferences',
+    'manage cookies',
   ];
   
   let found = false;
@@ -638,6 +660,20 @@ export function detectCookieBanner(html: string): CookieBannerResult {
       'quantcast',
       'trustarc',
       'usercentrics',
+      'termly',
+      'iubenda',
+      'complianz',
+      'cmplz',
+      'moove_gdpr',
+      'cookie-law-info',
+      'cli_cookie',
+      'catapult-cookie',
+      'osano',
+      'cookie-script',
+      'cookieyes',
+      'cky-consent',
+      'securiti',
+      'didomi',
     ];
     
     $('script').each((_, el) => {
