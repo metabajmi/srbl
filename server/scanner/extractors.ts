@@ -588,8 +588,11 @@ export function detectCookieBanner(html: string): CookieBannerResult {
     'cookies-banner', 'cookie-modal', 'cookie-dialog', 'cookie-alert',
     'cookie-bar', 'cookie-message', 'CybotCookiebotDialog',
     'onetrust-consent-sdk', 'onetrust-banner-sdk', 'ot-sdk-container',
+    'onetrust-policy', 'onetrust-button-group', 'ot-sdk-btn',
     'cky-consent-container', 'termly-code-snippet-support',
     'iubenda-cs-banner', 'cmplz-cookiebanner', 'cookie-law-info-bar',
+    'didomi-consent-popup', 'usercentrics-root', 'quantcast-choice',
+    'sp-cc', 'trustarc-banner', 'osano-cm-window', 'cookiescript_badge',
   ];
   
   const textPatterns = [
@@ -752,23 +755,101 @@ export function detectCookieBanner(html: string): CookieBannerResult {
   }
   
   if (found) {
-    const acceptPatterns = ['قبول', 'accept', 'agree', 'موافق', 'ok', 'allow'];
-    const rejectPatterns = ['رفض', 'reject', 'decline', 'deny', 'refuse'];
-    const settingsPatterns = ['تخصيص', 'إعدادات', 'settings', 'preferences', 'customize', 'manage'];
+    const acceptPatterns = [
+      'قبول', 'أقبل', 'أوافق', 'موافق', 'موافقة', 'نعم', 'حسناً', 'فهمت', 'متابعة',
+      'accept', 'agree', 'ok', 'allow', 'confirm', 'got it', 'i understand', 'continue',
+      'accept all', 'allow all', 'accept cookies', 'allow cookies', 'قبول الكل',
+    ];
+    const rejectPatterns = [
+      'رفض', 'أرفض', 'لا', 'إلغاء', 'رفض الكل',
+      'reject', 'decline', 'deny', 'refuse', 'no thanks', 'reject all', 'deny all',
+      'decline all', 'no, thanks', 'not now', 'later',
+    ];
+    const settingsPatterns = [
+      'تخصيص', 'إعدادات', 'تفضيلات', 'خيارات', 'إدارة',
+      'settings', 'preferences', 'customize', 'manage', 'options', 'more options',
+      'cookie settings', 'manage cookies', 'cookie preferences', 'إعدادات الكوكيز',
+    ];
     
-    $('button, a, [role="button"]').each((_, el) => {
+    const acceptButtonIds = [
+      'onetrust-accept-btn-handler', 'accept-cookies', 'acceptCookies', 'accept-all',
+      'acceptAll', 'cookie-accept', 'cookieAccept', 'btn-accept', 'btnAccept',
+      'agree-button', 'agreeButton', 'consent-accept', 'consentAccept',
+      'cky-btn-accept', 'cli-accept-btn', 'cmplz-accept', 'accept-btn',
+    ];
+    const rejectButtonIds = [
+      'onetrust-reject-all-handler', 'reject-cookies', 'rejectCookies', 'reject-all',
+      'rejectAll', 'cookie-reject', 'cookieReject', 'btn-reject', 'btnReject',
+      'decline-button', 'declineButton', 'consent-reject', 'consentReject',
+      'cky-btn-reject', 'cli-reject-btn', 'cmplz-deny', 'reject-btn', 'deny-btn',
+    ];
+    const settingsButtonIds = [
+      'onetrust-pc-btn-handler', 'cookie-settings', 'cookieSettings', 'manage-cookies',
+      'manageCookies', 'cookie-preferences', 'cookiePreferences', 'btn-settings',
+      'cky-btn-preferences', 'cli-settings-btn', 'cmplz-manage',
+    ];
+    
+    for (const id of acceptButtonIds) {
+      if ($(`#${id}`).length > 0 || $(`[id*="${id}"]`).length > 0) {
+        hasAcceptButton = true;
+        break;
+      }
+    }
+    for (const id of rejectButtonIds) {
+      if ($(`#${id}`).length > 0 || $(`[id*="${id}"]`).length > 0) {
+        hasRejectButton = true;
+        break;
+      }
+    }
+    for (const id of settingsButtonIds) {
+      if ($(`#${id}`).length > 0 || $(`[id*="${id}"]`).length > 0) {
+        hasSettingsOption = true;
+        break;
+      }
+    }
+    
+    const acceptClassPatterns = ['accept', 'agree', 'allow', 'confirm', 'primary', 'success'];
+    const rejectClassPatterns = ['reject', 'decline', 'deny', 'refuse', 'secondary', 'cancel'];
+    const settingsClassPatterns = ['settings', 'preferences', 'manage', 'options', 'customize'];
+    
+    $('button, a, [role="button"], input[type="submit"], input[type="button"]').each((_, el) => {
       const text = $(el).text().toLowerCase().trim();
+      const className = ($(el).attr('class') || '').toLowerCase();
+      const id = ($(el).attr('id') || '').toLowerCase();
+      const ariaLabel = ($(el).attr('aria-label') || '').toLowerCase();
+      const combined = text + ' ' + className + ' ' + id + ' ' + ariaLabel;
       
       for (const pattern of acceptPatterns) {
-        if (text.includes(pattern)) hasAcceptButton = true;
+        if (combined.includes(pattern.toLowerCase())) {
+          hasAcceptButton = true;
+          break;
+        }
       }
       for (const pattern of rejectPatterns) {
-        if (text.includes(pattern)) hasRejectButton = true;
+        if (combined.includes(pattern.toLowerCase())) {
+          hasRejectButton = true;
+          break;
+        }
       }
       for (const pattern of settingsPatterns) {
-        if (text.includes(pattern)) hasSettingsOption = true;
+        if (combined.includes(pattern.toLowerCase())) {
+          hasSettingsOption = true;
+          break;
+        }
+      }
+      
+      for (const cls of acceptClassPatterns) {
+        if (className.includes(cls)) hasAcceptButton = true;
+      }
+      for (const cls of rejectClassPatterns) {
+        if (className.includes(cls)) hasRejectButton = true;
+      }
+      for (const cls of settingsClassPatterns) {
+        if (className.includes(cls)) hasSettingsOption = true;
       }
     });
+    
+    console.log(`[Extractor] Cookie buttons - Accept: ${hasAcceptButton}, Reject: ${hasRejectButton}, Settings: ${hasSettingsOption}`);
   }
   
   let consentMechanism: CookieBannerResult['consent_mechanism'] = 'none';
