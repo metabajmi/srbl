@@ -463,17 +463,36 @@ export function evaluatePDPLCompliance(context: EvaluationContext): PDPLEvaluati
     }
   }
   
-  const applicableChecks = checks.filter(c => c.result !== 'not_applicable');
-  const passedWeight = passed_checks * 10;
-  const partialWeight = checks.filter(c => c.result === 'partial').length * 5;
-  const totalWeight = applicableChecks.length * 10;
+  const applicableChecks = checks.filter(c => c.result !== 'not_applicable' && c.result !== 'not_found');
+  const passedChecksCount = applicableChecks.filter(c => c.result === 'pass').length;
+  const partialChecksCount = applicableChecks.filter(c => c.result === 'partial').length;
+  const failedChecksCount = applicableChecks.filter(c => c.result === 'fail').length;
   
-  const criticalPenalty = critical_issues * 15;
-  const majorPenalty = major_issues * 8;
-  const minorPenalty = minor_issues * 3;
+  const totalApplicable = applicableChecks.length;
+  if (totalApplicable === 0) {
+    console.log(`[PDPLEvaluator] No applicable checks found`);
+    return {
+      checks,
+      overall_score: 50,
+      compliance_level: 'medium' as const,
+      critical_issues: 0,
+      major_issues: 0,
+      minor_issues: 0,
+      passed_checks: 0,
+      total_checks: 0,
+    };
+  }
   
-  let score = Math.round(((passedWeight + partialWeight) / totalWeight) * 100);
-  score = Math.max(0, score - criticalPenalty - majorPenalty - minorPenalty);
+  const passedWeight = passedChecksCount * 100;
+  const partialWeight = partialChecksCount * 50;
+  const failedWeight = failedChecksCount * 0;
+  
+  let score = Math.round((passedWeight + partialWeight + failedWeight) / totalApplicable);
+  
+  const criticalFailPenalty = Math.min(20, critical_issues * 5);
+  const majorFailPenalty = Math.min(15, major_issues * 3);
+  
+  score = Math.max(0, score - criticalFailPenalty - majorFailPenalty);
   score = Math.min(100, Math.max(0, score));
   
   let compliance_level: 'high' | 'medium' | 'low';

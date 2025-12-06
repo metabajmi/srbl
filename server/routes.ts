@@ -28,6 +28,7 @@ import {
   type RetrievedContext 
 } from "./openai";
 import { analyzeSite, convertToLegacyFormat } from "./services/complianceAnalyzer";
+import { runComprehensiveScan } from "./scanner/comprehensiveScanner";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
@@ -632,6 +633,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error rescanning:", error);
       res.status(500).json({ error: "فشل في إعادة الفحص" });
+    }
+  });
+
+  // ========== Comprehensive PDPL Scan Endpoint ==========
+  
+  app.post("/api/comprehensive-scan", async (req, res) => {
+    try {
+      const { url, deep_scan = true, fetch_policy_content = true } = req.body;
+      
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ 
+          error: "عنوان URL مطلوب",
+          error_en: "URL is required"
+        });
+      }
+      
+      if (!validateUrl(url)) {
+        return res.status(400).json({ 
+          error: "عنوان URL غير صالح أو محظور لأسباب أمنية",
+          error_en: "Invalid or blocked URL for security reasons"
+        });
+      }
+      
+      console.log(`[API] Starting comprehensive scan for: ${url}`);
+      
+      const result = await runComprehensiveScan(url, {
+        deep_scan,
+        fetch_policy_content,
+        max_pages_to_crawl: 20,
+        render_timeout_ms: 60000,
+      });
+      
+      console.log(`[API] Comprehensive scan completed with score: ${result.overall_score}%`);
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error in comprehensive scan:", error);
+      res.status(500).json({ 
+        error: "فشل في الفحص الشامل",
+        error_en: "Comprehensive scan failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
