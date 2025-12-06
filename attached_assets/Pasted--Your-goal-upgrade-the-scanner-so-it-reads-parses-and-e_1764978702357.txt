@@ -1,0 +1,111 @@
+
+Your goal: upgrade the scanner so it **reads, parses, and evaluates the actual contents** of Privacy Policy pages, Terms & Conditions (regardless of file name), and Cookie Consent mechanisms. Do not only check existence — extract, classify, and map content to PDPL rules.
+
+REQUIREMENTS (high priority):
+
+1) PAGE DISCOVERY (find the correct pages even if named differently)
+- Search site for links and page titles that indicate legal pages. Accept common and alternate labels:
+  - privacy, privacy-policy, privacy_policy, policy-privacy, سياسة-الخصوصية, سياسة الخصوصية
+  - terms, terms-and-conditions, terms_of_service, terms-service, terms-use, شروط, الشروط والأحكام, الشروط, سياسة الاستبدال, سياسة الاسترجاع
+  - cookie, cookies, cookie-policy, cookie-banner, cookie-consent, cookie-settings, سياسة الكوكيز
+- Use:
+  a) footer links (scan <footer>)
+  b) sitemap.xml
+  c) robots-discovered links
+  d) internal link graph up to 3 hops
+- If multiple candidate pages exist, pick the most content-rich (largest text) and include all as "related_legal_pages".
+
+2) RENDER & CAPTURE (use Puppeteer/Playwright if available)
+- Render the page fully (execute JS). Capture:
+  - final rendered DOM (full text)
+  - innerText of relevant sections (headers <h1..h4>, paragraphs, lists)
+  - screenshots (base64 or file path)
+  - network calls made while rendering (to find remote policy fragments)
+  - cookies set during load and on consent interactions
+- If Puppeteer unavailable, fall back to fetch + lightweight JS rendering but mark "js_render: false" in output.
+
+3) STRUCTURED EXTRACTION (parse the policy and terms into sections)
+- Break the document into logical sections by headers. For each section extract:
+  - section_title
+  - section_text (first 500–2000 chars)
+  - keywords found (list)
+- Map sections to PDPL concepts using deterministic rules (no ML hallucination). Example mappings:
+  - "lawful_basis", "processing_purpose", "data_retention", "data_subject_rights", "third_party_sharing", "data_transfer", "security_measures", "contact_details", "cookies", "children_data"
+- Use regex + keyword lists in both Arabic and English to classify (provide lists below).
+
+4) ALTERNATIVE NAMES HANDLING
+- If page title or URL suggests replacement/refund policy or other retail policy, still parse it and search for standard Terms or Privacy content inside it (they sometimes bundle multiple policies). Do not discard.
+- If a page contains only "Return Policy" but includes sections like "data collected" or "contact", include it as partial Terms/Privacy and mark which PDPL items are present vs missing.
+
+5) COOKIE BANNER ANALYSIS
+- Detect cookie banner presence visually (DOM) and by scripts.
+- Evaluate functionality:
+  - Is banner blocking trackers before consent? (Detect initial network calls to trackers before any click)
+  - Are categories listed (necessary/analytics/marketing)?
+  - Is there an "Accept/Reject" granular option?
+  - Does the banner set cookies prior to consent? (Check cookie set timestamps vs user interaction)
+- If the banner is not visible by default, simulate a scroll and look for delayed banners.
+
+6) DETAILED PDPL RULE MAPPINGS (each check deterministic)
+For each PDPL rule, return an object:
+  - rule_id
+  - rule_name
+  - data_source (page URL / selector / script URL / network_call)
+  - condition_checked (technical description)
+  - result: pass / fail / partial / not_found
+  - evidence: excerpt or pointer (e.g., pages[3].sections[2])
+  - severity: minor / major / critical
+
+Examples of checks to implement (non-exhaustive):
+- privacy_policy_presence (exists + URL)
+- privacy_policy_contact (does it include controller contact)
+- lawful_basis_explained (is lawful basis for processing described)
+- retention_periods_declared
+- rights_of_data_subjects_listed (access, rectification, deletion, objection)
+- third_party_sharing_disclosed (names or categories)
+- international_transfer_statement
+- cookies_explained (types & purpose)
+- cookie_consent_mechanism (granular opt-in / blocking behavior)
+- security_measures_described
+- terms_scope_and_user_obligations (if terms are required)
+- specific_sensitive_data_handling (financial, health, national_id)
+
+7) NLP + RULES (use hybrid: deterministic + lightweight NLP)
+- Use deterministic lookup first (keyword lists + regexes). Only use NLP for section segmentation and paraphrase matching, but any inference must include a precise evidence excerpt.
+- Keyword lists examples (EN + AR):
+  - lawful basis: ["legal basis", "lawful basis", "consent", "contract", "legitimate interest", "الأساس القانوني", "الموافقة", "مصلحة مشروعة"]
+  - retention: ["retention", "store for", "retain", "period", "الاحتفاظ", "فترة الاحتفاظ"]
+  - rights: ["access", "rectify", "erasure", "right to delete", "حذف", "وصول", "تعديل"]
+  - cookies: ["cookie", "cookies", "pixel", "localStorage", "الكوكيز", "ملفات تعريف"]
+  - third_party: ["third party", "share with", "vendors", "providers", "مزود", "طرف ثالث"]
+- Use stemming/normalization and Arabic normalization (remove diacritics, normalize ALEF forms).
+
+8) OUTPUT (single structured JSON only)
+Return exactly one JSON object following this shape (example keys required):
+
+{
+ "scanned_url":"https://example.com",
+ "scan_date":"<ISO>",
+ "legal_pages":[
+   {"url":"...", "type":"privacy|terms|cookie|other", "found_by":"footer|sitemap|link_text", "screenshot":"path/base64", "sections":[{"title":"", "text":"", "mapping":["data_retention","cookies"]}], "word_count":int}
+ ],
+ "cookie_banner": {"present":true/false, "blocking":true/false, "granular_controls":true/false, "evidence":"pages[0].network_calls[12]"},
+ "pdpl_checks":[
+   {"rule_id":"privacy_policy_presence", "rule_name":"Privacy Policy Presence", "data_source":"legal_pages[0].url", "condition_checked":"page contains a privacy policy page", "result":"pass", "evidence":"...","severity":"minor"}
+ ],
+ "overall_score":0-100,
+ "scan_errors":[ "...if any..." ]
+}
+
+9) STABILITY & TRACEABILITY
+- Every "pass/partial/fail" must reference evidence by pointer (pages[i], network_calls[j], selector).
+- Save raw artifacts (screenshots, full HTML) to artifacts folder and reference paths in output.
+- Add logs for each major step (discovery, render, extract, classify, score).
+
+10) PERFORMANCE & CONFIG
+- Provide parameters: max_pages_to_crawl (default 50), render_timeout_ms (default 20000), deep_scan true/false.
+- If deep_scan=false, only scan home + footer links + privacy + terms + cookie pages.
+
+FINAL RULE: Do not produce any legal advice in the output. Output only the structured JSON. If any check cannot be determined, mark result="not_found" or "partial" and include exact evidence snippet or error.
+
+Run the improved analyzer on a sample set of 10 diverse websites (WordPress, Shopify, React SPA, Custom) and save the artifacts + a short run report listing false positives/negatives encountered.
