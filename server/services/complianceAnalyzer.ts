@@ -93,6 +93,45 @@ export async function analyzeSite(
   const cookieBanner = detectCookieBanner(browserResult.html);
   const contactInfo = detectContactInfo(browserResult.html);
   
+  // CRITICAL: Navigate to actual policy pages and analyze their content
+  console.log('\n[Analyzer] ========== MULTI-PAGE DEEP SCANNING ==========');
+  
+  let privacyPolicyContent = '';
+  let termsContent = '';
+  
+  // Navigate to Privacy Policy page if found
+  if (privacyPolicy.found && privacyPolicy.url) {
+    try {
+      console.log(`[Analyzer] ➤ Navigating to PRIVACY POLICY at: ${privacyPolicy.url}`);
+      const privacyResult = await scanWithBrowser(privacyPolicy.url);
+      privacyPolicyContent = privacyResult.html;
+      console.log(`[Analyzer]   ✓ Loaded ${privacyPolicyContent.length} bytes from privacy policy`);
+    } catch (error) {
+      console.warn(`[Analyzer] ⚠ Failed to load privacy policy: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  } else {
+    console.log(`[Analyzer] ✗ NO PRIVACY POLICY FOUND on homepage`);
+  }
+  
+  // Navigate to Terms page if found
+  if (termsAndConditions.found && termsAndConditions.url) {
+    try {
+      console.log(`[Analyzer] ➤ Navigating to TERMS & CONDITIONS at: ${termsAndConditions.url}`);
+      const termsResult = await scanWithBrowser(termsAndConditions.url);
+      termsContent = termsResult.html;
+      console.log(`[Analyzer]   ✓ Loaded ${termsContent.length} bytes from terms page`);
+    } catch (error) {
+      console.warn(`[Analyzer] ⚠ Failed to load terms: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  } else {
+    console.log(`[Analyzer] ✗ NO TERMS & CONDITIONS FOUND on homepage`);
+  }
+  
+  // Combine all policy content for analysis
+  const combinedPolicyContent = `${privacyPolicyContent} ${termsContent}`;
+  console.log(`[Analyzer] Combined policy content: ${combinedPolicyContent.length} bytes total`);
+  console.log(`[Analyzer] ${'='.repeat(50)}\n`);
+  
   const extractionResult: ScanExtractionResult = {
     url: normalizedUrl,
     scan_timestamp: new Date().toISOString(),
