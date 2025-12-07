@@ -52,8 +52,19 @@ The Smart Customer Assistant utilizes a Retrieval Augmented Generation (RAG) arc
 - **Modular Architecture:**
   - `server/scanner/browser.ts`: Puppeteer lifecycle management
   - `server/scanner/extractors.ts`: Data extraction functions
+  - `server/scanner/pagesDiscovery.ts`: Automatic legal page discovery from footer/nav/sitemap
+  - `server/scanner/policyParser.ts`: Policy content parser with PDPL section mapping
+  - `server/scanner/cookieBannerAnalyzer.ts`: Deep cookie banner behavior analysis
+  - `server/scanner/pdplEvaluator.ts`: Comprehensive PDPL rule evaluation with evidence
+  - `server/scanner/comprehensiveScanner.ts`: Main orchestrator for comprehensive scans
   - `server/rules/pdpl-rules.ts`: PDPL rule definitions and evaluators
   - `server/services/complianceAnalyzer.ts`: Orchestration pipeline
+- **Comprehensive Scan API:** `POST /api/comprehensive-scan` provides full PDPL analysis with:
+  - Automatic discovery of all legal pages (privacy, terms, cookies, refund policies)
+  - Deep policy content parsing and PDPL requirement mapping
+  - Cookie banner presence and behavior analysis
+  - 19+ PDPL rule evaluations with pass/partial/fail results
+  - Structured JSON output with evidence pointers and recommendations
 - **Frontend UI:** Displays compliance level badges, findings cards, and error handling with specific Arabic messages.
 - **Export Functionality:** Generates PDF/HTML/JSON reports with concurrent request protection, visual feedback, and toast notifications.
 
