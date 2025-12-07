@@ -296,6 +296,19 @@ export async function analyzeSite(
       transparency_score: transparencyScore,
     },
     
+    // Include 12-point PDPL compliance audit results
+    compliance_audit: complianceAudit ? {
+      totalChecks: complianceAudit.totalChecks,
+      found: complianceAudit.found,
+      missing: complianceAudit.missing,
+      partial: complianceAudit.partial,
+      transparencyScore: complianceAudit.transparencyScore,
+      compliant: complianceAudit.summary.compliant,
+      items: complianceAudit.items,
+      criticalMissing: complianceAudit.summary.criticalMissing,
+      recommendations: complianceAudit.summary.recommendations,
+    } : undefined,
+    
     scan_errors: [...browserResult.errors, ...errors],
     partial_analysis: browserResult.errors.length > 0,
   };

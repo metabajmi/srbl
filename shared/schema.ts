@@ -1518,6 +1518,27 @@ export interface DeterministicScanResult {
     transparency_score: number;
   };
   
+  // 12-Point PDPL Compliance Audit
+  compliance_audit?: {
+    totalChecks: number;
+    found: number;
+    missing: number;
+    partial: number;
+    transparencyScore: number;
+    compliant: boolean;
+    items: Array<{
+      id: string;
+      name: string;
+      nameAr: string;
+      pdplArticle: string;
+      status: 'found' | 'missing' | 'partial';
+      matchedKeywords: string[];
+      required: boolean;
+    }>;
+    criticalMissing: string[];
+    recommendations: string[];
+  };
+  
   // Errors
   scan_errors: string[];
   partial_analysis: boolean;
