@@ -204,8 +204,9 @@ export async function analyzeSite(
   
   // Factor transparency score from 12-point compliance audit into final score
   let finalScore = scoreResult.overall;
-  if (complianceAudit && transparencyScore > 0) {
+  if (complianceAudit) {
     // Blend PDPL rule score (60%) with transparency score (40%)
+    // This applies even if transparency is 0, ensuring bad policies get penalized
     finalScore = Math.round((scoreResult.overall * 0.6) + (transparencyScore * 0.4));
     console.log(`[Analyzer] Combined scores: PDPL rules=${scoreResult.overall}% (60%) + Transparency=${transparencyScore}% (40%) = Final=${finalScore}%`);
   }
