@@ -283,6 +283,40 @@ export async function runComprehensiveScan(
   
   const scanDuration = Date.now() - startTime;
   
+  // CRITICAL FIX: Calculate combined overall score that factors in compliance audit
+  // Weight: 60% PDPL checks + 40% Compliance Audit transparency score
+  const pdplScore = pdplEvaluation.overall_score;
+  const auditScore = complianceAuditResult.transparencyScore;
+  
+  // If there are critical missing required sections, apply additional penalty
+  const criticalMissingCount = complianceAuditResult.summary.criticalMissing.length;
+  const criticalPenalty = criticalMissingCount * 5; // -5% per critical missing section
+  
+  let combinedScore = Math.round((pdplScore * 0.6) + (auditScore * 0.4) - criticalPenalty);
+  combinedScore = Math.max(0, Math.min(100, combinedScore)); // Clamp 0-100
+  
+  // Determine compliance level based on combined score AND critical missing
+  let finalComplianceLevel: 'high' | 'medium' | 'low';
+  if (criticalMissingCount >= 3 || combinedScore < 50) {
+    finalComplianceLevel = 'low';
+  } else if (criticalMissingCount >= 1 || combinedScore < 80) {
+    finalComplianceLevel = 'medium';
+  } else {
+    finalComplianceLevel = 'high';
+  }
+  
+  console.log(`\n[FinalScoring] PDPL Checks Score: ${pdplScore}%`);
+  console.log(`[FinalScoring] Compliance Audit Score: ${auditScore}%`);
+  console.log(`[FinalScoring] Critical Missing Sections: ${criticalMissingCount} (-${criticalPenalty}% penalty)`);
+  console.log(`[FinalScoring] Combined Score: (${pdplScore} × 0.6) + (${auditScore} × 0.4) - ${criticalPenalty} = ${combinedScore}%`);
+  console.log(`[FinalScoring] Final Compliance Level: ${finalComplianceLevel.toUpperCase()}`);
+  
+  // Add recommendations from compliance audit to top recommendations
+  const allRecommendations = [
+    ...complianceAuditResult.summary.recommendations,
+    ...topRecommendations
+  ].slice(0, 7);
+  
   const result: ComprehensiveScanResult = {
     scanned_url: url,
     final_url: mainScanResult.finalUrl,
@@ -346,16 +380,16 @@ export async function runComprehensiveScan(
       criticalMissing: complianceAuditResult.summary.criticalMissing,
     },
     
-    overall_score: pdplEvaluation.overall_score,
-    compliance_level: pdplEvaluation.compliance_level,
+    overall_score: combinedScore,
+    compliance_level: finalComplianceLevel,
     
     summary: {
-      critical_issues: pdplEvaluation.critical_issues,
+      critical_issues: pdplEvaluation.critical_issues + criticalMissingCount,
       major_issues: pdplEvaluation.major_issues,
       minor_issues: pdplEvaluation.minor_issues,
       passed_checks: pdplEvaluation.passed_checks,
-      total_checks: pdplEvaluation.total_checks,
-      top_recommendations: topRecommendations,
+      total_checks: pdplEvaluation.total_checks + complianceAuditResult.totalChecks,
+      top_recommendations: allRecommendations,
       top_recommendations_ar: topRecommendationsAr,
     },
     

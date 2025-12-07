@@ -427,36 +427,70 @@ const pdplChecklist: PDPLChecklistItem[] = [
 ];
 
 export function auditPolicyCompliance(policies: ParsedPolicy[]): ComplianceAuditResult {
-  console.log(`[ComplianceAudit] Starting PDPL 12-point compliance audit...`);
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`[ComplianceAudit] Starting PDPL 12-point MANDATORY compliance audit...`);
+  console.log(`${'='.repeat(60)}`);
   
+  // Force text extraction from all policy types
   const combinedPolicyText = policies
     .filter(p => p.type === 'privacy' || p.type === 'cookies' || p.type === 'terms')
-    .map(p => p.fullText)
+    .map(p => {
+      console.log(`[ComplianceAudit] Processing ${p.type} policy from ${p.url}`);
+      console.log(`[ComplianceAudit] - Text length: ${p.fullText?.length || 0} characters`);
+      console.log(`[ComplianceAudit] - Word count: ${p.wordCount || 0}`);
+      return p.fullText || '';
+    })
     .join(' ');
   
-  console.log(`[ComplianceAudit] Combined text length: ${combinedPolicyText.length} characters`);
+  console.log(`\n[ComplianceAudit] Total scraped text length: ${combinedPolicyText.length} characters`);
+  
+  // CRITICAL: Check if we actually scraped text
+  if (combinedPolicyText.length < 100) {
+    console.log(`[ComplianceAudit] ⚠️ WARNING: Very little text scraped! Policy may not have loaded properly.`);
+  }
   
   const items: ComplianceAuditItem[] = [];
   let found = 0;
   let missing = 0;
   let partial = 0;
+  let requiredMissing = 0;
+  
+  console.log(`\n[ComplianceAudit] Checking each of 12 PDPL mandatory sections:`);
+  console.log(`${'-'.repeat(60)}`);
   
   for (const check of pdplChecklist) {
     const allKeywords = [...check.keywords.en, ...check.keywords.ar];
     const matchedKeywords = searchKeywordsInText(combinedPolicyText, allKeywords);
     
     let status: 'found' | 'missing' | 'partial';
+    let statusIcon: string;
     
     if (matchedKeywords.length >= 2) {
       status = 'found';
+      statusIcon = '✓ FOUND';
       found++;
     } else if (matchedKeywords.length === 1) {
       status = 'partial';
+      statusIcon = '~ PARTIAL';
       partial++;
     } else {
       status = 'missing';
+      statusIcon = '✗ MISSING';
       missing++;
+      if (check.required) {
+        requiredMissing++;
+      }
     }
+    
+    // DETAILED LOGGING FOR EACH SECTION
+    console.log(`\n[Section ${check.id}] "${check.name}" (${check.nameAr})`);
+    console.log(`  Article: ${check.pdplArticle} | Required: ${check.required ? 'YES' : 'No'}`);
+    console.log(`  Keywords searched: ${allKeywords.length} (${check.keywords.en.length} EN + ${check.keywords.ar.length} AR)`);
+    console.log(`  Keywords found: ${matchedKeywords.length}`);
+    if (matchedKeywords.length > 0) {
+      console.log(`  Matched: [${matchedKeywords.join(', ')}]`);
+    }
+    console.log(`  Status: ${statusIcon}${check.required && status === 'missing' ? ' ⚠️ CRITICAL - REQUIRED SECTION!' : ''}`);
     
     items.push({
       id: check.id,
@@ -469,7 +503,15 @@ export function auditPolicyCompliance(policies: ParsedPolicy[]): ComplianceAudit
     });
   }
   
-  const transparencyScore = Math.round(((found + partial * 0.5) / pdplChecklist.length) * 100);
+  console.log(`\n${'-'.repeat(60)}`);
+  
+  // Calculate transparency score with STRICTER logic
+  // If required sections are missing, score takes a significant hit
+  const baseScore = Math.round(((found + partial * 0.5) / pdplChecklist.length) * 100);
+  
+  // Penalty for missing REQUIRED sections: -10% per missing required section
+  const requiredPenalty = requiredMissing * 10;
+  const transparencyScore = Math.max(0, baseScore - requiredPenalty);
   
   const criticalMissing = items
     .filter(item => item.status === 'missing' && item.required)
@@ -478,7 +520,7 @@ export function auditPolicyCompliance(policies: ParsedPolicy[]): ComplianceAudit
   const recommendations: string[] = [];
   
   if (criticalMissing.length > 0) {
-    recommendations.push(`Add missing required sections: ${criticalMissing.join(', ')}`);
+    recommendations.push(`CRITICAL: Add missing required sections: ${criticalMissing.join(', ')}`);
   }
   
   const partialItems = items.filter(item => item.status === 'partial');
@@ -491,8 +533,22 @@ export function auditPolicyCompliance(policies: ParsedPolicy[]): ComplianceAudit
     recommendations.push('Consider adding reference to SDAIA as the competent authority for PDPL compliance');
   }
   
-  console.log(`[ComplianceAudit] Audit complete. Found: ${found}, Partial: ${partial}, Missing: ${missing}`);
-  console.log(`[ComplianceAudit] Transparency Score: ${transparencyScore}%`);
+  // SUMMARY LOGGING
+  console.log(`\n[ComplianceAudit] ========== AUDIT SUMMARY ==========`);
+  console.log(`[ComplianceAudit] Total Checks: ${pdplChecklist.length}`);
+  console.log(`[ComplianceAudit] Found: ${found} | Partial: ${partial} | Missing: ${missing}`);
+  console.log(`[ComplianceAudit] Required Sections Missing: ${requiredMissing}`);
+  console.log(`[ComplianceAudit] Base Score: ${baseScore}% | Penalty: -${requiredPenalty}%`);
+  console.log(`[ComplianceAudit] Final Transparency Score: ${transparencyScore}%`);
+  console.log(`[ComplianceAudit] Compliant: ${criticalMissing.length === 0 ? 'YES' : 'NO - Missing required sections!'}`);
+  
+  if (criticalMissing.length > 0) {
+    console.log(`[ComplianceAudit] ⚠️ CRITICAL MISSING SECTIONS:`);
+    criticalMissing.forEach((section, i) => {
+      console.log(`  ${i + 1}. ${section}`);
+    });
+  }
+  console.log(`${'='.repeat(60)}\n`);
   
   return {
     totalChecks: pdplChecklist.length,
