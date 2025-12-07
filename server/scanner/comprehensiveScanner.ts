@@ -3,6 +3,14 @@ import { discoverLegalPages, DiscoveredPage, fetchAndDiscoverSitemap } from './p
 import { parsePolicy, ParsedPolicy, analyzePolicyCompleteness } from './policyParser';
 import { analyzeCookieBanner, CookieBannerAnalysis } from './cookieBannerAnalyzer';
 import { evaluatePDPLCompliance, createEvaluationContext, PDPLCheck, PDPLEvaluationResult } from './pdplEvaluator';
+import { 
+  analyzePolicyGaps, 
+  auditPolicyCompliance, 
+  GapAnalysisResult, 
+  ComplianceAuditResult,
+  PolicyGap,
+  ComplianceAuditItem
+} from './gapAnalyzer';
 import {
   extractScripts,
   extractCookies,
@@ -83,6 +91,25 @@ export interface ComprehensiveScanResult {
     present: boolean;
     email?: string;
     phone?: string;
+  };
+  
+  policy_gaps: {
+    totalTrackersDetected: number;
+    totalDisclosed: number;
+    totalMissing: number;
+    disclosureRate: number;
+    gaps: PolicyGap[];
+  };
+  
+  compliance_audit: {
+    totalChecks: number;
+    found: number;
+    missing: number;
+    partial: number;
+    transparencyScore: number;
+    items: ComplianceAuditItem[];
+    compliant: boolean;
+    criticalMissing: string[];
   };
   
   overall_score: number;
@@ -246,6 +273,14 @@ export async function runComprehensiveScan(
   const topRecommendations = failedChecks.slice(0, 5).map(c => c.recommendation);
   const topRecommendationsAr = failedChecks.slice(0, 5).map(c => c.recommendation_ar);
   
+  // Run Gap Analysis and Compliance Audit
+  const gapAnalysisResult = analyzePolicyGaps(
+    tracking.map(t => ({ name: t.name })),
+    parsedPolicies
+  );
+  
+  const complianceAuditResult = auditPolicyCompliance(parsedPolicies);
+  
   const scanDuration = Date.now() - startTime;
   
   const result: ComprehensiveScanResult = {
@@ -290,6 +325,25 @@ export async function runComprehensiveScan(
       present: contactInfo.found,
       email: contactInfo.email,
       phone: contactInfo.phone,
+    },
+    
+    policy_gaps: {
+      totalTrackersDetected: gapAnalysisResult.totalTrackersDetected,
+      totalDisclosed: gapAnalysisResult.totalDisclosed,
+      totalMissing: gapAnalysisResult.totalMissing,
+      disclosureRate: gapAnalysisResult.disclosureRate,
+      gaps: gapAnalysisResult.gaps,
+    },
+    
+    compliance_audit: {
+      totalChecks: complianceAuditResult.totalChecks,
+      found: complianceAuditResult.found,
+      missing: complianceAuditResult.missing,
+      partial: complianceAuditResult.partial,
+      transparencyScore: complianceAuditResult.transparencyScore,
+      items: complianceAuditResult.items,
+      compliant: complianceAuditResult.summary.compliant,
+      criticalMissing: complianceAuditResult.summary.criticalMissing,
     },
     
     overall_score: pdplEvaluation.overall_score,
@@ -340,6 +394,23 @@ function createErrorResult(url: string, errors: string[], startTime: number): Co
     security: { https: false, hsts: false, csp: false },
     tracking: { technologies: [], third_party_services: [], cookies_count: 0 },
     contact_info: { present: false },
+    policy_gaps: {
+      totalTrackersDetected: 0,
+      totalDisclosed: 0,
+      totalMissing: 0,
+      disclosureRate: 0,
+      gaps: [],
+    },
+    compliance_audit: {
+      totalChecks: 0,
+      found: 0,
+      missing: 0,
+      partial: 0,
+      transparencyScore: 0,
+      items: [],
+      compliant: false,
+      criticalMissing: [],
+    },
     overall_score: 0,
     compliance_level: 'low',
     summary: {
