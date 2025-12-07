@@ -583,3 +583,90 @@ export function auditPolicyCompliance(policies: ParsedPolicy[]): ComplianceAudit
     }
   };
 }
+
+// NEW: Audit each document type separately (Privacy, Terms, Cookie)
+export interface DocumentAudit {
+  type: 'privacy' | 'terms' | 'cookies';
+  name: string;
+  url: string;
+  found: boolean;
+  audit: ComplianceAuditResult | null;
+}
+
+export interface ComprehensiveDocumentAudit {
+  documents: DocumentAudit[];
+  summary: {
+    allDocumentsFound: boolean;
+    overallCompliance: number;
+    criticalGaps: string[];
+  };
+}
+
+export function auditAllDocuments(policies: ParsedPolicy[]): ComprehensiveDocumentAudit {
+  console.log(`\n${'='.repeat(70)}`);
+  console.log(`[DocumentAudit] COMPREHENSIVE MULTI-DOCUMENT PDPL AUDIT`);
+  console.log(`${'='.repeat(70)}`);
+  
+  const documents: DocumentAudit[] = [];
+  const documentTypes: Array<'privacy' | 'terms' | 'cookies'> = ['privacy', 'terms', 'cookies'];
+  
+  for (const docType of documentTypes) {
+    const policy = policies.find(p => p.type === docType);
+    
+    if (!policy || !policy.fullText || policy.fullText.length < 50) {
+      console.log(`\n[DocumentAudit] ⚠️ ${docType.toUpperCase()} DOCUMENT: NOT FOUND OR EMPTY`);
+      documents.push({
+        type: docType,
+        name: docType === 'privacy' ? 'Privacy Policy' : docType === 'terms' ? 'Terms & Conditions' : 'Cookie Policy',
+        url: policy?.url || 'NOT FOUND',
+        found: false,
+        audit: null
+      });
+      continue;
+    }
+    
+    // Audit this specific document
+    console.log(`\n[DocumentAudit] AUDITING ${docType.toUpperCase()}: ${policy.url}`);
+    const audit = auditPolicyCompliance([policy]);
+    
+    documents.push({
+      type: docType,
+      name: docType === 'privacy' ? 'Privacy Policy' : docType === 'terms' ? 'Terms & Conditions' : 'Cookie Policy',
+      url: policy.url,
+      found: true,
+      audit
+    });
+  }
+  
+  // Calculate summary
+  const allDocumentsFound = documents.every(d => d.found);
+  const documentScores = documents.filter(d => d.audit).map(d => d.audit!.transparencyScore);
+  const overallCompliance = documentScores.length > 0 
+    ? Math.round(documentScores.reduce((a, b) => a + b, 0) / documentScores.length)
+    : 0;
+  
+  const criticalGaps: string[] = [];
+  for (const doc of documents) {
+    if (!doc.found) {
+      criticalGaps.push(`${doc.name} is MISSING - cannot audit compliance`);
+    } else if (doc.audit && doc.audit.summary.criticalMissing.length > 0) {
+      criticalGaps.push(`${doc.name}: ${doc.audit.summary.criticalMissing.join(', ')}`);
+    }
+  }
+  
+  console.log(`\n${'='.repeat(70)}`);
+  console.log(`[DocumentAudit] SUMMARY`);
+  console.log(`  All Documents Found: ${allDocumentsFound ? 'YES ✓' : 'NO ✗'}`);
+  console.log(`  Overall Compliance: ${overallCompliance}%`);
+  console.log(`  Documents Audited: ${documents.filter(d => d.found).length}/3`);
+  console.log(`${'='.repeat(70)}\n`);
+  
+  return {
+    documents,
+    summary: {
+      allDocumentsFound,
+      overallCompliance,
+      criticalGaps
+    }
+  };
+}

@@ -24,7 +24,7 @@ import {
   type ComprehensiveAnalysisResult,
   type DocumentAnalysisReport
 } from '../legal-analyzer';
-import { auditPolicyCompliance, type ParsedPolicy } from '../scanner/gapAnalyzer';
+import { auditAllDocuments, auditPolicyCompliance, type ParsedPolicy } from '../scanner/gapAnalyzer';
 import * as cheerio from 'cheerio';
 
 export interface AnalysisOptions {
@@ -130,49 +130,46 @@ export async function analyzeSite(
   }
   
   // CRITICAL: Analyze policy content for 12-point PDPL compliance
-  let complianceAudit = null;
+  const policies: ParsedPolicy[] = [];
+  let auditAllDocumentsResult: any = null;
   let transparencyScore = 0;
   
-  if (privacyPolicyContent.length > 100 || termsContent.length > 100) {
-    const policies: ParsedPolicy[] = [];
-    
-    // Extract text from privacy policy HTML
-    if (privacyPolicyContent.length > 100) {
-      const $ = cheerio.load(privacyPolicyContent);
-      const policyText = $('body').text().trim();
-      if (policyText.length > 50) {
-        policies.push({
-          type: 'privacy',
-          url: privacyPolicy.url || 'unknown',
-          fullText: policyText,
-          wordCount: policyText.split(/\s+/).length,
-          language: 'en'
-        });
-      }
+  // Extract text from privacy policy HTML
+  if (privacyPolicyContent.length > 100) {
+    const $ = cheerio.load(privacyPolicyContent);
+    const policyText = $('body').text().trim();
+    if (policyText.length > 50) {
+      policies.push({
+        type: 'privacy',
+        url: privacyPolicy.url || 'unknown',
+        fullText: policyText,
+        wordCount: policyText.split(/\s+/).length,
+        language: 'en'
+      });
     }
-    
-    // Extract text from terms HTML
-    if (termsContent.length > 100) {
-      const $ = cheerio.load(termsContent);
-      const termsText = $('body').text().trim();
-      if (termsText.length > 50) {
-        policies.push({
-          type: 'terms',
-          url: termsAndConditions.url || 'unknown',
-          fullText: termsText,
-          wordCount: termsText.split(/\s+/).length,
-          language: 'en'
-        });
-      }
+  }
+  
+  // Extract text from terms HTML
+  if (termsContent.length > 100) {
+    const $ = cheerio.load(termsContent);
+    const termsText = $('body').text().trim();
+    if (termsText.length > 50) {
+      policies.push({
+        type: 'terms',
+        url: termsAndConditions.url || 'unknown',
+        fullText: termsText,
+        wordCount: termsText.split(/\s+/).length,
+        language: 'en'
+      });
     }
-    
-    // Run compliance audit on extracted content
-    if (policies.length > 0) {
-      complianceAudit = auditPolicyCompliance(policies);
-      transparencyScore = complianceAudit.transparencyScore;
-      console.log(`[Analyzer] Compliance audit complete. Transparency score: ${transparencyScore}%`);
-      console.log(`[Analyzer] Audit summary: ${complianceAudit.items.filter(i => i.status === 'found').length} found, ${complianceAudit.items.filter(i => i.status === 'partial').length} partial, ${complianceAudit.items.filter(i => i.status === 'missing').length} missing`);
-    }
+  }
+  
+  // Run per-document compliance audit on extracted content
+  if (policies.length > 0) {
+    auditAllDocumentsResult = auditAllDocuments(policies);
+    transparencyScore = auditAllDocumentsResult.summary.overallCompliance;
+    console.log(`[Analyzer] Multi-document audit complete. Overall compliance: ${transparencyScore}%`);
+    console.log(`[Analyzer] Documents audited: ${auditAllDocumentsResult.documents.filter((d: any) => d.found).length}/3`);
   } else {
     console.log(`[Analyzer] ⚠ Insufficient policy content for compliance audit (${privacyPolicyContent.length + termsContent.length} bytes)`);
   }
@@ -202,9 +199,9 @@ export async function analyzeSite(
   const ruleResults = evaluateAllRules(extractionResult);
   const scoreResult = calculateScore(ruleResults.all);
   
-  // Factor transparency score from 12-point compliance audit into final score
+  // Factor transparency score from multi-document compliance audit into final score
   let finalScore = scoreResult.overall;
-  if (complianceAudit) {
+  if (transparencyScore > 0) {
     // Blend PDPL rule score (60%) with transparency score (40%)
     // This applies even if transparency is 0, ensuring bad policies get penalized
     finalScore = Math.round((scoreResult.overall * 0.6) + (transparencyScore * 0.4));
@@ -296,17 +293,28 @@ export async function analyzeSite(
       transparency_score: transparencyScore,
     },
     
-    // Include 12-point PDPL compliance audit results
-    compliance_audit: complianceAudit ? {
-      totalChecks: complianceAudit.totalChecks,
-      found: complianceAudit.found,
-      missing: complianceAudit.missing,
-      partial: complianceAudit.partial,
-      transparencyScore: complianceAudit.transparencyScore,
-      compliant: complianceAudit.summary.compliant,
-      items: complianceAudit.items,
-      criticalMissing: complianceAudit.summary.criticalMissing,
-      recommendations: complianceAudit.summary.recommendations,
+    // Include per-document PDPL compliance audit results
+    document_audits: auditAllDocumentsResult ? auditAllDocumentsResult.documents.map((doc: any) => ({
+      type: doc.type,
+      name: doc.name,
+      url: doc.url,
+      found: doc.found,
+      audit: doc.audit ? {
+        totalChecks: doc.audit.totalChecks,
+        found: doc.audit.found,
+        missing: doc.audit.missing,
+        partial: doc.audit.partial,
+        transparencyScore: doc.audit.transparencyScore,
+        items: doc.audit.items,
+        summary: doc.audit.summary,
+      } : null,
+    })) : undefined,
+    
+    compliance_summary: auditAllDocumentsResult ? {
+      allDocumentsFound: auditAllDocumentsResult.summary.allDocumentsFound,
+      overallCompliance: auditAllDocumentsResult.summary.overallCompliance,
+      documentsAudited: auditAllDocumentsResult.documents.filter((d: any) => d.found).length,
+      criticalGaps: auditAllDocumentsResult.summary.criticalGaps,
     } : undefined,
     
     scan_errors: [...browserResult.errors, ...errors],
