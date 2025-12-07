@@ -483,17 +483,21 @@ export function evaluatePDPLCompliance(context: EvaluationContext): PDPLEvaluati
     };
   }
   
+  console.log(`[PDPLEvaluator] Checks breakdown: passed=${passedChecksCount}, partial=${partialChecksCount}, failed=${failedChecksCount}, total=${totalApplicable}`);
+  console.log(`[PDPLEvaluator] Issues: critical=${critical_issues}, major=${major_issues}, minor=${minor_issues}`);
+  
   const passedWeight = passedChecksCount * 100;
   const partialWeight = partialChecksCount * 50;
-  const failedWeight = failedChecksCount * 0;
   
-  let score = Math.round((passedWeight + partialWeight + failedWeight) / totalApplicable);
+  let baseScore = Math.round((passedWeight + partialWeight) / totalApplicable);
+  console.log(`[PDPLEvaluator] Base score before penalties: ${baseScore}`);
   
-  const criticalFailPenalty = Math.min(20, critical_issues * 5);
-  const majorFailPenalty = Math.min(15, major_issues * 3);
+  const criticalFailPenalty = Math.min(15, critical_issues * 4);
+  const majorFailPenalty = Math.min(10, major_issues * 2);
   
-  score = Math.max(0, score - criticalFailPenalty - majorFailPenalty);
+  let score = Math.max(0, baseScore - criticalFailPenalty - majorFailPenalty);
   score = Math.min(100, Math.max(0, score));
+  console.log(`[PDPLEvaluator] Final score after penalties (critical: -${criticalFailPenalty}, major: -${majorFailPenalty}): ${score}`);
   
   let compliance_level: 'high' | 'medium' | 'low';
   if (score >= 80 && critical_issues === 0) {
