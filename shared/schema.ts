@@ -1518,25 +1518,41 @@ export interface DeterministicScanResult {
     transparency_score: number;
   };
   
-  // 12-Point PDPL Compliance Audit
-  compliance_audit?: {
-    totalChecks: number;
-    found: number;
-    missing: number;
-    partial: number;
-    transparencyScore: number;
-    compliant: boolean;
-    items: Array<{
-      id: string;
-      name: string;
-      nameAr: string;
-      pdplArticle: string;
-      status: 'found' | 'missing' | 'partial';
-      matchedKeywords: string[];
-      required: boolean;
-    }>;
-    criticalMissing: string[];
-    recommendations: string[];
+  // Per-Document PDPL Compliance Audit
+  document_audits?: Array<{
+    type: 'privacy' | 'terms' | 'cookies';
+    name: string;
+    url: string;
+    found: boolean;
+    audit: {
+      totalChecks: number;
+      found: number;
+      missing: number;
+      partial: number;
+      transparencyScore: number;
+      items: Array<{
+        id: string;
+        name: string;
+        nameAr: string;
+        pdplArticle: string;
+        status: 'found' | 'missing' | 'partial';
+        matchedKeywords: string[];
+        required: boolean;
+      }>;
+      summary: {
+        compliant: boolean;
+        criticalMissing: string[];
+        recommendations: string[];
+      };
+    } | null;
+  }>;
+  
+  // Overall Compliance Summary
+  compliance_summary?: {
+    allDocumentsFound: boolean;
+    overallCompliance: number;
+    documentsAudited: number;
+    criticalGaps: string[];
   };
   
   // Errors
