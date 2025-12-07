@@ -64,6 +64,9 @@ The Smart Customer Assistant utilizes a Retrieval Augmented Generation (RAG) arc
   - Deep policy content parsing and PDPL requirement mapping
   - Cookie banner presence and behavior analysis
   - 19+ PDPL rule evaluations with pass/partial/fail results
+  - **Gap Analysis:** Compares detected tracking technologies (40+ tools from tracker dictionary) against privacy policy disclosures with bilingual keyword matching (Arabic/English)
+  - **Compliance Audit:** 12-point PDPL mandatory requirements checklist including contact info, legal basis, data retention, subject rights, DPO, complaints, and SDAIA reference
+  - Transparency Score calculation (0-100%) based on found/partial/missing policy sections
   - Structured JSON output with evidence pointers and recommendations
 - **Frontend UI:** Displays compliance level badges, findings cards, and error handling with specific Arabic messages.
 - **Export Functionality:** Generates PDF/HTML/JSON reports with concurrent request protection, visual feedback, and toast notifications.
