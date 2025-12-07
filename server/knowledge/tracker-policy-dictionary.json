@@ -1,0 +1,488 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Tracker to Policy Keyword Dictionary - Maps detected trackers to keywords that should appear in privacy policies",
+    "last_updated": "2025-12-07",
+    "language_support": ["en", "ar"]
+  },
+  "trackers": [
+    {
+      "id": "google_analytics",
+      "name": "Google Analytics",
+      "category": "analytics",
+      "severity": "high",
+      "keywords": {
+        "en": ["google analytics", "analytics", "ga4", "universal analytics", "google tracking"],
+        "ar": ["تحليلات جوجل", "جوجل أناليتكس", "تحليلات قوقل", "قوقل أناليتكس", "تتبع جوجل"]
+      },
+      "description": "Website analytics and user behavior tracking"
+    },
+    {
+      "id": "google_tag_manager",
+      "name": "Google Tag Manager",
+      "category": "tag_management",
+      "severity": "high",
+      "keywords": {
+        "en": ["google tag manager", "gtm", "tag manager"],
+        "ar": ["مدير العلامات", "جوجل تاج مانجر", "مدير الوسوم"]
+      },
+      "description": "Tag management system for deploying marketing and analytics tags"
+    },
+    {
+      "id": "facebook_pixel",
+      "name": "Facebook Pixel",
+      "category": "advertising",
+      "severity": "high",
+      "keywords": {
+        "en": ["facebook", "meta pixel", "facebook pixel", "fb pixel", "meta"],
+        "ar": ["فيسبوك", "ميتا", "بكسل فيسبوك", "فيس بوك", "الفيسبوك"]
+      },
+      "description": "Facebook/Meta advertising and conversion tracking"
+    },
+    {
+      "id": "meta_pixel",
+      "name": "Meta Pixel",
+      "category": "advertising",
+      "severity": "high",
+      "keywords": {
+        "en": ["meta", "meta pixel", "facebook", "instagram"],
+        "ar": ["ميتا", "فيسبوك", "انستقرام", "انستغرام"]
+      },
+      "description": "Meta advertising platform tracking"
+    },
+    {
+      "id": "tiktok_pixel",
+      "name": "TikTok Pixel",
+      "category": "advertising",
+      "severity": "high",
+      "keywords": {
+        "en": ["tiktok", "tik tok", "tiktok pixel", "bytedance"],
+        "ar": ["تيك توك", "تيكتوك", "بايت دانس"]
+      },
+      "description": "TikTok advertising and conversion tracking"
+    },
+    {
+      "id": "twitter_pixel",
+      "name": "Twitter/X Pixel",
+      "category": "advertising",
+      "severity": "high",
+      "keywords": {
+        "en": ["twitter", "x pixel", "twitter ads", "x ads"],
+        "ar": ["تويتر", "اكس", "إكس"]
+      },
+      "description": "Twitter/X advertising and conversion tracking"
+    },
+    {
+      "id": "snapchat_pixel",
+      "name": "Snapchat Pixel",
+      "category": "advertising",
+      "severity": "high",
+      "keywords": {
+        "en": ["snapchat", "snap pixel", "snap inc"],
+        "ar": ["سناب شات", "سناب", "سنابشات"]
+      },
+      "description": "Snapchat advertising and conversion tracking"
+    },
+    {
+      "id": "linkedin_insight",
+      "name": "LinkedIn Insight Tag",
+      "category": "advertising",
+      "severity": "medium",
+      "keywords": {
+        "en": ["linkedin", "linkedin insight", "linkedin ads"],
+        "ar": ["لينكد إن", "لينكدإن", "لينكد ان"]
+      },
+      "description": "LinkedIn advertising and professional network tracking"
+    },
+    {
+      "id": "hotjar",
+      "name": "Hotjar",
+      "category": "analytics",
+      "severity": "high",
+      "keywords": {
+        "en": ["hotjar", "heatmap", "session recording", "session replay"],
+        "ar": ["هوتجار", "تسجيل الجلسات", "خريطة حرارية"]
+      },
+      "description": "Heatmaps, session recordings, and user behavior analytics"
+    },
+    {
+      "id": "microsoft_clarity",
+      "name": "Microsoft Clarity",
+      "category": "analytics",
+      "severity": "high",
+      "keywords": {
+        "en": ["microsoft clarity", "clarity", "session recording", "heatmap"],
+        "ar": ["مايكروسوفت كلاريتي", "كلاريتي", "تسجيل الجلسات"]
+      },
+      "description": "Microsoft's session recording and heatmap tool"
+    },
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "category": "marketing",
+      "severity": "medium",
+      "keywords": {
+        "en": ["hubspot", "hub spot", "hubspot tracking"],
+        "ar": ["هب سبوت", "هابسبوت"]
+      },
+      "description": "Marketing automation and CRM tracking"
+    },
+    {
+      "id": "intercom",
+      "name": "Intercom",
+      "category": "customer_support",
+      "severity": "medium",
+      "keywords": {
+        "en": ["intercom", "live chat", "chat widget"],
+        "ar": ["إنتركوم", "انتركوم", "الدردشة المباشرة"]
+      },
+      "description": "Customer messaging and support platform"
+    },
+    {
+      "id": "zendesk",
+      "name": "Zendesk",
+      "category": "customer_support",
+      "severity": "medium",
+      "keywords": {
+        "en": ["zendesk", "zopim", "zendesk chat"],
+        "ar": ["زيندسك", "زن ديسك"]
+      },
+      "description": "Customer service and support platform"
+    },
+    {
+      "id": "segment",
+      "name": "Segment",
+      "category": "analytics",
+      "severity": "high",
+      "keywords": {
+        "en": ["segment", "segment.io", "twilio segment"],
+        "ar": ["سيجمنت", "سيغمنت"]
+      },
+      "description": "Customer data platform and analytics infrastructure"
+    },
+    {
+      "id": "mixpanel",
+      "name": "Mixpanel",
+      "category": "analytics",
+      "severity": "high",
+      "keywords": {
+        "en": ["mixpanel", "product analytics"],
+        "ar": ["ميكسبانل", "مكسبانل"]
+      },
+      "description": "Product analytics and user behavior tracking"
+    },
+    {
+      "id": "amplitude",
+      "name": "Amplitude",
+      "category": "analytics",
+      "severity": "high",
+      "keywords": {
+        "en": ["amplitude", "product analytics"],
+        "ar": ["أمبليتيود", "امبليتود"]
+      },
+      "description": "Digital analytics and product intelligence"
+    },
+    {
+      "id": "fullstory",
+      "name": "FullStory",
+      "category": "analytics",
+      "severity": "high",
+      "keywords": {
+        "en": ["fullstory", "full story", "session replay"],
+        "ar": ["فول ستوري", "تسجيل الجلسات"]
+      },
+      "description": "Digital experience analytics and session replay"
+    },
+    {
+      "id": "google_ads",
+      "name": "Google Ads",
+      "category": "advertising",
+      "severity": "high",
+      "keywords": {
+        "en": ["google ads", "adwords", "google advertising", "doubleclick"],
+        "ar": ["إعلانات جوجل", "اعلانات قوقل", "جوجل أدز", "دبل كليك"]
+      },
+      "description": "Google advertising and remarketing"
+    },
+    {
+      "id": "google_adsense",
+      "name": "Google AdSense",
+      "category": "advertising",
+      "severity": "high",
+      "keywords": {
+        "en": ["adsense", "google adsense", "google ads"],
+        "ar": ["أدسنس", "جوجل أدسنس", "ادسنس"]
+      },
+      "description": "Google display advertising network"
+    },
+    {
+      "id": "criteo",
+      "name": "Criteo",
+      "category": "advertising",
+      "severity": "high",
+      "keywords": {
+        "en": ["criteo", "retargeting", "remarketing"],
+        "ar": ["كريتيو", "إعادة الاستهداف"]
+      },
+      "description": "Retargeting and display advertising"
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "category": "payment",
+      "severity": "medium",
+      "keywords": {
+        "en": ["stripe", "payment processing", "payment gateway"],
+        "ar": ["سترايب", "معالجة الدفع", "بوابة الدفع"]
+      },
+      "description": "Payment processing platform"
+    },
+    {
+      "id": "paypal",
+      "name": "PayPal",
+      "category": "payment",
+      "severity": "medium",
+      "keywords": {
+        "en": ["paypal", "pay pal"],
+        "ar": ["باي بال", "بايبال"]
+      },
+      "description": "Online payment platform"
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "category": "social_media",
+      "severity": "medium",
+      "keywords": {
+        "en": ["youtube", "you tube", "youtube embed"],
+        "ar": ["يوتيوب", "يو تيوب"]
+      },
+      "description": "Video hosting and embedding"
+    },
+    {
+      "id": "vimeo",
+      "name": "Vimeo",
+      "category": "social_media",
+      "severity": "low",
+      "keywords": {
+        "en": ["vimeo"],
+        "ar": ["فيميو"]
+      },
+      "description": "Video hosting platform"
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "category": "infrastructure",
+      "severity": "low",
+      "keywords": {
+        "en": ["cloudflare", "cdn", "content delivery"],
+        "ar": ["كلاودفلير", "شبكة توصيل المحتوى"]
+      },
+      "description": "CDN and web security services"
+    },
+    {
+      "id": "recaptcha",
+      "name": "Google reCAPTCHA",
+      "category": "security",
+      "severity": "medium",
+      "keywords": {
+        "en": ["recaptcha", "captcha", "google recaptcha"],
+        "ar": ["كابتشا", "ريكابتشا", "التحقق البشري"]
+      },
+      "description": "Bot protection and spam prevention"
+    },
+    {
+      "id": "pinterest_tag",
+      "name": "Pinterest Tag",
+      "category": "advertising",
+      "severity": "medium",
+      "keywords": {
+        "en": ["pinterest", "pinterest tag"],
+        "ar": ["بينترست", "بنترست"]
+      },
+      "description": "Pinterest advertising and conversion tracking"
+    },
+    {
+      "id": "bing_ads",
+      "name": "Bing Ads",
+      "category": "advertising",
+      "severity": "medium",
+      "keywords": {
+        "en": ["bing ads", "microsoft advertising", "bing"],
+        "ar": ["إعلانات بينج", "مايكروسوفت"]
+      },
+      "description": "Microsoft/Bing advertising platform"
+    },
+    {
+      "id": "freshchat",
+      "name": "Freshchat",
+      "category": "customer_support",
+      "severity": "low",
+      "keywords": {
+        "en": ["freshchat", "freshworks", "freshdesk"],
+        "ar": ["فريش شات", "فريش ديسك"]
+      },
+      "description": "Customer messaging platform"
+    },
+    {
+      "id": "drift",
+      "name": "Drift",
+      "category": "marketing",
+      "severity": "medium",
+      "keywords": {
+        "en": ["drift", "conversational marketing"],
+        "ar": ["دريفت"]
+      },
+      "description": "Conversational marketing platform"
+    },
+    {
+      "id": "optimizely",
+      "name": "Optimizely",
+      "category": "analytics",
+      "severity": "medium",
+      "keywords": {
+        "en": ["optimizely", "a/b testing", "ab testing"],
+        "ar": ["أوبتيمايزلي", "اختبار أ/ب"]
+      },
+      "description": "A/B testing and experimentation platform"
+    },
+    {
+      "id": "crazy_egg",
+      "name": "Crazy Egg",
+      "category": "analytics",
+      "severity": "medium",
+      "keywords": {
+        "en": ["crazy egg", "crazyegg", "heatmap"],
+        "ar": ["كريزي إيج", "خريطة حرارية"]
+      },
+      "description": "Heatmap and user behavior analytics"
+    },
+    {
+      "id": "lucky_orange",
+      "name": "Lucky Orange",
+      "category": "analytics",
+      "severity": "medium",
+      "keywords": {
+        "en": ["lucky orange", "luckyorange"],
+        "ar": ["لاكي أورنج"]
+      },
+      "description": "Session recordings and heatmaps"
+    },
+    {
+      "id": "mouseflow",
+      "name": "Mouseflow",
+      "category": "analytics",
+      "severity": "medium",
+      "keywords": {
+        "en": ["mouseflow", "session replay"],
+        "ar": ["ماوسفلو"]
+      },
+      "description": "Session replay and heatmap analytics"
+    },
+    {
+      "id": "heap",
+      "name": "Heap Analytics",
+      "category": "analytics",
+      "severity": "high",
+      "keywords": {
+        "en": ["heap", "heap analytics"],
+        "ar": ["هيب", "تحليلات هيب"]
+      },
+      "description": "Automatic event capture and analytics"
+    },
+    {
+      "id": "pendo",
+      "name": "Pendo",
+      "category": "analytics",
+      "severity": "medium",
+      "keywords": {
+        "en": ["pendo", "product analytics"],
+        "ar": ["بيندو"]
+      },
+      "description": "Product experience and analytics platform"
+    },
+    {
+      "id": "appsflyer",
+      "name": "AppsFlyer",
+      "category": "mobile_analytics",
+      "severity": "high",
+      "keywords": {
+        "en": ["appsflyer", "mobile attribution"],
+        "ar": ["أبسفلاير"]
+      },
+      "description": "Mobile attribution and marketing analytics"
+    },
+    {
+      "id": "adjust",
+      "name": "Adjust",
+      "category": "mobile_analytics",
+      "severity": "high",
+      "keywords": {
+        "en": ["adjust", "mobile analytics"],
+        "ar": ["أدجست"]
+      },
+      "description": "Mobile measurement and fraud prevention"
+    },
+    {
+      "id": "branch",
+      "name": "Branch",
+      "category": "mobile_analytics",
+      "severity": "medium",
+      "keywords": {
+        "en": ["branch", "branch.io", "deep linking"],
+        "ar": ["برانش"]
+      },
+      "description": "Mobile linking and attribution platform"
+    },
+    {
+      "id": "taboola",
+      "name": "Taboola",
+      "category": "advertising",
+      "severity": "high",
+      "keywords": {
+        "en": ["taboola", "content recommendation"],
+        "ar": ["تابولا"]
+      },
+      "description": "Content discovery and native advertising"
+    },
+    {
+      "id": "outbrain",
+      "name": "Outbrain",
+      "category": "advertising",
+      "severity": "high",
+      "keywords": {
+        "en": ["outbrain", "content recommendation"],
+        "ar": ["أوتبرين"]
+      },
+      "description": "Content discovery and native advertising"
+    }
+  ],
+  "generic_disclosure_keywords": {
+    "en": [
+      "third party",
+      "third-party",
+      "analytics",
+      "tracking",
+      "cookies",
+      "advertising",
+      "marketing",
+      "data collection",
+      "personal information",
+      "data sharing"
+    ],
+    "ar": [
+      "طرف ثالث",
+      "أطراف ثالثة",
+      "تحليلات",
+      "تتبع",
+      "ملفات تعريف الارتباط",
+      "كوكيز",
+      "إعلانات",
+      "تسويق",
+      "جمع البيانات",
+      "المعلومات الشخصية",
+      "مشاركة البيانات"
+    ]
+  }
+}

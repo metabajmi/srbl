@@ -1,0 +1,47 @@
+I need to expand the "Privacy Policy Content Audit" to specifically check for 12 mandatory PDPL requirements.
+
+Please update the `scannerService.js` to include a detailed validation list.
+Create a dictionary object named `pdplChecklist` containing these specific sections and their associated Arabic/English keywords/regex:
+
+1.  **Contact Information (بيانات التواصل):**
+    Keywords: ["contact us", "email", "phone", "address", "تواصل معنا", "البريد الإلكتروني", "اتصل بنا", "العنوان"].
+
+2.  **Last Update Date (تاريخ آخر تحديث):**
+    Keywords: ["last updated", "effective date", "published on", "تاريخ آخر تحديث", "سارية من", "تحرير في"].
+
+3.  **Data Collection Types (ماهية البيانات):**
+    Keywords: ["types of data", "personal data", "name", "email", "collected info", "البيانات التي نجمعها", "أنواع البيانات", "معلومات شخصية"].
+
+4.  **Collection Method & Purpose (كيف ولماذا نجمعها):**
+    Keywords: ["how we collect", "purpose", "why we collect", "cookies", "كيف نجمع", "الغرض من الجمع", "طرق الجمع", "أسباب"].
+
+5.  **Data Usage (كيفية الاستخدام):**
+    Keywords: ["how we use", "processing", "usage", "service improvement", "كيفية استخدام", "معالجة البيانات", "تحسين الخدمات"].
+
+6.  **Data Disclosure (الإفصاح والمشاركة):**
+    Keywords: ["disclosure", "share", "third party", "partners", "الإفصاح", "مشاركة البيانات", "أطراف ثالثة", "الجهات المستلمة"].
+
+7.  **Legal Basis (المسوغات النظامية):**
+    Keywords: ["legal basis", "consent", "legitimate interest", "contract", "المسوغ النظامي", "السند النظامي", "الموافقة", "تنفيذ العقد", "المصلحة المشروعة", "الأساس النظامي"].
+
+8.  **Data Storage & Retention (التخزين والمدة):**
+    Keywords: ["storage", "retention", "how long", "keep data", "delete after", "تخزين", "حفظ البيانات", "مدة الاحتفاظ", "فترة"].
+
+9.  **Data Subject Rights (حقوق صاحب البيانات):**
+    Keywords: ["rights", "access", "rectification", "withdraw consent", "erasure", "حقوقك", "الوصول", "تصحيح", "مسح", "سحب الموافقة", "إتلاف"].
+
+10. **DPO / Responsible Person (مسؤول الحماية):**
+    Keywords: ["DPO", "Data Protection Officer", "privacy officer", "contact the officer", "مسؤول حماية البيانات", "ضابط الاتصال", "موظف الخصوصية"].
+
+11. **Complaint Mechanism (آلية الشكوى):**
+    Keywords: ["complaint", "object", "lodge a complaint", "grievance", "شكوى", "اعتراض", "رفع بلاغ"].
+
+12. **SDAIA Reference (مرجع الهيئة - سدايا):**
+    Keywords: ["SDAIA", "Saudi Data & AI Authority", "competent authority", "سدايا", "الهيئة السعودية للبيانات", "الجهة المختصة"].
+
+**Logic Update:**
+* Iterate through this checklist against the scraped text of the policy.
+* The output JSON should show a `complianceAudit` object with a status for each of the 12 points (e.g., `{ "Legal Basis": "Found", "SDAIA Reference": "Missing" }`).
+* Calculate a "Transparency Score" based on how many of these 12 items are present.
+
+Please implement this logic.
