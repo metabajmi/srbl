@@ -465,17 +465,22 @@ export function auditPolicyCompliance(policies: ParsedPolicy[]): ComplianceAudit
     let status: 'found' | 'missing' | 'partial';
     let statusIcon: string;
     
-    if (matchedKeywords.length >= 2) {
+    // STRICT REQUIREMENTS:
+    // - FOUND: 4+ keyword matches (substantial coverage)
+    // - PARTIAL: 2-3 keyword matches (some coverage but incomplete)
+    // - MISSING: 0-1 keyword matches (insufficient or absent)
+    
+    if (matchedKeywords.length >= 4) {
       status = 'found';
       statusIcon = '✓ FOUND';
       found++;
-    } else if (matchedKeywords.length === 1) {
+    } else if (matchedKeywords.length >= 2) {
       status = 'partial';
-      statusIcon = '~ PARTIAL';
+      statusIcon = '~ PARTIAL (insufficient)';
       partial++;
     } else {
       status = 'missing';
-      statusIcon = '✗ MISSING';
+      statusIcon = '✗ MISSING (NOT FOUND)';
       missing++;
       if (check.required) {
         requiredMissing++;
@@ -505,13 +510,27 @@ export function auditPolicyCompliance(policies: ParsedPolicy[]): ComplianceAudit
   
   console.log(`\n${'-'.repeat(60)}`);
   
-  // Calculate transparency score with STRICTER logic
-  // If required sections are missing, score takes a significant hit
-  const baseScore = Math.round(((found + partial * 0.5) / pdplChecklist.length) * 100);
+  // ZERO-TOLERANCE COMPLIANCE SCORING
+  // Only count FOUND items (4+ keywords). PARTIAL items don't count toward compliance.
+  // If ANY required section is missing, apply massive penalty.
   
-  // Penalty for missing REQUIRED sections: -10% per missing required section
-  const requiredPenalty = requiredMissing * 10;
-  const transparencyScore = Math.max(0, baseScore - requiredPenalty);
+  const requiredItems = items.filter(item => item.required);
+  const foundRequired = requiredItems.filter(item => item.status === 'found').length;
+  const totalRequired = requiredItems.length;
+  
+  // Base score: what percentage of REQUIRED sections are fully found?
+  const requiredCoveragePercent = Math.round((foundRequired / totalRequired) * 100);
+  
+  // Penalty for missing required sections: -15% per missing required section (STRICT!)
+  const requiredPenalty = requiredMissing * 15;
+  
+  // Final transparency score: coverage minus penalty, never negative
+  let transparencyScore = Math.max(0, requiredCoveragePercent - requiredPenalty);
+  
+  console.log(`[ComplianceAudit] Required Section Coverage: ${foundRequired}/${totalRequired} (${requiredCoveragePercent}%)`);
+  console.log(`[ComplianceAudit] Missing Required Sections: ${requiredMissing}`);
+  console.log(`[ComplianceAudit] Penalty Applied: -${requiredPenalty}%`);
+  console.log(`[ComplianceAudit] ZERO-TOLERANCE Score: ${transparencyScore}%`);
   
   const criticalMissing = items
     .filter(item => item.status === 'missing' && item.required)
@@ -538,7 +557,7 @@ export function auditPolicyCompliance(policies: ParsedPolicy[]): ComplianceAudit
   console.log(`[ComplianceAudit] Total Checks: ${pdplChecklist.length}`);
   console.log(`[ComplianceAudit] Found: ${found} | Partial: ${partial} | Missing: ${missing}`);
   console.log(`[ComplianceAudit] Required Sections Missing: ${requiredMissing}`);
-  console.log(`[ComplianceAudit] Base Score: ${baseScore}% | Penalty: -${requiredPenalty}%`);
+  console.log(`[ComplianceAudit] Required Coverage: ${requiredCoveragePercent}% | Penalty: -${requiredPenalty}%`);
   console.log(`[ComplianceAudit] Final Transparency Score: ${transparencyScore}%`);
   console.log(`[ComplianceAudit] Compliant: ${criticalMissing.length === 0 ? 'YES' : 'NO - Missing required sections!'}`);
   
