@@ -457,9 +457,6 @@ export function evaluatePDPLCompliance(context: EvaluationContext): PDPLEvaluati
       if (check.severity === 'critical') critical_issues++;
       else if (check.severity === 'major') major_issues++;
       else minor_issues++;
-    } else if (check.result === 'partial') {
-      if (check.severity === 'critical') critical_issues++;
-      else if (check.severity === 'major') major_issues++;
     }
   }
   
