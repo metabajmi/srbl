@@ -1,5 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface TrackerKeywords {
   en: string[];
@@ -65,9 +69,10 @@ export interface ParsedPolicy {
   fullText: string;
   wordCount: number;
   language: string;
-  sections: Array<{
-    title: string;
-    content: string;
+  sections?: Array<{
+    title?: string;
+    content?: string;
+    text?: string;
   }>;
 }
 
