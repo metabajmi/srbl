@@ -122,6 +122,109 @@ function isSameDomain(url1: string, url2: string): boolean {
   }
 }
 
+export function discoverLinksFromDOM(html: string, baseUrl: string): { 
+  privacyLinks: Array<{ url: string; text: string; confidence: number }>; 
+  termsLinks: Array<{ url: string; text: string; confidence: number }>;
+  cookiesLinks: Array<{ url: string; text: string; confidence: number }>;
+  refundLinks: Array<{ url: string; text: string; confidence: number }>;
+} {
+  const $ = cheerio.load(html);
+  
+  const privacyLinks: Array<{ url: string; text: string; confidence: number }> = [];
+  const termsLinks: Array<{ url: string; text: string; confidence: number }> = [];
+  const cookiesLinks: Array<{ url: string; text: string; confidence: number }> = [];
+  const refundLinks: Array<{ url: string; text: string; confidence: number }> = [];
+  
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href') || '';
+    const text = $(el).text().trim();
+    const normalized = normalizeUrl(href, baseUrl);
+    
+    if (!normalized || !isSameDomain(normalized, baseUrl)) return;
+    
+    // Check Privacy
+    for (const pattern of PRIVACY_PATTERNS.urls) {
+      if (pattern.test(href)) {
+        privacyLinks.push({ url: normalized, text, confidence: 0.95 });
+        return;
+      }
+    }
+    for (const keyword of PRIVACY_PATTERNS.text) {
+      if (text.toLowerCase().includes(keyword.toLowerCase())) {
+        privacyLinks.push({ url: normalized, text, confidence: 0.8 });
+        return;
+      }
+    }
+    
+    // Check Terms
+    for (const pattern of TERMS_PATTERNS.urls) {
+      if (pattern.test(href)) {
+        termsLinks.push({ url: normalized, text, confidence: 0.95 });
+        return;
+      }
+    }
+    for (const keyword of TERMS_PATTERNS.text) {
+      if (text.toLowerCase().includes(keyword.toLowerCase())) {
+        termsLinks.push({ url: normalized, text, confidence: 0.8 });
+        return;
+      }
+    }
+    
+    // Check Cookies
+    for (const pattern of COOKIES_PATTERNS.urls) {
+      if (pattern.test(href)) {
+        cookiesLinks.push({ url: normalized, text, confidence: 0.95 });
+        return;
+      }
+    }
+    
+    // Check Refund
+    for (const pattern of REFUND_PATTERNS.urls) {
+      if (pattern.test(href)) {
+        refundLinks.push({ url: normalized, text, confidence: 0.9 });
+        return;
+      }
+    }
+  });
+  
+  // Log discovered links
+  console.log(`\n[LinkDiscovery] ========== LINKS FOUND ON HOMEPAGE ==========`);
+  if (privacyLinks.length > 0) {
+    console.log(`[LinkDiscovery] PRIVACY POLICY LINKS (${privacyLinks.length}):`);
+    privacyLinks.forEach((link, i) => {
+      console.log(`  ${i + 1}. ${link.text || '(no text)'} → ${link.url} [confidence: ${(link.confidence * 100).toFixed(0)}%]`);
+    });
+  } else {
+    console.log(`[LinkDiscovery] ❌ NO PRIVACY POLICY LINKS FOUND`);
+  }
+  
+  if (termsLinks.length > 0) {
+    console.log(`[LinkDiscovery] TERMS & CONDITIONS LINKS (${termsLinks.length}):`);
+    termsLinks.forEach((link, i) => {
+      console.log(`  ${i + 1}. ${link.text || '(no text)'} → ${link.url} [confidence: ${(link.confidence * 100).toFixed(0)}%]`);
+    });
+  } else {
+    console.log(`[LinkDiscovery] ❌ NO TERMS LINKS FOUND`);
+  }
+  
+  if (cookiesLinks.length > 0) {
+    console.log(`[LinkDiscovery] COOKIES POLICY LINKS (${cookiesLinks.length}):`);
+    cookiesLinks.forEach((link, i) => {
+      console.log(`  ${i + 1}. ${link.text || '(no text)'} → ${link.url}`);
+    });
+  }
+  
+  if (refundLinks.length > 0) {
+    console.log(`[LinkDiscovery] REFUND POLICY LINKS (${refundLinks.length}):`);
+    refundLinks.forEach((link, i) => {
+      console.log(`  ${i + 1}. ${link.text || '(no text)'} → ${link.url}`);
+    });
+  }
+  console.log(`[LinkDiscovery] ${'='.repeat(50)}\n`);
+  
+  return { privacyLinks, termsLinks, cookiesLinks, refundLinks };
+}
+
 function classifyPage(url: string, linkText: string): { type: DiscoveredPage['type']; confidence: number } {
   const urlLower = url.toLowerCase();
   const textNormalized = normalizeArabic(linkText);

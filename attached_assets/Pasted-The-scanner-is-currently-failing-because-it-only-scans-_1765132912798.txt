@@ -1,0 +1,44 @@
+The scanner is currently failing because it only scans the HOMEPAGE. It detects the Cookie Banner and the *existence* of links, but it does NOT navigate to the actual "Privacy Policy" or "Terms" pages to read their content.
+
+I need a major logic update in `scannerService.js` to implement **"Deep Multi-Page Scanning"**.
+
+Please rewrite the scanning flow to follow this exact sequence:
+
+1.  **Step 1: Discovery (On Homepage)**
+    * Launch Puppeteer and go to the provided URL (Homepage).
+    * Check for the **Cookie Banner** (DOM analysis).
+    * **CRITICAL:** Search the DOM for `<a>` tags (links) to find the specific URLs for:
+        * `privacyUrl`: Links containing "privacy", "policy", "سياسة", "الخصوصية".
+        * `termsUrl`: Links containing "terms", "conditions", "user agreement", "الشروط", "الأحكام".
+    * *Log these URLs to the console.*
+
+2.  **Step 2: Privacy Policy Audit (Navigation Required)**
+    * If `privacyUrl` is found:
+        * **Navigate (`page.goto`) to `privacyUrl`.**
+        * Wait for the text to load.
+        * Extract the full `innerText` of the Privacy Policy page.
+        * **Run the "12-Point PDPL Checklist"** ONLY on this extracted text (not the homepage text).
+    * If `privacyUrl` is NOT found, mark the Privacy Score as 0 (Critical Fail).
+
+3.  **Step 3: Terms & Conditions Audit (Navigation Required)**
+    * If `termsUrl` is found:
+        * **Navigate (`page.goto`) to `termsUrl`.**
+        * Extract the full `innerText` of the Terms page.
+        * Validate against a simple dictionary: ["Governing Law", "Refund", "Jurisdiction", "Saudi Law", "قانون", "استرجاع", "نزاعات"].
+    * If `termsUrl` is NOT found, mark Terms Score as 0.
+
+4.  **Step 4: Consolidated Reporting**
+    * The final JSON output must show details for each document separately:
+        ```json
+        {
+          "cookieBanner": { "detected": true, "compliance": "..." },
+          "privacyPolicy": { "url": "...", "found12Points": {...}, "score": ... },
+          "terms": { "url": "...", "contentCheck": "..." }
+        }
+        ```
+
+**Debug Requirement:**
+* You MUST print to the console: `Navigating to Privacy Policy at: [URL]`.
+* If the scanner stays on the homepage and tries to read the policy there, it is WRONG. Fix it.
+
+Please implement this Multi-Page Navigation logic now.

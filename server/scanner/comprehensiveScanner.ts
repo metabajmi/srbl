@@ -1,5 +1,5 @@
 import { scanWithBrowser, BrowserScanResult, NetworkRequest } from './browser';
-import { discoverLegalPages, DiscoveredPage, fetchAndDiscoverSitemap } from './pagesDiscovery';
+import { discoverLegalPages, DiscoveredPage, fetchAndDiscoverSitemap, discoverLinksFromDOM } from './pagesDiscovery';
 import { parsePolicy, ParsedPolicy, analyzePolicyCompleteness } from './policyParser';
 import { analyzeCookieBanner, CookieBannerAnalysis } from './cookieBannerAnalyzer';
 import { evaluatePDPLCompliance, createEvaluationContext, PDPLCheck, PDPLEvaluationResult } from './pdplEvaluator';
@@ -161,6 +161,12 @@ export async function runComprehensiveScan(
     return createErrorResult(url, errors, startTime);
   }
   
+  // STEP 1: Discover links from the homepage HTML
+  console.log(`\n[Scanner] ========== MULTI-PAGE SCANNING PROCESS ==========`);
+  console.log(`[Scanner] STEP 1: Scanning homepage for policy links...`);
+  const discoveredLinks = discoverLinksFromDOM(mainScanResult.html, mainScanResult.finalUrl);
+  
+  console.log(`\n[Scanner] STEP 2: Discovering legal pages via patterns...`);
   const discoveredPages = discoverLegalPages(mainScanResult.html, mainScanResult.finalUrl);
   console.log(`[ComprehensiveScan] Discovered ${discoveredPages.pages.length} potential legal pages`);
   
@@ -195,10 +201,13 @@ export async function runComprehensiveScan(
       .filter(p => p.type !== 'other' && p.confidence >= 0.7)
       .slice(0, fullConfig.max_pages_to_crawl);
     
+    console.log(`\n[Scanner] STEP 3: Navigating to and analyzing ${pagesToFetch.length} policy pages...\n`);
+    
     for (const page of pagesToFetch) {
       try {
-        console.log(`[ComprehensiveScan] Fetching policy page: ${page.url}`);
+        console.log(`[Scanner] ➤ Navigating to ${page.type.toUpperCase()} at: ${page.url}`);
         const pageResult = await scanWithBrowser(page.url);
+        console.log(`[Scanner]   ✓ Successfully loaded (${pageResult.html?.length || 0} bytes)`);
         
         const parsed = parsePolicy(pageResult.html, page.url, page.type);
         parsedPolicies.push(parsed);
@@ -222,7 +231,7 @@ export async function runComprehensiveScan(
           present_elements: completeness.presentElements,
         });
         
-        console.log(`[ComprehensiveScan] Parsed ${parsed.type} policy: ${parsed.wordCount} words, ${parsed.sections.length} sections`);
+        console.log(`[Scanner]   ✓ Parsed: ${parsed.wordCount} words in ${parsed.sections.length} sections (Language: ${parsed.language})`);
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         errors.push(`Failed to fetch ${page.type} page (${page.url}): ${errorMsg}`);
