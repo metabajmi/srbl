@@ -24,6 +24,8 @@ import {
   type ComprehensiveAnalysisResult,
   type DocumentAnalysisReport
 } from '../legal-analyzer';
+import { auditPolicyCompliance, type ParsedPolicy } from '../scanner/gapAnalyzer';
+import * as cheerio from 'cheerio';
 
 export interface AnalysisOptions {
   timeout?: number;
@@ -127,9 +129,54 @@ export async function analyzeSite(
     console.log(`[Analyzer] ✗ NO TERMS & CONDITIONS FOUND on homepage`);
   }
   
-  // Combine all policy content for analysis
-  const combinedPolicyContent = `${privacyPolicyContent} ${termsContent}`;
-  console.log(`[Analyzer] Combined policy content: ${combinedPolicyContent.length} bytes total`);
+  // CRITICAL: Analyze policy content for 12-point PDPL compliance
+  let complianceAudit = null;
+  let transparencyScore = 0;
+  
+  if (privacyPolicyContent.length > 100 || termsContent.length > 100) {
+    const policies: ParsedPolicy[] = [];
+    
+    // Extract text from privacy policy HTML
+    if (privacyPolicyContent.length > 100) {
+      const $ = cheerio.load(privacyPolicyContent);
+      const policyText = $('body').text().trim();
+      if (policyText.length > 50) {
+        policies.push({
+          type: 'privacy',
+          url: privacyPolicy.url || 'unknown',
+          fullText: policyText,
+          wordCount: policyText.split(/\s+/).length,
+          language: 'en'
+        });
+      }
+    }
+    
+    // Extract text from terms HTML
+    if (termsContent.length > 100) {
+      const $ = cheerio.load(termsContent);
+      const termsText = $('body').text().trim();
+      if (termsText.length > 50) {
+        policies.push({
+          type: 'terms',
+          url: termsAndConditions.url || 'unknown',
+          fullText: termsText,
+          wordCount: termsText.split(/\s+/).length,
+          language: 'en'
+        });
+      }
+    }
+    
+    // Run compliance audit on extracted content
+    if (policies.length > 0) {
+      complianceAudit = auditPolicyCompliance(policies);
+      transparencyScore = complianceAudit.transparencyScore;
+      console.log(`[Analyzer] Compliance audit complete. Transparency score: ${transparencyScore}%`);
+      console.log(`[Analyzer] Audit summary: ${complianceAudit.items.filter(i => i.status === 'found').length} found, ${complianceAudit.items.filter(i => i.status === 'partial').length} partial, ${complianceAudit.items.filter(i => i.status === 'missing').length} missing`);
+    }
+  } else {
+    console.log(`[Analyzer] ⚠ Insufficient policy content for compliance audit (${privacyPolicyContent.length + termsContent.length} bytes)`);
+  }
+  
   console.log(`[Analyzer] ${'='.repeat(50)}\n`);
   
   const extractionResult: ScanExtractionResult = {
@@ -154,6 +201,14 @@ export async function analyzeSite(
   
   const ruleResults = evaluateAllRules(extractionResult);
   const scoreResult = calculateScore(ruleResults.all);
+  
+  // Factor transparency score from 12-point compliance audit into final score
+  let finalScore = scoreResult.overall;
+  if (complianceAudit && transparencyScore > 0) {
+    // Blend PDPL rule score (60%) with transparency score (40%)
+    finalScore = Math.round((scoreResult.overall * 0.6) + (transparencyScore * 0.4));
+    console.log(`[Analyzer] Combined scores: PDPL rules=${scoreResult.overall}% (60%) + Transparency=${transparencyScore}% (40%) = Final=${finalScore}%`);
+  }
   
   const firstPartyCookies = cookies.filter(c => !c.thirdParty);
   const thirdPartyCookies = cookies.filter(c => c.thirdParty);
@@ -189,6 +244,13 @@ export async function analyzeSite(
   
   const scanDuration = Date.now() - startTime;
   console.log(`[Analyzer] Analysis complete in ${scanDuration}ms`);
+  
+  // Determine compliance level based on final score
+  const determineLevelFromScore = (score: number): 'high' | 'medium' | 'low' => {
+    if (score >= 80) return 'high';
+    if (score >= 50) return 'medium';
+    return 'low';
+  };
   
   const result: DeterministicScanResult = {
     url: normalizedUrl,
@@ -226,9 +288,12 @@ export async function analyzeSite(
     pdpl_violations: ruleResults.violations,
     pdpl_passed_rules: ruleResults.passed,
     
-    overall_score: scoreResult.overall,
-    compliance_level: scoreResult.level,
-    score_breakdown: scoreResult.breakdown,
+    overall_score: finalScore,
+    compliance_level: determineLevelFromScore(finalScore),
+    score_breakdown: {
+      ...scoreResult.breakdown,
+      transparency_score: transparencyScore,
+    },
     
     scan_errors: [...browserResult.errors, ...errors],
     partial_analysis: browserResult.errors.length > 0,
