@@ -215,9 +215,43 @@ function checkElement(policyText: string, element: any): PolicyElementCheck {
     statusEn = 'FOUND';
     notes = '';
   } else {
-    status = 'غير موجود';
-    statusEn = 'MISSING';
-    notes = 'لم يتم ذكره نهائياً في سياسة الخصوصية.';
+    // Special handling for Element 10 (DPO) - if no DPO mentioned but has privacy contact email
+    if (element.id === 'element_10') {
+      // Check for privacy-related contact patterns
+      const privacyContactPatterns = [
+        'privacy@', 'خصوصية@', 'dataprotection@', 'dpo@', 'gdpr@', 'pdpl@',
+        'للتواصل بخصوص', 'للاستفسار عن الخصوصية', 'استفسارات الخصوصية',
+        'أسئلة حول الخصوصية', 'تواصل معنا بشأن', 'للتواصل معنا',
+        'يمكنك التواصل', 'راسلنا على', 'للمزيد من المعلومات',
+        'بيانات التواصل', 'اتصل بنا', 'contact us', 'reach us'
+      ];
+      
+      const hasPrivacyContact = privacyContactPatterns.some(pattern => 
+        normalizedPolicy.includes(normalizeText(pattern))
+      );
+      
+      // Also check for any email pattern combined with privacy context
+      const hasEmailWithPrivacyContext = 
+        (policyText.includes('@') && 
+         (normalizedPolicy.includes('خصوصية') || 
+          normalizedPolicy.includes('privacy') ||
+          normalizedPolicy.includes('بيانات') ||
+          normalizedPolicy.includes('data')));
+      
+      if (hasPrivacyContact || hasEmailWithPrivacyContext) {
+        status = 'ناقص أو غير واضح';
+        statusEn = 'PARTIAL';
+        notes = 'يوجد بريد إلكتروني للتواصل بخصوص الخصوصية ولكن لم يُذكر مسؤول حماية البيانات (DPO) بشكل صريح.';
+      } else {
+        status = 'غير موجود';
+        statusEn = 'MISSING';
+        notes = 'لم يتم ذكر مسؤول حماية البيانات ولا يوجد بريد إلكتروني للتواصل بخصوص الخصوصية.';
+      }
+    } else {
+      status = 'غير موجود';
+      statusEn = 'MISSING';
+      notes = 'لم يتم ذكره نهائياً في سياسة الخصوصية.';
+    }
   }
 
   // Extract evidence if found
