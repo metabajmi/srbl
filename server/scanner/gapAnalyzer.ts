@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { auditPrivacyPolicy, type PrivacyPolicyAudit } from './privacyPolicyElementChecker';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -591,6 +592,7 @@ export interface DocumentAudit {
   url: string;
   found: boolean;
   audit: ComplianceAuditResult | null;
+  privacyPolicyAudit?: PrivacyPolicyAudit;
 }
 
 export interface ComprehensiveDocumentAudit {
@@ -629,12 +631,22 @@ export function auditAllDocuments(policies: ParsedPolicy[]): ComprehensiveDocume
     console.log(`\n[DocumentAudit] AUDITING ${docType.toUpperCase()}: ${policy.url}`);
     const audit = auditPolicyCompliance([policy]);
     
+    // FOR PRIVACY POLICIES: Also run specialized 11-element check
+    let privacyPolicyAudit: PrivacyPolicyAudit | undefined;
+    if (docType === 'privacy') {
+      console.log(`\n[DocumentAudit] Running specialized 11-element PDPL privacy policy check...`);
+      privacyPolicyAudit = auditPrivacyPolicy(policy.fullText);
+      console.log(`[DocumentAudit] Privacy Policy Elements - Found: ${privacyPolicyAudit.elementsFound}/11, Partial: ${privacyPolicyAudit.elementsPartial}/11, Missing: ${privacyPolicyAudit.elementsMissing}/11`);
+      console.log(`[DocumentAudit] Privacy Policy Compliance: ${privacyPolicyAudit.compliancePercentage}%`);
+    }
+    
     documents.push({
       type: docType,
       name: docType === 'privacy' ? 'Privacy Policy' : docType === 'terms' ? 'Terms & Conditions' : 'Cookie Policy',
       url: policy.url,
       found: true,
-      audit
+      audit,
+      privacyPolicyAudit
     });
   }
   
