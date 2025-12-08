@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, Cookie, ExternalLink } from "lucide-react";
+import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, Cookie, ExternalLink, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
 import { useState, useEffect, useRef } from "react";
 import { BackButton } from "@/components/BackButton";
@@ -252,6 +252,11 @@ export default function ScanResultsPage() {
               />
             </div>
 
+            {/* Privacy Policy 12-Element Audit */}
+            {(scan as any).analysisResult?.document_audits?.[0]?.privacyPolicyAudit && (
+              <PrivacyPolicyAuditCard audit={(scan as any).analysisResult.document_audits[0].privacyPolicyAudit} />
+            )}
+
             {/* Issues List - Simple */}
             {realIssues.length > 0 && (
               <Card className="mb-6">
@@ -434,5 +439,158 @@ function ActionButton({ title, description, icon, needed, onClick, testId }: {
       {icon}
       <span className="font-medium">{description} {title}</span>
     </Button>
+  );
+}
+
+// Privacy Policy 12-Element Audit Card
+interface PrivacyPolicyAuditProps {
+  audit: {
+    elementsFound: number;
+    elementsPartial: number;
+    elementsMissing: number;
+    compliancePercentage: number;
+    isComplete: boolean;
+    summary: string;
+    elements: Array<{
+      id: string;
+      number: number;
+      nameAr: string;
+      nameEn: string;
+      status: 'موجود بالكامل' | 'ناقص أو غير واضح' | 'غير موجود';
+      statusEn: 'FOUND' | 'PARTIAL' | 'MISSING';
+      evidence: string;
+      notes: string;
+      matchCount: number;
+      matchedKeywords: string[];
+    }>;
+  };
+}
+
+function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  const getStatusIcon = (statusEn: string) => {
+    switch (statusEn) {
+      case 'FOUND': return <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />;
+      case 'PARTIAL': return <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />;
+      default: return <XCircle className="w-4 h-4 text-red-600 flex-shrink-0" />;
+    }
+  };
+
+  const getStatusBadge = (status: string, statusEn: string) => {
+    switch (statusEn) {
+      case 'FOUND': return <Badge variant="outline" className="border-green-500 text-green-600 text-xs">{status}</Badge>;
+      case 'PARTIAL': return <Badge variant="outline" className="border-orange-500 text-orange-600 text-xs">{status}</Badge>;
+      default: return <Badge variant="destructive" className="text-xs">{status}</Badge>;
+    }
+  };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-primary" />
+            فحص عناصر سياسة الخصوصية (12 عنصر PDPL)
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {audit.isComplete ? (
+              <Badge variant="outline" className="border-green-500 text-green-600">مكتملة</Badge>
+            ) : (
+              <Badge variant="destructive">غير مكتملة</Badge>
+            )}
+            <span className="text-sm font-medium">{audit.compliancePercentage}%</span>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Summary Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
+            <div className="text-2xl font-bold text-green-600">{audit.elementsFound}</div>
+            <div className="text-xs text-green-700 dark:text-green-400">موجود بالكامل</div>
+          </div>
+          <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
+            <div className="text-2xl font-bold text-orange-600">{audit.elementsPartial}</div>
+            <div className="text-xs text-orange-700 dark:text-orange-400">ناقص أو غير واضح</div>
+          </div>
+          <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
+            <div className="text-2xl font-bold text-red-600">{audit.elementsMissing}</div>
+            <div className="text-xs text-red-700 dark:text-red-400">غير موجود</div>
+          </div>
+        </div>
+
+        {/* Expand/Collapse Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full mb-3"
+          onClick={() => setExpanded(!expanded)}
+          data-testid="button-expand-audit"
+        >
+          {expanded ? (
+            <>
+              <ChevronUp className="w-4 h-4 ml-2" />
+              إخفاء التفاصيل
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4 ml-2" />
+              عرض تفاصيل العناصر الـ 12
+            </>
+          )}
+        </Button>
+
+        {/* Detailed Elements Table */}
+        {expanded && (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {audit.elements.map((element) => (
+              <div
+                key={element.id}
+                className={`p-3 rounded-lg border ${
+                  element.statusEn === 'FOUND' 
+                    ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' 
+                    : element.statusEn === 'PARTIAL'
+                    ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'
+                    : 'border-red-200 bg-red-50/50 dark:bg-red-950/20'
+                }`}
+                data-testid={`audit-element-${element.number}`}
+              >
+                <div className="flex items-start gap-2">
+                  {getStatusIcon(element.statusEn)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{element.number}. {element.nameAr}</span>
+                      {getStatusBadge(element.status, element.statusEn)}
+                    </div>
+                    
+                    {element.evidence && (
+                      <p className="text-xs text-muted-foreground mt-1 bg-background/50 p-2 rounded border">
+                        <span className="font-medium">الدليل:</span> {element.evidence}
+                      </p>
+                    )}
+                    
+                    {element.notes && element.statusEn !== 'FOUND' && (
+                      <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
+                        {element.notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Summary */}
+        {!audit.isComplete && (
+          <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
+            <p className="text-sm text-red-700 dark:text-red-400 font-medium">
+              السياسة غير مكتملة - {audit.elementsMissing} عنصر مفقود من أصل 12
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
