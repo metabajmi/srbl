@@ -171,25 +171,30 @@ function checkElement(policyText: string, element: typeof PRIVACY_POLICY_ELEMENT
 
   const matchCount = matchedKeywords.length;
   
-  // Determine status based on match count
-  // 4+ matches = موجود بالكامل (FOUND)
-  // 2-3 matches = ناقص أو غير واضح (PARTIAL)  
-  // 0-1 matches = غير موجود (MISSING)
+  // STRICT ZERO-TOLERANCE EVALUATION:
+  // 5+ keyword matches = موجود بالكامل (FOUND) - element clearly and explicitly present
+  // 3-4 matches = ناقص أو غير واضح (PARTIAL) - mentioned but not detailed enough
+  // 0-2 matches = غير موجود (MISSING) - not present or too vague
+  // 
+  // This is STRICT: we don't assume, we don't guess, we don't complete missing info
   let status: 'موجود بالكامل' | 'ناقص أو غير واضح' | 'غير موجود';
   let statusEn: 'FOUND' | 'PARTIAL' | 'MISSING';
   let notes = '';
 
-  if (matchCount >= 4) {
+  if (matchCount >= 5) {
     status = 'موجود بالكامل';
     statusEn = 'FOUND';
-  } else if (matchCount >= 2) {
+    notes = '';
+  } else if (matchCount >= 3) {
     status = 'ناقص أو غير واضح';
     statusEn = 'PARTIAL';
-    notes = `تم العثور على ${matchCount} إشارات فقط، يجب توضيح هذا العنصر بشكل أكثر تفصيلاً`;
+    notes = `مذكور بشكل غير كافٍ (${matchCount} إشارات فقط). يجب توضيح هذا العنصر بشكل مفصّل وصريح.`;
   } else {
     status = 'غير موجود';
     statusEn = 'MISSING';
-    notes = 'لم يتم العثور على هذا العنصر في سياسة الخصوصية';
+    notes = matchCount > 0 
+      ? `لم يتم ذكره بوضوح (${matchCount} إشارة غامضة فقط). يجب إضافة نص صريح ومفصّل.`
+      : 'لم يتم ذكره نهائياً في سياسة الخصوصية.';
   }
 
   // Extract evidence if found
