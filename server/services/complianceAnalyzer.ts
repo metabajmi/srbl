@@ -25,6 +25,7 @@ import {
   type DocumentAnalysisReport
 } from '../legal-analyzer';
 import { auditAllDocuments, auditPolicyCompliance, type ParsedPolicy } from '../scanner/gapAnalyzer';
+import { discoverFallbackPolicyUrls } from '../scanner/pagesDiscovery';
 import * as cheerio from 'cheerio';
 
 export interface AnalysisOptions {
@@ -90,13 +91,34 @@ export async function analyzeSite(
   const forms = extractForms(browserResult.html);
   const thirdPartyServices = detectThirdPartyServices(browserResult.networkRequests, browserResult.finalUrl);
   const security = extractSecurityHeaders(browserResult.responseHeaders, browserResult.finalUrl);
-  const privacyPolicy = detectPrivacyPolicy(browserResult.html, browserResult.finalUrl);
-  const termsAndConditions = detectTerms(browserResult.html, browserResult.finalUrl);
+  let privacyPolicy = detectPrivacyPolicy(browserResult.html, browserResult.finalUrl);
+  let termsAndConditions = detectTerms(browserResult.html, browserResult.finalUrl);
   const cookieBanner = detectCookieBanner(browserResult.html);
   const contactInfo = detectContactInfo(browserResult.html);
   
   // CRITICAL: Navigate to actual policy pages and analyze their content
   console.log('\n[Analyzer] ========== MULTI-PAGE DEEP SCANNING ==========');
+  
+  // If policies not found via link detection, try fallback URL probing
+  if (!privacyPolicy.found || !termsAndConditions.found) {
+    console.log(`[Analyzer] Policies not found via link detection, trying fallback URL probing...`);
+    try {
+      const fallbackPages = await discoverFallbackPolicyUrls(browserResult.finalUrl, browserResult.html);
+      
+      for (const page of fallbackPages) {
+        if (page.type === 'privacy' && !privacyPolicy.found) {
+          privacyPolicy = { found: true, url: page.url };
+          console.log(`[Analyzer] ✓ Found privacy policy via fallback: ${page.url}`);
+        }
+        if (page.type === 'terms' && !termsAndConditions.found) {
+          termsAndConditions = { found: true, url: page.url };
+          console.log(`[Analyzer] ✓ Found terms via fallback: ${page.url}`);
+        }
+      }
+    } catch (error) {
+      console.warn(`[Analyzer] Fallback discovery failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
   
   let privacyPolicyContent = '';
   let termsContent = '';
@@ -112,7 +134,7 @@ export async function analyzeSite(
       console.warn(`[Analyzer] ⚠ Failed to load privacy policy: ${error instanceof Error ? error.message : String(error)}`);
     }
   } else {
-    console.log(`[Analyzer] ✗ NO PRIVACY POLICY FOUND on homepage`);
+    console.log(`[Analyzer] ✗ NO PRIVACY POLICY FOUND on homepage or fallback`);
   }
   
   // Navigate to Terms page if found
