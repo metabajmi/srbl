@@ -116,7 +116,7 @@ const PRIVACY_POLICY_ELEMENTS = [
     number: 7,
     nameAr: 'المسوغات النظامية لجمع ومعالجة البيانات الشخصية',
     nameEn: 'Legal basis for collecting and processing personal data',
-    keywordsAr: ['المسوغ النظامي', 'الأساس القانوني', 'المسوغات النظامية', 'الموافقة', 'العقد', 'الالتزام القانوني', 'المصلحة المشروعة', 'أساس قانوني', 'سند نظامي', 'المادة', 'نظام حماية البيانات', 'PDPL'],
+    keywordsAr: ['المسوغ النظامي', 'الأساس القانوني', 'المسوغات النظامية', 'الموافقة', 'العقد', 'الالتزام القانوني', 'المصلحة المشروعة', 'أساس قانوني', 'سند نظامي', 'المادة', 'نظام حماية البيانات', 'PDPL', 'الأسس النظامية', 'الأحكام النظامية', 'وفقاً للنظام', 'بموجب النظام', 'النظام الأساسي', 'الإطار النظامي', 'السند النظامي', 'الأساس النظامي'],
     keywordsEn: ['legal basis', 'lawful basis', 'consent', 'contract', 'legal obligation', 'legitimate interest', 'legal grounds', 'lawful grounds', 'PDPL', 'data protection law'],
   },
   {
@@ -148,8 +148,8 @@ const PRIVACY_POLICY_ELEMENTS = [
     number: 11,
     nameAr: 'كيفية تقديم شكوى أو اعتراض',
     nameEn: 'How to file a complaint or objection',
-    keywordsAr: ['تقديم شكوى', 'الشكاوى', 'اعتراض', 'تقديم اعتراض', 'آلية الشكوى', 'الاعتراض على', 'رفع شكوى', 'إرسال شكوى', 'طريقة الشكوى', 'للشكاوى', 'شكوى'],
-    keywordsEn: ['file a complaint', 'complaint', 'objection', 'lodge complaint', 'submit complaint', 'complaints mechanism', 'how to complain', 'raise objection', 'complaints procedure'],
+    keywordsAr: ['تقديم شكوى', 'الشكاوى', 'اعتراض', 'تقديم اعتراض', 'آلية الشكوى', 'الاعتراض على', 'رفع شكوى', 'إرسال شكوى', 'طريقة الشكوى', 'للشكاوى', 'شكوى', 'التظلمات', 'التظلم', 'مركز العناية', 'خدمة العملاء', 'الدعم الفني', 'قنوات التواصل', 'تقديم بلاغ', 'البلاغات', 'الاستفسارات والشكاوى'],
+    keywordsEn: ['file a complaint', 'complaint', 'objection', 'lodge complaint', 'submit complaint', 'complaints mechanism', 'how to complain', 'raise objection', 'complaints procedure', 'grievance', 'customer service', 'support center'],
   },
   {
     id: 'element_12',
@@ -203,21 +203,17 @@ function checkElement(policyText: string, element: any): PolicyElementCheck {
   }
   
   // EVALUATION THRESHOLDS - adjusted for Arabic policy patterns:
-  // 2+ keyword matches = موجود بالكامل (FOUND) - element clearly present
-  // 1 match = ناقص أو غير واضح (PARTIAL) - mentioned but not detailed
+  // 1+ keyword matches = موجود بالكامل (FOUND) - element present with clear statement
   // 0 matches = غير موجود (MISSING) - not present
+  // Note: Lowered from 2 to 1 because formal Arabic policies often state each concept once clearly
   let status: 'موجود بالكامل' | 'ناقص أو غير واضح' | 'غير موجود';
   let statusEn: 'FOUND' | 'PARTIAL' | 'MISSING';
   let notes = '';
 
-  if (matchCount >= 2) {
+  if (matchCount >= 1) {
     status = 'موجود بالكامل';
     statusEn = 'FOUND';
     notes = '';
-  } else if (matchCount === 1) {
-    status = 'ناقص أو غير واضح';
-    statusEn = 'PARTIAL';
-    notes = 'مذكور بشكل غير كافٍ. يجب توضيح هذا العنصر بشكل مفصّل وصريح.';
   } else {
     status = 'غير موجود';
     statusEn = 'MISSING';
