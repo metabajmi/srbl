@@ -1545,6 +1545,21 @@ export interface DeterministicScanResult {
         recommendations: string[];
       };
     } | null;
+    // 11-element privacy policy audit (only for privacy type)
+    privacyPolicyAudit?: {
+      elementsFound: number;
+      elementsPartial: number;
+      elementsMissing: number;
+      compliancePercentage: number;
+      elements: Array<{
+        id: string;
+        name: string;
+        nameAr: string;
+        status: 'found' | 'partial' | 'missing';
+        matchCount: number;
+        matchedKeywords: string[];
+      }>;
+    };
   }>;
   
   // Overall Compliance Summary

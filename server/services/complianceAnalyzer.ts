@@ -308,6 +308,8 @@ export async function analyzeSite(
         items: doc.audit.items,
         summary: doc.audit.summary,
       } : null,
+      // Include 11-element privacy policy audit for privacy documents
+      privacyPolicyAudit: doc.privacyPolicyAudit || undefined,
     })) : undefined,
     
     compliance_summary: auditAllDocumentsResult ? {
