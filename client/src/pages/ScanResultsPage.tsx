@@ -226,7 +226,7 @@ export default function ScanResultsPage() {
                 title="سياسة الخصوصية" 
                 found={!!scan.hasPrivacyPolicy} 
                 url={scan.privacyPolicyUrl}
-                audit={(scan as any).analysisResult?.document_audits?.[0]?.privacyPolicyAudit}
+                audit={(scan as any).analysisResult?.privacy_policy_audit || (scan as any).analysisResult?.document_audits?.[0]?.privacyPolicyAudit}
                 testId="card-status-privacy"
               />
               <StatusCard 
@@ -252,8 +252,8 @@ export default function ScanResultsPage() {
             </div>
 
             {/* Privacy Policy 12-Element Audit */}
-            {(scan as any).analysisResult?.document_audits?.[0]?.privacyPolicyAudit && (
-              <PrivacyPolicyAuditCard audit={(scan as any).analysisResult.document_audits[0].privacyPolicyAudit} />
+            {((scan as any).analysisResult?.privacy_policy_audit || (scan as any).analysisResult?.document_audits?.[0]?.privacyPolicyAudit) && (
+              <PrivacyPolicyAuditCard audit={(scan as any).analysisResult.privacy_policy_audit || (scan as any).analysisResult.document_audits[0].privacyPolicyAudit} />
             )}
 
             {/* Issues List - Simple */}

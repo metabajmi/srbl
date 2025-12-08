@@ -134,10 +134,14 @@ export async function analyzeSite(
   let auditAllDocumentsResult: any = null;
   let transparencyScore = 0;
   
-  // Extract text from privacy policy HTML
+  // Extract text from privacy policy HTML (remove scripts and styles first)
   if (privacyPolicyContent.length > 100) {
     const $ = cheerio.load(privacyPolicyContent);
-    const policyText = $('body').text().trim();
+    // Remove script, style, and other non-content tags to get clean text
+    $('script, style, noscript, iframe, svg, link, meta').remove();
+    const policyText = $('body').text().replace(/\s+/g, ' ').trim();
+    console.log(`[Analyzer] Privacy policy text extracted: ${policyText.length} chars`);
+    console.log(`[Analyzer] First 300 chars: ${policyText.substring(0, 300)}...`);
     if (policyText.length > 50) {
       policies.push({
         type: 'privacy',
@@ -149,10 +153,13 @@ export async function analyzeSite(
     }
   }
   
-  // Extract text from terms HTML
+  // Extract text from terms HTML (remove scripts and styles first)
   if (termsContent.length > 100) {
     const $ = cheerio.load(termsContent);
-    const termsText = $('body').text().trim();
+    // Remove script, style, and other non-content tags to get clean text
+    $('script, style, noscript, iframe, svg, link, meta').remove();
+    const termsText = $('body').text().replace(/\s+/g, ' ').trim();
+    console.log(`[Analyzer] Terms text extracted: ${termsText.length} chars`);
     if (termsText.length > 50) {
       policies.push({
         type: 'terms',
@@ -301,7 +308,6 @@ export async function analyzeSite(
     score_breakdown: {
       ...scoreResult.breakdown,
       transparency_score: transparencyScore,
-      privacy_policy_12_elements_score: privacyPolicyScore,
     },
     
     // Include per-document PDPL compliance audit results
