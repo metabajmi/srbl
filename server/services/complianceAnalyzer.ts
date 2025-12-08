@@ -107,11 +107,23 @@ export async function analyzeSite(
       
       for (const page of fallbackPages) {
         if (page.type === 'privacy' && !privacyPolicy.found) {
-          privacyPolicy = { found: true, url: page.url };
+          privacyPolicy = { 
+            found: true, 
+            url: page.url,
+            detection_method: 'url_pattern' as const,
+            content_accessible: true,
+            elements_found: [],
+            elements_missing: []
+          };
           console.log(`[Analyzer] ✓ Found privacy policy via fallback: ${page.url}`);
         }
         if (page.type === 'terms' && !termsAndConditions.found) {
-          termsAndConditions = { found: true, url: page.url };
+          termsAndConditions = { 
+            found: true, 
+            url: page.url,
+            detection_method: 'url_pattern' as const,
+            content_accessible: true
+          };
           console.log(`[Analyzer] ✓ Found terms via fallback: ${page.url}`);
         }
       }
