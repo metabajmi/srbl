@@ -1545,17 +1545,23 @@ export interface DeterministicScanResult {
         recommendations: string[];
       };
     } | null;
-    // 11-element privacy policy audit (only for privacy type)
+    // 12-element PDPL privacy policy audit
     privacyPolicyAudit?: {
       elementsFound: number;
       elementsPartial: number;
       elementsMissing: number;
       compliancePercentage: number;
+      isComplete: boolean;
+      summary: string;
       elements: Array<{
         id: string;
-        name: string;
+        number: number;
         nameAr: string;
-        status: 'found' | 'partial' | 'missing';
+        nameEn: string;
+        status: 'موجود بالكامل' | 'ناقص أو غير واضح' | 'غير موجود';
+        statusEn: 'FOUND' | 'PARTIAL' | 'MISSING';
+        evidence: string;
+        notes: string;
         matchCount: number;
         matchedKeywords: string[];
       }>;
