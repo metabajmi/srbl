@@ -138,14 +138,15 @@ function checkElement(policyText: string, element: typeof PRIVACY_POLICY_ELEMENT
     }
   }
 
-  // Determine status based on match count
+  // Determine status based on match count (ZERO-TOLERANCE thresholds)
+  // 4+ = FOUND, 2-3 = PARTIAL, 0-1 = MISSING
   let status: 'FOUND' | 'PARTIAL' | 'MISSING';
-  if (matchCount >= 3) {
-    status = 'FOUND'; // 3+ keyword matches = element found
-  } else if (matchCount >= 1) {
-    status = 'PARTIAL'; // 1-2 keyword matches = partial match
+  if (matchCount >= 4) {
+    status = 'FOUND'; // 4+ keyword matches = element found
+  } else if (matchCount >= 2) {
+    status = 'PARTIAL'; // 2-3 keyword matches = partial match
   } else {
-    status = 'MISSING'; // 0 keyword matches = element missing
+    status = 'MISSING'; // 0-1 keyword matches = element missing
   }
 
   return {
@@ -158,6 +159,71 @@ function checkElement(policyText: string, element: typeof PRIVACY_POLICY_ELEMENT
     status,
     matchedKeywords,
     matchCount,
+  };
+}
+
+// Check if site uses marketing/advertising (for conditional pp11 check)
+function detectMarketingUsage(policyText: string): boolean {
+  const normalizedText = normalizeText(policyText);
+  const marketingIndicators = [
+    'marketing', 'advertising', 'promotional', 'newsletter', 'email marketing',
+    'التسويق', 'الإعلانات', 'الترويج', 'النشرة الإخبارية', 'رسائل ترويجية'
+  ];
+  return marketingIndicators.some(indicator => normalizedText.includes(normalizeText(indicator)));
+}
+
+// Special check for subject rights - must verify ALL 6 required rights
+function checkSubjectRights(policyText: string): PolicyElementCheck {
+  const normalizedPolicy = normalizeText(policyText);
+  const element = PRIVACY_POLICY_ELEMENTS.find(el => el.id === 'pp8')!;
+  
+  // The 6 mandatory rights per PDPL Article 4
+  const requiredRights = [
+    { id: 'access', ar: ['حق الوصول', 'الوصول للبيانات', 'الاطلاع على'], en: ['right to access', 'access your data', 'right of access'] },
+    { id: 'rectify', ar: ['حق التصحيح', 'تصحيح البيانات', 'تعديل البيانات'], en: ['right to rectify', 'correct your data', 'right to correct', 'rectification'] },
+    { id: 'erase', ar: ['حق الحذف', 'حق الإتلاف', 'حذف البيانات', 'إتلاف البيانات'], en: ['right to erasure', 'right to delete', 'deletion', 'right to erase'] },
+    { id: 'object', ar: ['حق الاعتراض', 'الاعتراض على', 'رفض المعالجة'], en: ['right to object', 'object to processing', 'right to refuse'] },
+    { id: 'portability', ar: ['حق نقل البيانات', 'نقل البيانات', 'قابلية النقل'], en: ['data portability', 'right to portability', 'transfer your data', 'right to transfer'] },
+    { id: 'complaint', ar: ['تقديم شكوى', 'الشكوى', 'شكوى للجهة المختصة'], en: ['lodge a complaint', 'file a complaint', 'complaint to authority'] },
+  ];
+  
+  const matchedKeywords: string[] = [];
+  let rightsFound = 0;
+  
+  for (const right of requiredRights) {
+    const allKeywords = [...right.ar, ...right.en];
+    let rightMatched = false;
+    for (const kw of allKeywords) {
+      if (normalizedPolicy.includes(normalizeText(kw))) {
+        matchedKeywords.push(kw);
+        rightMatched = true;
+        break; // One keyword per right is enough
+      }
+    }
+    if (rightMatched) rightsFound++;
+  }
+  
+  // Subject rights: ALL 6 rights must be mentioned for FOUND
+  // 4-5 rights = PARTIAL, 0-3 rights = MISSING
+  let status: 'FOUND' | 'PARTIAL' | 'MISSING';
+  if (rightsFound >= 6) {
+    status = 'FOUND';
+  } else if (rightsFound >= 4) {
+    status = 'PARTIAL';
+  } else {
+    status = 'MISSING';
+  }
+  
+  return {
+    id: element.id,
+    nameAr: element.nameAr,
+    nameEn: element.nameEn,
+    severity: element.severity,
+    keywordsAr: element.keywordsAr,
+    keywordsEn: element.keywordsEn,
+    status,
+    matchedKeywords,
+    matchCount: rightsFound,
   };
 }
 
@@ -182,7 +248,34 @@ export function auditPrivacyPolicy(policyText: string): PrivacyPolicyAudit {
     };
   }
 
-  const elements = PRIVACY_POLICY_ELEMENTS.map(el => checkElement(policyText, el));
+  const hasMarketing = detectMarketingUsage(policyText);
+  
+  const elements = PRIVACY_POLICY_ELEMENTS.map(el => {
+    // Special handling for pp8 (subject rights) - check all 6 rights
+    if (el.id === 'pp8') {
+      return checkSubjectRights(policyText);
+    }
+    
+    // Special handling for pp11 (marketing consent) - only required if site uses marketing
+    if (el.id === 'pp11') {
+      if (!hasMarketing) {
+        // Site doesn't use marketing, so pp11 is NOT APPLICABLE (treated as FOUND)
+        return {
+          id: el.id,
+          nameAr: el.nameAr,
+          nameEn: el.nameEn,
+          severity: el.severity,
+          keywordsAr: el.keywordsAr,
+          keywordsEn: el.keywordsEn,
+          status: 'FOUND' as const,
+          matchedKeywords: ['N/A - لا يوجد تسويق في الموقع'],
+          matchCount: 0,
+        };
+      }
+    }
+    
+    return checkElement(policyText, el);
+  });
 
   const elementsFound = elements.filter(e => e.status === 'FOUND').length;
   const elementsPartial = elements.filter(e => e.status === 'PARTIAL').length;
@@ -191,6 +284,10 @@ export function auditPrivacyPolicy(policyText: string): PrivacyPolicyAudit {
   // Compliance calculation: FOUND = 100%, PARTIAL = 50%, MISSING = 0%
   const totalScore = elementsFound * 100 + elementsPartial * 50;
   const compliancePercentage = Math.round((totalScore / (PRIVACY_POLICY_ELEMENTS.length * 100)) * 100);
+
+  console.log(`[PrivacyPolicyChecker] Marketing detected: ${hasMarketing}`);
+  console.log(`[PrivacyPolicyChecker] Elements - Found: ${elementsFound}, Partial: ${elementsPartial}, Missing: ${elementsMissing}`);
+  console.log(`[PrivacyPolicyChecker] Compliance: ${compliancePercentage}%`);
 
   return {
     elementsFound,
