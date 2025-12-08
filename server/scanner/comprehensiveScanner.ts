@@ -1,5 +1,5 @@
 import { scanWithBrowser, BrowserScanResult, NetworkRequest } from './browser';
-import { discoverLegalPages, DiscoveredPage, fetchAndDiscoverSitemap, discoverLinksFromDOM } from './pagesDiscovery';
+import { discoverLegalPages, DiscoveredPage, fetchAndDiscoverSitemap, discoverLinksFromDOM, discoverFallbackPolicyUrls } from './pagesDiscovery';
 import { parsePolicy, ParsedPolicy, analyzePolicyCompleteness } from './policyParser';
 import { analyzeCookieBanner, CookieBannerAnalysis } from './cookieBannerAnalyzer';
 import { evaluatePDPLCompliance, createEvaluationContext, PDPLCheck, PDPLEvaluationResult } from './pdplEvaluator';
@@ -212,6 +212,25 @@ export async function runComprehensiveScan(
         confidence: 0.7,
         depth: 0,
       });
+    }
+  }
+  
+  // STEP 2.5: If no policy pages found, try fallback URL probing
+  const hasPrivacyPage = discoveredPages.pages.some(p => p.type === 'privacy');
+  const hasTermsPage = discoveredPages.pages.some(p => p.type === 'terms');
+  
+  if (!hasPrivacyPage || !hasTermsPage) {
+    console.log(`\n[Scanner] STEP 2.5: No policy links found on page, trying fallback URL probing...`);
+    try {
+      const fallbackPages = await discoverFallbackPolicyUrls(mainScanResult.finalUrl, mainScanResult.html);
+      for (const fallbackPage of fallbackPages) {
+        if (!discoveredPages.pages.some(p => p.url === fallbackPage.url)) {
+          discoveredPages.pages.push(fallbackPage);
+        }
+      }
+      console.log(`[Scanner] Fallback discovery added ${fallbackPages.length} pages`);
+    } catch (error) {
+      console.log(`[Scanner] Fallback discovery failed, continuing...`);
     }
   }
   

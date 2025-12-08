@@ -437,3 +437,110 @@ export async function fetchAndDiscoverSitemap(baseUrl: string): Promise<string[]
   
   return sitemapUrls;
 }
+
+const PLATFORM_FALLBACK_PATHS: Record<string, { privacy: string[]; terms: string[]; refund: string[] }> = {
+  shopify: {
+    privacy: ['/policies/privacy-policy', '/pages/privacy-policy', '/ar/policies/privacy-policy'],
+    terms: ['/policies/terms-of-service', '/pages/terms-of-service', '/ar/policies/terms-of-service'],
+    refund: ['/policies/refund-policy', '/pages/refund-policy', '/ar/policies/refund-policy'],
+  },
+  magento: {
+    privacy: ['/privacy-policy', '/privacy-policy-cookie-restriction-mode', '/ar/privacy-policy'],
+    terms: ['/terms-and-conditions', '/terms-of-use', '/ar/terms-and-conditions'],
+    refund: ['/return-policy', '/returns', '/ar/return-policy'],
+  },
+  woocommerce: {
+    privacy: ['/privacy-policy', '/privacy', '/ar/privacy-policy'],
+    terms: ['/terms-and-conditions', '/terms', '/ar/terms-and-conditions'],
+    refund: ['/refund-policy', '/returns-refunds', '/ar/refund-policy'],
+  },
+  generic: {
+    privacy: [
+      '/privacy-policy', '/privacy', '/pages/privacy-policy', '/pages/privacy',
+      '/ar/privacy-policy', '/SA_ar/privacy-policy', '/policies/privacy-policy',
+      '/سياسة-الخصوصية', '/privacy-policy.html', '/legal/privacy'
+    ],
+    terms: [
+      '/terms-and-conditions', '/terms', '/pages/terms-and-conditions', '/pages/terms',
+      '/ar/terms-and-conditions', '/SA_ar/terms-and-conditions', '/policies/terms-of-service',
+      '/الشروط-والأحكام', '/terms.html', '/legal/terms'
+    ],
+    refund: [
+      '/refund-policy', '/return-policy', '/pages/refund-policy', '/pages/return-policy',
+      '/ar/refund-policy', '/SA_ar/refund-policy', '/policies/refund-policy',
+      '/سياسة-الاسترجاع', '/returns', '/shipping-returns'
+    ],
+  },
+};
+
+function detectPlatform(html: string): string {
+  const htmlLower = html.toLowerCase();
+  if (htmlLower.includes('shopify') || htmlLower.includes('cdn.shopify')) return 'shopify';
+  if (htmlLower.includes('magento') || htmlLower.includes('mage-')) return 'magento';
+  if (htmlLower.includes('woocommerce') || htmlLower.includes('wc-')) return 'woocommerce';
+  return 'generic';
+}
+
+export async function discoverFallbackPolicyUrls(baseUrl: string, html: string): Promise<DiscoveredPage[]> {
+  const platform = detectPlatform(html);
+  console.log(`[FallbackDiscovery] Detected platform: ${platform}`);
+  
+  const fallbackPaths = PLATFORM_FALLBACK_PATHS[platform] || PLATFORM_FALLBACK_PATHS.generic;
+  const genericPaths = PLATFORM_FALLBACK_PATHS.generic;
+  
+  const allPaths = {
+    privacy: Array.from(new Set([...fallbackPaths.privacy, ...genericPaths.privacy])),
+    terms: Array.from(new Set([...fallbackPaths.terms, ...genericPaths.terms])),
+    refund: Array.from(new Set([...fallbackPaths.refund, ...genericPaths.refund])),
+  };
+  
+  const discovered: DiscoveredPage[] = [];
+  const seenUrls = new Set<string>();
+  
+  async function probeUrl(path: string, type: DiscoveredPage['type']): Promise<boolean> {
+    try {
+      const fullUrl = new URL(path, baseUrl).href;
+      if (seenUrls.has(fullUrl)) return false;
+      
+      const response = await fetch(fullUrl, {
+        method: 'HEAD',
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PDPLBot/1.0)' },
+        signal: AbortSignal.timeout(5000),
+        redirect: 'follow',
+      });
+      
+      if (response.ok || response.status === 200) {
+        seenUrls.add(fullUrl);
+        discovered.push({
+          url: fullUrl,
+          type,
+          foundBy: 'internal_link',
+          linkText: `(fallback: ${path})`,
+          confidence: 0.7,
+          depth: 0,
+        });
+        console.log(`[FallbackDiscovery] ✓ Found ${type} at: ${fullUrl}`);
+        return true;
+      }
+    } catch (error) {
+    }
+    return false;
+  }
+  
+  console.log(`[FallbackDiscovery] Probing standard policy URLs for ${platform}...`);
+  
+  for (const path of allPaths.privacy) {
+    if (await probeUrl(path, 'privacy')) break;
+  }
+  
+  for (const path of allPaths.terms) {
+    if (await probeUrl(path, 'terms')) break;
+  }
+  
+  for (const path of allPaths.refund) {
+    if (await probeUrl(path, 'refund')) break;
+  }
+  
+  console.log(`[FallbackDiscovery] Discovered ${discovered.length} pages via fallback probing`);
+  return discovered;
+}
