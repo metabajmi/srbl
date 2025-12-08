@@ -499,7 +499,6 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
             ) : (
               <Badge variant="destructive">غير مكتملة</Badge>
             )}
-            <span className="text-sm font-medium">{audit.compliancePercentage}%</span>
           </div>
         </div>
       </CardHeader>
