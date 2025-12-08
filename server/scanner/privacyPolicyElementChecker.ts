@@ -61,15 +61,18 @@ const PRIVACY_POLICY_ELEMENTS = [
     number: 1,
     nameAr: 'بيانات التواصل الخاصة بالجهة',
     nameEn: 'Entity contact information',
-    keywordsAr: ['اتصل بنا', 'تواصل معنا', 'بيانات التواصل', 'البريد الإلكتروني', 'رقم الهاتف', 'العنوان', 'للتواصل', 'معلومات الاتصال', 'بريدنا الإلكتروني', 'هاتف', 'عنوان الشركة', 'رقم التواصل'],
-    keywordsEn: ['contact us', 'contact information', 'email', 'phone', 'address', 'reach us', 'get in touch', 'contact details', 'our email', 'telephone', 'company address'],
+    // Must have ACTUAL contact details like email/phone - not just mentions of data types
+    keywordsAr: ['اتصل بنا', 'للتواصل معنا', 'بيانات التواصل معنا', 'بريدنا الإلكتروني', 'رقمنا', 'عنوان الشركة', 'رقم التواصل', 'الاتصال بنا', 'تواصل معنا على', 'راسلنا على', 'يمكنك التواصل', 'للاستفسار', 'للمزيد من المعلومات تواصل'],
+    keywordsEn: ['contact us at', 'reach us at', 'our email', 'our phone', 'our address', 'get in touch at', 'contact details', 'you can reach us', 'for inquiries contact'],
+    // Require explicit contact info patterns
+    strictPatterns: ['@', '.com', '.sa', '+966', '920', '800'],
   },
   {
     id: 'element_2',
     number: 2,
     nameAr: 'تاريخ آخر تحديث لسياسة الخصوصية',
     nameEn: 'Last update date of privacy policy',
-    keywordsAr: ['تاريخ التحديث', 'آخر تحديث', 'تم التحديث', 'تاريخ النشر', 'تاريخ المراجعة', 'النسخة', 'تحديث السياسة', 'آخر مراجعة', 'تاريخ السريان', 'تاريخ الإصدار'],
+    keywordsAr: ['تاريخ التحديث', 'آخر تحديث', 'تم التحديث', 'تاريخ النشر', 'تاريخ المراجعة', 'النسخة', 'تحديث السياسة', 'آخر مراجعة', 'تاريخ السريان', 'تاريخ الإصدار', 'محدثة في', 'تاريخ الاصدار'],
     keywordsEn: ['last updated', 'updated on', 'revision date', 'effective date', 'date of update', 'version', 'last modified', 'published on', 'date of revision'],
   },
   {
@@ -77,32 +80,36 @@ const PRIVACY_POLICY_ELEMENTS = [
     number: 3,
     nameAr: 'ماهي البيانات الشخصية التي يتم جمعها',
     nameEn: 'What personal data is collected',
-    keywordsAr: ['البيانات التي نجمعها', 'نجمع البيانات', 'أنواع البيانات', 'البيانات الشخصية', 'المعلومات التي نجمعها', 'الاسم', 'البريد الإلكتروني', 'رقم الهاتف', 'العنوان', 'بيانات الهوية', 'بيانات تقنية', 'عنوان IP', 'الكوكيز', 'ملفات تعريف الارتباط'],
-    keywordsEn: ['data we collect', 'we collect', 'types of data', 'personal data', 'information we collect', 'name', 'email', 'phone number', 'address', 'identity data', 'technical data', 'IP address', 'cookies', 'browsing data'],
+    // Look for data type listings
+    keywordsAr: ['البيانات التي نجمعها', 'نجمع البيانات', 'بيانات الاتصال', 'البيانات الشخصية', 'المعلومات التي نجمعها', 'كالاسم', 'بيانات الهوية', 'عنوان IP', 'الكوكيز', 'ملفات تعريف الارتباط', 'بما في ذلك', 'معلوماتك الشخصية', 'بياناتك الشخصية'],
+    keywordsEn: ['data we collect', 'we collect', 'types of data', 'personal data', 'information we collect', 'including your', 'such as name', 'identity data', 'technical data', 'IP address', 'cookies'],
   },
   {
     id: 'element_4',
     number: 4,
     nameAr: 'كيف يتم جمع البيانات الشخصية وما هو الغرض من جمعها',
     nameEn: 'How data is collected and purpose of collection',
-    keywordsAr: ['كيف نجمع', 'طريقة الجمع', 'كيفية جمع', 'الغرض من الجمع', 'لماذا نجمع', 'أغراض الجمع', 'نجمع بياناتك', 'مصادر البيانات', 'نحصل على', 'الهدف من الجمع', 'سبب الجمع', 'أسباب جمع'],
-    keywordsEn: ['how we collect', 'collection method', 'purpose of collection', 'why we collect', 'purposes', 'sources of data', 'we obtain', 'reason for collecting', 'collected for', 'collection purposes'],
+    // Purpose and collection method
+    keywordsAr: ['بغرض', 'لغرض', 'الغرض من', 'نجمع بياناتك', 'للأغراض التالية', 'الهدف من', 'سبب الجمع', 'نحصل على', 'يتم جمعها', 'طريقة الجمع', 'كيفية جمع', 'مصادر البيانات', 'عند التسجيل', 'عند الشراء'],
+    keywordsEn: ['for the purpose', 'purpose of', 'purposes', 'we collect your', 'why we collect', 'how we collect', 'collection method', 'sources of data', 'when you register', 'when you purchase'],
   },
   {
     id: 'element_5',
     number: 5,
     nameAr: 'كيفية استخدام البيانات الشخصية',
     nameEn: 'How personal data is used',
-    keywordsAr: ['كيف نستخدم', 'استخدام البيانات', 'نستخدم بياناتك', 'طريقة الاستخدام', 'استخدامات البيانات', 'نعالج البيانات', 'معالجة البيانات', 'نستفيد من', 'استخدام المعلومات'],
-    keywordsEn: ['how we use', 'use of data', 'we use your data', 'data usage', 'processing', 'we process', 'utilize', 'used for', 'using your information'],
+    // Data usage statements
+    keywordsAr: ['نستخدم', 'تستخدم', 'استخدام البيانات', 'نستخدم هذه المعلومات', 'نستخدم بياناتك', 'تستخدم المعلومات', 'نعالج', 'معالجة البيانات', 'نستفيد من', 'استخدام المعلومات', 'تستخدم جميع', 'نستخدم هذه', 'ماذا نفعل'],
+    keywordsEn: ['we use', 'how we use', 'use of data', 'we use your data', 'data usage', 'processing', 'we process', 'used for', 'using your information', 'what we do with'],
   },
   {
     id: 'element_6',
     number: 6,
     nameAr: 'كيفية الإفصاح عن البيانات الشخصية (مع من يتم مشاركتها)',
     nameEn: 'How data is disclosed and with whom it is shared',
-    keywordsAr: ['الإفصاح عن', 'مشاركة البيانات', 'نشارك مع', 'أطراف ثالثة', 'طرف ثالث', 'مزودي الخدمة', 'الشركاء', 'جهات خارجية', 'نفصح عن', 'مشاركة المعلومات', 'الجهات التي نشارك معها', 'المستلمين'],
-    keywordsEn: ['disclosure', 'share with', 'third parties', 'third party', 'service providers', 'partners', 'we share', 'disclose', 'recipients', 'sharing information', 'shared with'],
+    // Sharing and disclosure
+    keywordsAr: ['نقوم بمشاركة', 'مشاركة بياناتك', 'نشارك', 'أطراف ثالثة', 'طرف ثالث', 'مزودي الخدمة', 'الشركاء', 'جهات خارجية', 'نفصح عن', 'مشاركة المعلومات', 'المستلمين', 'الإفصاح عن', 'نكشف عن', 'شركاء'],
+    keywordsEn: ['we share', 'share your data', 'disclosure', 'third parties', 'third party', 'service providers', 'partners', 'external parties', 'we disclose', 'recipients', 'shared with'],
   },
   {
     id: 'element_7',
@@ -154,7 +161,7 @@ const PRIVACY_POLICY_ELEMENTS = [
   },
 ];
 
-function checkElement(policyText: string, element: typeof PRIVACY_POLICY_ELEMENTS[0]): PolicyElementCheck {
+function checkElement(policyText: string, element: any): PolicyElementCheck {
   const normalizedPolicy = normalizeText(policyText);
   const allKeywords = [...element.keywordsAr, ...element.keywordsEn];
   const matchedKeywords: string[] = [];
@@ -171,30 +178,50 @@ function checkElement(policyText: string, element: typeof PRIVACY_POLICY_ELEMENT
 
   const matchCount = matchedKeywords.length;
   
-  // STRICT ZERO-TOLERANCE EVALUATION:
-  // 5+ keyword matches = موجود بالكامل (FOUND) - element clearly and explicitly present
-  // 3-4 matches = ناقص أو غير واضح (PARTIAL) - mentioned but not detailed enough
-  // 0-2 matches = غير موجود (MISSING) - not present or too vague
-  // 
-  // This is STRICT: we don't assume, we don't guess, we don't complete missing info
+  // Special handling for element 1 (contact info) - requires ACTUAL contact details
+  // Not just mentions of data types like "email" or "phone"
+  if (element.id === 'element_1' && element.strictPatterns) {
+    const hasActualContact = element.strictPatterns.some((pattern: string) => 
+      policyText.toLowerCase().includes(pattern.toLowerCase())
+    );
+    
+    if (!hasActualContact) {
+      // No actual contact info found (email, phone, etc.)
+      return {
+        id: element.id,
+        number: element.number,
+        nameAr: element.nameAr,
+        nameEn: element.nameEn,
+        status: 'غير موجود',
+        statusEn: 'MISSING',
+        evidence: '',
+        notes: 'لا توجد معلومات اتصال فعلية (بريد إلكتروني، رقم هاتف، عنوان). يجب توفير بيانات تواصل حقيقية.',
+        matchCount: 0,
+        matchedKeywords: [],
+      };
+    }
+  }
+  
+  // EVALUATION THRESHOLDS - adjusted for Arabic policy patterns:
+  // 2+ keyword matches = موجود بالكامل (FOUND) - element clearly present
+  // 1 match = ناقص أو غير واضح (PARTIAL) - mentioned but not detailed
+  // 0 matches = غير موجود (MISSING) - not present
   let status: 'موجود بالكامل' | 'ناقص أو غير واضح' | 'غير موجود';
   let statusEn: 'FOUND' | 'PARTIAL' | 'MISSING';
   let notes = '';
 
-  if (matchCount >= 5) {
+  if (matchCount >= 2) {
     status = 'موجود بالكامل';
     statusEn = 'FOUND';
     notes = '';
-  } else if (matchCount >= 3) {
+  } else if (matchCount === 1) {
     status = 'ناقص أو غير واضح';
     statusEn = 'PARTIAL';
-    notes = `مذكور بشكل غير كافٍ (${matchCount} إشارات فقط). يجب توضيح هذا العنصر بشكل مفصّل وصريح.`;
+    notes = 'مذكور بشكل غير كافٍ. يجب توضيح هذا العنصر بشكل مفصّل وصريح.';
   } else {
     status = 'غير موجود';
     statusEn = 'MISSING';
-    notes = matchCount > 0 
-      ? `لم يتم ذكره بوضوح (${matchCount} إشارة غامضة فقط). يجب إضافة نص صريح ومفصّل.`
-      : 'لم يتم ذكره نهائياً في سياسة الخصوصية.';
+    notes = 'لم يتم ذكره نهائياً في سياسة الخصوصية.';
   }
 
   // Extract evidence if found
