@@ -199,13 +199,23 @@ export async function analyzeSite(
   const ruleResults = evaluateAllRules(extractionResult);
   const scoreResult = calculateScore(ruleResults.all);
   
-  // Factor transparency score from multi-document compliance audit into final score
+  // Factor privacy policy 12-element audit into final score
   let finalScore = scoreResult.overall;
+  let privacyPolicyScore = 0;
+  
   if (auditAllDocumentsResult) {
-    // ALWAYS blend PDPL rule score (60%) with transparency score (40%)
-    // Even if transparencyScore is 0, we apply the penalty - ensures bad policies get penalized
-    finalScore = Math.round((scoreResult.overall * 0.6) + (transparencyScore * 0.4));
-    console.log(`[Analyzer] Combined scores: PDPL rules=${scoreResult.overall}% (60%) + Transparency=${transparencyScore}% (40%) = Final=${finalScore}%`);
+    // Get the 12-element privacy policy audit score from the first document
+    const privacyDoc = auditAllDocumentsResult.documents.find((d: any) => d.type === 'privacy');
+    if (privacyDoc?.privacyPolicyAudit) {
+      privacyPolicyScore = privacyDoc.privacyPolicyAudit.compliancePercentage || 0;
+    }
+    
+    // COMBINED SCORING:
+    // - PDPL Technical Rules (40%): cookies, security, banners, etc.
+    // - Privacy Policy 12-Element Audit (60%): content completeness check
+    // This ensures the 12-element audit is the PRIMARY factor in the overall score
+    finalScore = Math.round((scoreResult.overall * 0.4) + (privacyPolicyScore * 0.6));
+    console.log(`[Analyzer] Combined scores: PDPL rules=${scoreResult.overall}% (40%) + Privacy Policy 12-Elements=${privacyPolicyScore}% (60%) = Final=${finalScore}%`);
   }
   
   const firstPartyCookies = cookies.filter(c => !c.thirdParty);
@@ -291,6 +301,7 @@ export async function analyzeSite(
     score_breakdown: {
       ...scoreResult.breakdown,
       transparency_score: transparencyScore,
+      privacy_policy_12_elements_score: privacyPolicyScore,
     },
     
     // Include per-document PDPL compliance audit results
