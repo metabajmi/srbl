@@ -500,8 +500,8 @@ function PrivacyPolicyStatusCard({ title, found, url, audit, testId }: {
   const getStatusText = () => {
     switch (status) {
       case 'missing': return 'غير موجودة';
-      case 'incomplete': return `ناقصة (${audit?.elementsMissing || 0} عنصر مفقود)`;
-      case 'needs_improvement': return `تحتاج تحسين (${audit?.elementsPartial || 0} ناقص)`;
+      case 'incomplete': return `${audit?.elementsMissing || 0} عنصر مفقود`;
+      case 'needs_improvement': return `تحتاج تحسين`;
       case 'complete': return 'مكتملة';
       default: return 'غير محدد';
     }
@@ -581,7 +581,7 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-primary" />
-            فحص عناصر سياسة الخصوصية (12 عنصر PDPL)
+            فحص عناصر سياسة الخصوصية
           </CardTitle>
           <div className="flex items-center gap-2">
             {audit.isComplete ? (
