@@ -671,14 +671,6 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
           </div>
         )}
 
-        {/* Summary */}
-        {!audit.isComplete && (
-          <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
-            <p className="text-sm text-red-700 dark:text-red-400 font-medium">
-              السياسة غير مكتملة - {audit.elementsMissing} عنصر مفقود من أصل 12
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
