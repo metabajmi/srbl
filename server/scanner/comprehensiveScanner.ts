@@ -11,6 +11,7 @@ import {
   PolicyGap,
   ComplianceAuditItem
 } from './gapAnalyzer';
+import { auditPrivacyPolicy, PrivacyPolicyAudit } from './privacyPolicyElementChecker';
 import {
   extractScripts,
   extractCookies,
@@ -110,6 +111,27 @@ export interface ComprehensiveScanResult {
     items: ComplianceAuditItem[];
     compliant: boolean;
     criticalMissing: string[];
+  };
+  
+  privacy_policy_audit?: {
+    elementsFound: number;
+    elementsPartial: number;
+    elementsMissing: number;
+    compliancePercentage: number;
+    isComplete: boolean;
+    elements: Array<{
+      id: string;
+      number: number;
+      nameAr: string;
+      nameEn: string;
+      status: string;
+      statusEn: string;
+      evidence: string;
+      notes: string;
+      matchCount: number;
+      matchedKeywords: string[];
+    }>;
+    summary: string;
   };
   
   overall_score: number;
@@ -290,34 +312,41 @@ export async function runComprehensiveScan(
   
   const complianceAuditResult = auditPolicyCompliance(parsedPolicies);
   
+  // Run specialized 12-element privacy policy audit
+  const privacyPolicy = parsedPolicies.find(p => p.type === 'privacy');
+  let privacyPolicyAudit: PrivacyPolicyAudit | undefined;
+  if (privacyPolicy && privacyPolicy.fullText && privacyPolicy.fullText.length > 50) {
+    console.log(`\n[PrivacyElementCheck] Running 12-element privacy policy audit...`);
+    console.log(`[PrivacyElementCheck] Policy text length: ${privacyPolicy.fullText.length} chars`);
+    privacyPolicyAudit = auditPrivacyPolicy(privacyPolicy.fullText);
+    console.log(`[PrivacyElementCheck] Results: Found=${privacyPolicyAudit.elementsFound}/12, Partial=${privacyPolicyAudit.elementsPartial}/12, Missing=${privacyPolicyAudit.elementsMissing}/12`);
+    console.log(`[PrivacyElementCheck] Compliance: ${privacyPolicyAudit.compliancePercentage}%`);
+  }
+  
   const scanDuration = Date.now() - startTime;
   
-  // CRITICAL FIX: Calculate combined overall score that factors in compliance audit
-  // Weight: 60% PDPL checks + 40% Compliance Audit transparency score
+  // CRITICAL: Calculate overall score with 60% privacy policy 12-elements + 40% technical PDPL rules
   const pdplScore = pdplEvaluation.overall_score;
-  const auditScore = complianceAuditResult.transparencyScore;
+  const privacyPolicyScore = privacyPolicyAudit?.compliancePercentage || 0;
   
-  // If there are critical missing required sections, apply additional penalty
-  const criticalMissingCount = complianceAuditResult.summary.criticalMissing.length;
-  const criticalPenalty = criticalMissingCount * 5; // -5% per critical missing section
-  
-  let combinedScore = Math.round((pdplScore * 0.6) + (auditScore * 0.4) - criticalPenalty);
+  // Calculate combined score: 40% PDPL technical + 60% Privacy Policy 12-elements
+  let combinedScore = Math.round((pdplScore * 0.4) + (privacyPolicyScore * 0.6));
   combinedScore = Math.max(0, Math.min(100, combinedScore)); // Clamp 0-100
   
-  // Determine compliance level based on combined score AND critical missing
+  // Determine compliance level based on combined score AND privacy policy completeness
+  const privacyPolicyMissingCount = privacyPolicyAudit?.elementsMissing || 12;
   let finalComplianceLevel: 'high' | 'medium' | 'low';
-  if (criticalMissingCount >= 3 || combinedScore < 50) {
+  if (privacyPolicyMissingCount >= 3 || combinedScore < 50) {
     finalComplianceLevel = 'low';
-  } else if (criticalMissingCount >= 1 || combinedScore < 80) {
+  } else if (privacyPolicyMissingCount >= 1 || combinedScore < 80) {
     finalComplianceLevel = 'medium';
   } else {
     finalComplianceLevel = 'high';
   }
   
-  console.log(`\n[FinalScoring] PDPL Checks Score: ${pdplScore}%`);
-  console.log(`[FinalScoring] Compliance Audit Score: ${auditScore}%`);
-  console.log(`[FinalScoring] Critical Missing Sections: ${criticalMissingCount} (-${criticalPenalty}% penalty)`);
-  console.log(`[FinalScoring] Combined Score: (${pdplScore} × 0.6) + (${auditScore} × 0.4) - ${criticalPenalty} = ${combinedScore}%`);
+  console.log(`\n[FinalScoring] PDPL Technical Score: ${pdplScore}% (40%)`);
+  console.log(`[FinalScoring] Privacy Policy 12-Elements Score: ${privacyPolicyScore}% (60%)`);
+  console.log(`[FinalScoring] Combined Score: (${pdplScore} × 0.4) + (${privacyPolicyScore} × 0.6) = ${combinedScore}%`);
   console.log(`[FinalScoring] Final Compliance Level: ${finalComplianceLevel.toUpperCase()}`);
   
   // Add recommendations from compliance audit to top recommendations
@@ -389,11 +418,22 @@ export async function runComprehensiveScan(
       criticalMissing: complianceAuditResult.summary.criticalMissing,
     },
     
+    // Include 12-element privacy policy audit
+    privacy_policy_audit: privacyPolicyAudit ? {
+      elementsFound: privacyPolicyAudit.elementsFound,
+      elementsPartial: privacyPolicyAudit.elementsPartial,
+      elementsMissing: privacyPolicyAudit.elementsMissing,
+      compliancePercentage: privacyPolicyAudit.compliancePercentage,
+      isComplete: privacyPolicyAudit.isComplete,
+      elements: privacyPolicyAudit.elements,
+      summary: privacyPolicyAudit.summary,
+    } : undefined,
+    
     overall_score: combinedScore,
     compliance_level: finalComplianceLevel,
     
     summary: {
-      critical_issues: pdplEvaluation.critical_issues + criticalMissingCount,
+      critical_issues: pdplEvaluation.critical_issues + privacyPolicyMissingCount,
       major_issues: pdplEvaluation.major_issues,
       minor_issues: pdplEvaluation.minor_issues,
       passed_checks: pdplEvaluation.passed_checks,
