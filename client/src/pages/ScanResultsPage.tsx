@@ -500,8 +500,8 @@ function PrivacyPolicyStatusCard({ title, found, url, audit, testId }: {
   const getStatusText = () => {
     switch (status) {
       case 'missing': return 'غير موجودة';
-      case 'incomplete': return `${audit?.elementsMissing || 0} عنصر مفقود`;
-      case 'needs_improvement': return `تحتاج تحسين`;
+      case 'incomplete': return 'غير مكتملة';
+      case 'needs_improvement': return 'تحتاج تحسين';
       case 'complete': return 'مكتملة';
       default: return 'غير محدد';
     }
