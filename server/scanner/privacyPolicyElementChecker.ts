@@ -62,10 +62,10 @@ const PRIVACY_POLICY_ELEMENTS = [
     nameAr: 'بيانات التواصل الخاصة بالجهة',
     nameEn: 'Entity contact information',
     // Must have ACTUAL contact details like email/phone - not just mentions of data types
-    keywordsAr: ['اتصل بنا', 'للتواصل معنا', 'بيانات التواصل معنا', 'بريدنا الإلكتروني', 'رقمنا', 'عنوان الشركة', 'رقم التواصل', 'الاتصال بنا', 'تواصل معنا على', 'راسلنا على', 'يمكنك التواصل', 'للاستفسار', 'للمزيد من المعلومات تواصل'],
+    keywordsAr: ['اتصل بنا', 'للتواصل معنا', 'بيانات التواصل معنا', 'بريدنا الإلكتروني', 'رقمنا', 'عنوان الشركة', 'رقم التواصل', 'الاتصال بنا', 'تواصل معنا على', 'راسلنا على', 'يمكنك التواصل', 'للاستفسار', 'للمزيد من المعلومات تواصل', 'مركز الاتصال', 'خدمة العملاء', 'بوابة العملاء', 'منصة التواصل'],
     keywordsEn: ['contact us at', 'reach us at', 'our email', 'our phone', 'our address', 'get in touch at', 'contact details', 'you can reach us', 'for inquiries contact'],
-    // Require explicit contact info patterns
-    strictPatterns: ['@', '.com', '.sa', '+966', '920', '800'],
+    // Require explicit contact info patterns - includes government formats
+    strictPatterns: ['@', '.com', '.sa', '.gov', '+966', '920', '800', '199', '19'],
   },
   {
     id: 'element_2',
@@ -107,9 +107,9 @@ const PRIVACY_POLICY_ELEMENTS = [
     number: 6,
     nameAr: 'كيفية الإفصاح عن البيانات الشخصية (مع من يتم مشاركتها)',
     nameEn: 'How data is disclosed and with whom it is shared',
-    // Sharing and disclosure
-    keywordsAr: ['نقوم بمشاركة', 'مشاركة بياناتك', 'نشارك', 'أطراف ثالثة', 'طرف ثالث', 'مزودي الخدمة', 'الشركاء', 'جهات خارجية', 'نفصح عن', 'مشاركة المعلومات', 'المستلمين', 'الإفصاح عن', 'نكشف عن', 'شركاء'],
-    keywordsEn: ['we share', 'share your data', 'disclosure', 'third parties', 'third party', 'service providers', 'partners', 'external parties', 'we disclose', 'recipients', 'shared with'],
+    // Sharing and disclosure - includes government terminology
+    keywordsAr: ['نقوم بمشاركة', 'مشاركة بياناتك', 'نشارك', 'أطراف ثالثة', 'طرف ثالث', 'مزودي الخدمة', 'الشركاء', 'جهات خارجية', 'نفصح عن', 'مشاركة المعلومات', 'المستلمين', 'الإفصاح عن', 'نكشف عن', 'شركاء', 'إتاحة البيانات', 'إطلاع الجهات', 'تمكين الجهات', 'الجهات المختصة', 'الجهات المعنية', 'الجهات الحكومية', 'الجهات ذات العلاقة', 'نقل البيانات', 'تبادل البيانات', 'إفشاء', 'الكشف عن', 'مشاركة البيانات مع'],
+    keywordsEn: ['we share', 'share your data', 'disclosure', 'third parties', 'third party', 'service providers', 'partners', 'external parties', 'we disclose', 'recipients', 'shared with', 'transfer data', 'data sharing'],
   },
   {
     id: 'element_7',
