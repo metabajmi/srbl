@@ -72,8 +72,8 @@ const PRIVACY_POLICY_ELEMENTS = [
     number: 2,
     nameAr: 'تاريخ آخر تحديث لسياسة الخصوصية',
     nameEn: 'Last update date of privacy policy',
-    keywordsAr: ['تاريخ التحديث', 'آخر تحديث', 'تم التحديث', 'تاريخ النشر', 'تاريخ المراجعة', 'النسخة', 'تحديث السياسة', 'آخر مراجعة', 'تاريخ السريان', 'تاريخ الإصدار', 'محدثة في', 'تاريخ الاصدار'],
-    keywordsEn: ['last updated', 'updated on', 'revision date', 'effective date', 'date of update', 'version', 'last modified', 'published on', 'date of revision'],
+    keywordsAr: ['تاريخ التحديث', 'آخر تحديث', 'تم التحديث', 'تاريخ النشر', 'تاريخ المراجعة', 'النسخة', 'تحديث السياسة', 'آخر مراجعة', 'تاريخ السريان', 'تاريخ الإصدار', 'محدثة في', 'تاريخ الاصدار', 'تاريخ النفاذ', 'سارية المفعول', 'تم إصدار', 'صدر بتاريخ', 'اعتباراً من', 'يسري اعتباراً', 'تم اعتماد', 'تاريخ هذا الإشعار', 'إصدار السياسة', 'تحديث الإشعار'],
+    keywordsEn: ['last updated', 'updated on', 'revision date', 'effective date', 'date of update', 'version', 'last modified', 'published on', 'date of revision', 'effective from', 'issued on', 'policy version', 'notice date'],
   },
   {
     id: 'element_3',
