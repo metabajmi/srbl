@@ -1411,6 +1411,28 @@ export interface TermsResult {
   content_length?: number;
 }
 
+// Terms & Conditions 12-Module Audit Result
+export interface TermsConditionsAuditResult {
+  modulesFound: number;
+  modulesPartial: number;
+  modulesMissing: number;
+  compliancePercentage: number;
+  isComplete: boolean;
+  summary: string;
+  modules: Array<{
+    id: string;
+    number: number;
+    nameAr: string;
+    nameEn: string;
+    status: 'موجود بالكامل' | 'ناقص أو غير واضح' | 'غير موجود';
+    statusEn: 'FOUND' | 'PARTIAL' | 'MISSING';
+    evidence: string;
+    notes: string;
+    matchCount: number;
+    matchedKeywords: string[];
+  }>;
+}
+
 // Cookie Banner Detection Result
 export interface CookieBannerResult {
   found: boolean;
@@ -1566,7 +1588,12 @@ export interface DeterministicScanResult {
         matchedKeywords: string[];
       }>;
     };
+    // 12-module Terms & Conditions audit
+    termsConditionsAudit?: TermsConditionsAuditResult;
   }>;
+  
+  // Top-level 12-module Terms & Conditions audit
+  terms_conditions_audit?: TermsConditionsAuditResult;
   
   // Overall Compliance Summary
   compliance_summary?: {

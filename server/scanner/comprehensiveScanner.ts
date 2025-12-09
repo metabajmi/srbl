@@ -355,25 +355,31 @@ export async function runComprehensiveScan(
   const complianceAuditResult = auditPolicyCompliance(parsedPolicies);
   
   // Run specialized 12-element privacy policy audit
+  // Relaxed check: run if policy exists and has any meaningful content (wordCount > 10)
   const privacyPolicy = parsedPolicies.find(p => p.type === 'privacy');
   let privacyPolicyAudit: PrivacyPolicyAudit | undefined;
-  if (privacyPolicy && privacyPolicy.fullText && privacyPolicy.fullText.length > 50) {
+  if (privacyPolicy && privacyPolicy.fullText && privacyPolicy.wordCount > 10) {
     console.log(`\n[PrivacyElementCheck] Running 12-element privacy policy audit...`);
-    console.log(`[PrivacyElementCheck] Policy text length: ${privacyPolicy.fullText.length} chars`);
+    console.log(`[PrivacyElementCheck] Policy text length: ${privacyPolicy.fullText.length} chars, words: ${privacyPolicy.wordCount}`);
     privacyPolicyAudit = auditPrivacyPolicy(privacyPolicy.fullText);
     console.log(`[PrivacyElementCheck] Results: Found=${privacyPolicyAudit.elementsFound}/12, Partial=${privacyPolicyAudit.elementsPartial}/12, Missing=${privacyPolicyAudit.elementsMissing}/12`);
     console.log(`[PrivacyElementCheck] Compliance: ${privacyPolicyAudit.compliancePercentage}%`);
+  } else {
+    console.log(`\n[PrivacyElementCheck] Skipped - no valid privacy policy found (policy: ${!!privacyPolicy}, wordCount: ${privacyPolicy?.wordCount || 0})`);
   }
   
   // Run specialized 12-module Terms & Conditions audit
+  // Relaxed check: run if policy exists and has any meaningful content (wordCount > 10)
   const termsPolicy = parsedPolicies.find(p => p.type === 'terms');
   let termsConditionsAudit: TermsConditionsAudit | undefined;
-  if (termsPolicy && termsPolicy.fullText && termsPolicy.fullText.length > 50) {
+  if (termsPolicy && termsPolicy.fullText && termsPolicy.wordCount > 10) {
     console.log(`\n[TermsConditionsCheck] Running 12-module T&C audit...`);
-    console.log(`[TermsConditionsCheck] Terms text length: ${termsPolicy.fullText.length} chars`);
+    console.log(`[TermsConditionsCheck] Terms text length: ${termsPolicy.fullText.length} chars, words: ${termsPolicy.wordCount}`);
     termsConditionsAudit = checkTermsConditions(termsPolicy.fullText);
     console.log(`[TermsConditionsCheck] Results: Found=${termsConditionsAudit.modulesFound}/12, Partial=${termsConditionsAudit.modulesPartial}/12, Missing=${termsConditionsAudit.modulesMissing}/12`);
     console.log(`[TermsConditionsCheck] Compliance: ${termsConditionsAudit.compliancePercentage}%`);
+  } else {
+    console.log(`\n[TermsConditionsCheck] Skipped - no valid terms policy found (policy: ${!!termsPolicy}, wordCount: ${termsPolicy?.wordCount || 0})`);
   }
   
   const scanDuration = Date.now() - startTime;
