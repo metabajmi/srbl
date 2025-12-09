@@ -625,7 +625,7 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
           ) : (
             <>
               <ChevronDown className="w-4 h-4 ml-2" />
-              عرض تفاصيل العناصر الـ 12
+              عرض تفاصيل العناصر الـ 11
             </>
           )}
         </Button>
@@ -633,7 +633,7 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
         {/* Detailed Elements Table */}
         {expanded && (
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {audit.elements.map((element) => (
+            {audit.elements.filter((el: any) => !el.hideFromUI).map((element) => (
               <div
                 key={element.id}
                 className={`p-3 rounded-lg border ${
