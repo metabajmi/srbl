@@ -49,6 +49,7 @@ const BROWSER_OPTIONS = {
     '--window-size=1920,1080',
     '--disable-web-security',
     '--disable-features=IsolateOrigins,site-per-process',
+    '--disable-http2', // Fallback to HTTP/1.1 for sites with HTTP/2 issues
   ],
 };
 
