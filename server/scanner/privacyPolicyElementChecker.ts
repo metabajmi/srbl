@@ -272,6 +272,32 @@ function checkElement(policyText: string, element: any): PolicyElementCheck {
         statusEn = 'MISSING';
         notes = 'لم يتم ذكر مسؤول حماية البيانات ولا يوجد بريد إلكتروني للتواصل بخصوص الخصوصية.';
       }
+    } else if (element.id === 'element_11') {
+      // Special handling for Element 11 (Complaint mechanism) - if contact info exists, mark as PARTIAL
+      const complaintContactPatterns = [
+        'privacy@', 'خصوصية@', 'dataprotection@', 'dpo@', 'support@', 'info@',
+        'للتواصل معنا', 'يمكنك التواصل', 'راسلنا على', 'اتصل بنا',
+        'بيانات التواصل', 'للاستفسار', 'contact us', 'reach us',
+        'خدمة العملاء', 'customer service', 'الدعم'
+      ];
+      
+      const hasContactInfo = complaintContactPatterns.some(pattern => 
+        normalizedPolicy.includes(normalizeText(pattern))
+      );
+      
+      // Check for any email or phone in the policy
+      const hasEmail = policyText.includes('@');
+      const hasPhone = /(\+966|920|800|199|0\d{9})/.test(policyText);
+      
+      if (hasContactInfo || hasEmail || hasPhone) {
+        status = 'ناقص أو غير واضح';
+        statusEn = 'PARTIAL';
+        notes = 'توجد بيانات تواصل يمكن استخدامها للشكاوى والاستفسارات، لكن لم تُذكر آلية واضحة لتقديم الشكاوى.';
+      } else {
+        status = 'غير موجود';
+        statusEn = 'MISSING';
+        notes = 'لم يتم ذكر آلية لتقديم الشكاوى أو الاعتراضات.';
+      }
     } else {
       status = 'غير موجود';
       statusEn = 'MISSING';
