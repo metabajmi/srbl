@@ -65,7 +65,7 @@ const PRIVACY_POLICY_ELEMENTS = [
     keywordsAr: ['اتصل بنا', 'للتواصل معنا', 'بيانات التواصل معنا', 'بريدنا الإلكتروني', 'رقمنا', 'عنوان الشركة', 'رقم التواصل', 'الاتصال بنا', 'تواصل معنا على', 'راسلنا على', 'يمكنك التواصل', 'للاستفسار', 'للمزيد من المعلومات تواصل', 'مركز الاتصال', 'خدمة العملاء', 'بوابة العملاء', 'منصة التواصل'],
     keywordsEn: ['contact us at', 'reach us at', 'our email', 'our phone', 'our address', 'get in touch at', 'contact details', 'you can reach us', 'for inquiries contact'],
     strictPatterns: ['@', '.com', '.sa', '.gov', '+966', '920', '800', '199', '19'],
-    hideFromUI: true, // Hide this element from frontend display per user request
+    hideFromUI: false,
   },
   {
     id: 'element_2',
@@ -283,11 +283,10 @@ export function auditPrivacyPolicy(policyText: string): PrivacyPolicyAudit {
   
   if (!policyText || policyText.trim().length < 50) {
     console.log(`[PrivacyPolicyChecker] ⚠️ نص السياسة فارغ أو قصير جداً`);
-    const visibleCount = PRIVACY_POLICY_ELEMENTS.filter((el: any) => !el.hideFromUI).length;
     return {
       elementsFound: 0,
       elementsPartial: 0,
-      elementsMissing: visibleCount,
+      elementsMissing: 12,
       elements: PRIVACY_POLICY_ELEMENTS.map(el => ({
         id: el.id,
         number: el.number,
@@ -332,28 +331,24 @@ export function auditPrivacyPolicy(policyText: string): PrivacyPolicyAudit {
     return result;
   });
 
-  // Filter out hidden elements for UI counts (but keep them for internal scoring)
-  const visibleElements = elements.filter(e => !e.hideFromUI);
-  const totalVisibleElements = visibleElements.length; // Should be 11 (excluding contact info)
-  
-  const elementsFound = visibleElements.filter(e => e.statusEn === 'FOUND').length;
-  const elementsPartial = visibleElements.filter(e => e.statusEn === 'PARTIAL').length;
-  const elementsMissing = visibleElements.filter(e => e.statusEn === 'MISSING').length;
+  const elementsFound = elements.filter(e => e.statusEn === 'FOUND').length;
+  const elementsPartial = elements.filter(e => e.statusEn === 'PARTIAL').length;
+  const elementsMissing = elements.filter(e => e.statusEn === 'MISSING').length;
 
-  // Policy is complete ONLY if ALL visible elements are fully present
-  const isComplete = elementsFound === totalVisibleElements;
+  // Policy is complete ONLY if ALL 12 elements are fully present
+  const isComplete = elementsFound === 12;
 
-  // Compliance calculation based on visible elements only
+  // Compliance calculation
   const totalScore = elementsFound * 100 + elementsPartial * 50;
-  const compliancePercentage = Math.round((totalScore / (totalVisibleElements * 100)) * 100);
+  const compliancePercentage = Math.round((totalScore / (12 * 100)) * 100);
 
   // Generate summary
   let summary = '';
   if (isComplete) {
-    summary = `سياسة الخصوصية مكتملة - جميع العناصر الـ ${totalVisibleElements} موجودة بوضوح`;
+    summary = 'سياسة الخصوصية مكتملة - جميع العناصر الـ 12 موجودة بوضوح';
   } else {
-    const missingElements = visibleElements.filter(e => e.statusEn === 'MISSING').map(e => e.nameAr);
-    const partialElements = visibleElements.filter(e => e.statusEn === 'PARTIAL').map(e => e.nameAr);
+    const missingElements = elements.filter(e => e.statusEn === 'MISSING').map(e => e.nameAr);
+    const partialElements = elements.filter(e => e.statusEn === 'PARTIAL').map(e => e.nameAr);
     
     summary = 'سياسة الخصوصية غير مكتملة.\n';
     if (missingElements.length > 0) {
@@ -366,9 +361,9 @@ export function auditPrivacyPolicy(policyText: string): PrivacyPolicyAudit {
 
   console.log(`${'─'.repeat(70)}`);
   console.log(`[PrivacyPolicyChecker] ========== ملخص الفحص ==========`);
-  console.log(`[PrivacyPolicyChecker] موجود بالكامل: ${elementsFound}/${totalVisibleElements}`);
-  console.log(`[PrivacyPolicyChecker] ناقص أو غير واضح: ${elementsPartial}/${totalVisibleElements}`);
-  console.log(`[PrivacyPolicyChecker] غير موجود: ${elementsMissing}/${totalVisibleElements}`);
+  console.log(`[PrivacyPolicyChecker] موجود بالكامل: ${elementsFound}/12`);
+  console.log(`[PrivacyPolicyChecker] ناقص أو غير واضح: ${elementsPartial}/12`);
+  console.log(`[PrivacyPolicyChecker] غير موجود: ${elementsMissing}/12`);
   console.log(`[PrivacyPolicyChecker] نسبة الامتثال: ${compliancePercentage}%`);
   console.log(`[PrivacyPolicyChecker] السياسة مكتملة؟ ${isComplete ? 'نعم ✓' : 'لا ✗'}`);
   console.log(`${'='.repeat(70)}\n`);
