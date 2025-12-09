@@ -1,4 +1,4 @@
-import { scanWithBrowser, validateUrl, BrowserScanResult } from '../scanner/browser';
+import { scanWithBrowser, validateUrl, BrowserScanResult, BrowserCookie } from '../scanner/browser';
 import {
   extractScripts,
   extractCookies,
@@ -27,6 +27,44 @@ import {
 import { auditAllDocuments, auditPolicyCompliance, type ParsedPolicy } from '../scanner/gapAnalyzer';
 import { discoverFallbackPolicyUrls } from '../scanner/pagesDiscovery';
 import * as cheerio from 'cheerio';
+
+// HTTP fallback for anti-bot protected sites
+async function fetchWithCookies(url: string, cookies: BrowserCookie[]): Promise<string> {
+  const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+  
+  console.log(`[Analyzer] Trying HTTP fallback for: ${url}`);
+  
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
+        'Cookie': cookieHeader,
+        'Cache-Control': 'no-cache',
+      },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeout);
+    
+    if (response.ok) {
+      const html = await response.text();
+      console.log(`[Analyzer] HTTP fallback succeeded: ${html.length} bytes`);
+      return html;
+    } else {
+      console.log(`[Analyzer] HTTP fallback failed with status: ${response.status}`);
+      return '';
+    }
+  } catch (error) {
+    console.log(`[Analyzer] HTTP fallback error: ${error instanceof Error ? error.message : String(error)}`);
+    return '';
+  }
+}
 
 export interface AnalysisOptions {
   timeout?: number;
@@ -141,9 +179,22 @@ export async function analyzeSite(
       console.log(`[Analyzer] ➤ Navigating to PRIVACY POLICY at: ${privacyPolicy.url}`);
       const privacyResult = await scanWithBrowser(privacyPolicy.url);
       privacyPolicyContent = privacyResult.html;
+      
+      // If browser failed (empty content or error page), try HTTP fallback
+      if (privacyPolicyContent.length < 500 || privacyResult.errors.length > 0) {
+        console.log(`[Analyzer] ⚠ Browser navigation failed, trying HTTP fallback...`);
+        privacyPolicyContent = await fetchWithCookies(privacyPolicy.url, browserResult.cookies);
+      }
+      
       console.log(`[Analyzer]   ✓ Loaded ${privacyPolicyContent.length} bytes from privacy policy`);
     } catch (error) {
-      console.warn(`[Analyzer] ⚠ Failed to load privacy policy: ${error instanceof Error ? error.message : String(error)}`);
+      console.warn(`[Analyzer] ⚠ Browser failed, trying HTTP fallback...`);
+      try {
+        privacyPolicyContent = await fetchWithCookies(privacyPolicy.url!, browserResult.cookies);
+        console.log(`[Analyzer]   ✓ HTTP fallback loaded ${privacyPolicyContent.length} bytes`);
+      } catch (fallbackError) {
+        console.warn(`[Analyzer] ⚠ All methods failed for privacy policy`);
+      }
     }
   } else {
     console.log(`[Analyzer] ✗ NO PRIVACY POLICY FOUND on homepage or fallback`);
@@ -155,9 +206,22 @@ export async function analyzeSite(
       console.log(`[Analyzer] ➤ Navigating to TERMS & CONDITIONS at: ${termsAndConditions.url}`);
       const termsResult = await scanWithBrowser(termsAndConditions.url);
       termsContent = termsResult.html;
+      
+      // If browser failed (empty content or error page), try HTTP fallback
+      if (termsContent.length < 500 || termsResult.errors.length > 0) {
+        console.log(`[Analyzer] ⚠ Browser navigation failed for terms, trying HTTP fallback...`);
+        termsContent = await fetchWithCookies(termsAndConditions.url, browserResult.cookies);
+      }
+      
       console.log(`[Analyzer]   ✓ Loaded ${termsContent.length} bytes from terms page`);
     } catch (error) {
-      console.warn(`[Analyzer] ⚠ Failed to load terms: ${error instanceof Error ? error.message : String(error)}`);
+      console.warn(`[Analyzer] ⚠ Browser failed for terms, trying HTTP fallback...`);
+      try {
+        termsContent = await fetchWithCookies(termsAndConditions.url!, browserResult.cookies);
+        console.log(`[Analyzer]   ✓ HTTP fallback loaded ${termsContent.length} bytes for terms`);
+      } catch (fallbackError) {
+        console.warn(`[Analyzer] ⚠ All methods failed for terms`);
+      }
     }
   } else {
     console.log(`[Analyzer] ✗ NO TERMS & CONDITIONS FOUND on homepage`);
