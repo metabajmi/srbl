@@ -131,8 +131,22 @@ export async function analyzeSite(
   const security = extractSecurityHeaders(browserResult.responseHeaders, browserResult.finalUrl);
   let privacyPolicy = detectPrivacyPolicy(browserResult.html, browserResult.finalUrl);
   let termsAndConditions = detectTerms(browserResult.html, browserResult.finalUrl);
-  const cookieBanner = detectCookieBanner(browserResult.html);
+  let cookieBanner = detectCookieBanner(browserResult.html);
   const contactInfo = detectContactInfo(browserResult.html);
+  
+  // IMPORTANT: Merge dynamic cookie banner detection (JavaScript-injected banners)
+  if (!cookieBanner.found && browserResult.dynamicCookieBanner?.found) {
+    console.log(`[Analyzer] ✓ Cookie banner detected dynamically via: ${browserResult.dynamicCookieBanner.selector}`);
+    cookieBanner = {
+      found: true,
+      detection_method: 'dom_element' as const,
+      has_accept_button: true, // Assume present if dynamic banner found
+      has_reject_button: false,
+      has_settings_option: false,
+      consent_mechanism: 'opt_in' as const,
+      evidence: `Dynamic banner detected: ${browserResult.dynamicCookieBanner.text.substring(0, 100)}`,
+    };
+  }
   
   // CRITICAL: Navigate to actual policy pages and analyze their content
   console.log('\n[Analyzer] ========== MULTI-PAGE DEEP SCANNING ==========');
@@ -231,6 +245,31 @@ export async function analyzeSite(
   const policies: ParsedPolicy[] = [];
   let auditAllDocumentsResult: any = null;
   let transparencyScore = 0;
+  let contentBlocked = false;
+  
+  // Helper function to detect if content is a Cloudflare challenge page
+  function isCloudflareChallenge(text: string): boolean {
+    const cfIndicators = [
+      'cloudflare',
+      'Just a moment',
+      'Enable JavaScript',
+      'يتم الآن التحقق من أنك إنسان',
+      'التحقق من أنك إنسان',
+      'Please wait while we verify',
+      'challenge-form',
+      'cf-spinner',
+      'challenges.cloudflare.com',
+      'Ray ID:',
+      'مراجعة أمان الاتصال',
+    ];
+    const textLower = text.toLowerCase();
+    const matches = cfIndicators.filter(ind => textLower.includes(ind.toLowerCase()));
+    if (matches.length >= 2 && text.length < 1000) {
+      console.log(`[Analyzer] ⚠️ Cloudflare challenge detected! Indicators: ${matches.join(', ')}`);
+      return true;
+    }
+    return false;
+  }
   
   // Extract text from privacy policy HTML (remove scripts and styles first)
   if (privacyPolicyContent.length > 100) {
@@ -240,7 +279,12 @@ export async function analyzeSite(
     const policyText = $('body').text().replace(/\s+/g, ' ').trim();
     console.log(`[Analyzer] Privacy policy text extracted: ${policyText.length} chars`);
     console.log(`[Analyzer] First 300 chars: ${policyText.substring(0, 300)}...`);
-    if (policyText.length > 50) {
+    
+    // Check if this is a Cloudflare challenge page
+    if (isCloudflareChallenge(policyText)) {
+      console.log(`[Analyzer] ⚠️ Privacy policy blocked by Cloudflare - marking as inaccessible`);
+      contentBlocked = true;
+    } else if (policyText.length > 50) {
       policies.push({
         type: 'privacy',
         url: privacyPolicy.url || 'unknown',
@@ -309,13 +353,14 @@ export async function analyzeSite(
   let privacyPolicyScore = 0;
   let policyAccessible = true;
   
-  // Check if policy was inaccessible (anti-bot protection)
-  const policyWasBlocked = !!(privacyPolicy.found && privacyPolicy.url && privacyPolicyContent.length < 500);
+  // Check if policy was inaccessible (anti-bot protection like Cloudflare)
+  const policyWasBlocked = contentBlocked || !!(privacyPolicy.found && privacyPolicy.url && policies.filter(p => p.type === 'privacy').length === 0);
   
   if (policyWasBlocked) {
     policyAccessible = false;
-    console.log(`[Analyzer] ⚠ Privacy policy inaccessible (anti-bot protection detected)`);
-    console.log(`[Analyzer] Using technical checks only (40% weight) - policy audit skipped`);
+    console.log(`[Analyzer] ⚠ Privacy policy INACCESSIBLE (Cloudflare/anti-bot protection detected)`);
+    console.log(`[Analyzer] Using technical PDPL checks only - policy content audit skipped`);
+    console.log(`[Analyzer] Note: Policy URL was found (${privacyPolicy.url}) but content is blocked`);
     // Only use technical score when policy is inaccessible
     // Don't penalize for inaccessible policy - use technical score as final
     finalScore = scoreResult.overall;

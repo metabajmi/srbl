@@ -110,13 +110,55 @@ function normalizeUrl(url: string, baseUrl: string): string | null {
   }
 }
 
+// Extract the base domain name without TLD
+// e.g., "help.salla.sa" → "salla", "www.salla.com" → "salla"
+function extractBaseDomainName(hostname: string): string {
+  // Remove common subdomains
+  const parts = hostname.split('.');
+  if (parts.length <= 2) {
+    return parts[0]; // e.g., "salla.com" → "salla"
+  }
+  
+  // Check for common subdomains
+  const commonSubdomains = ['www', 'help', 'support', 'docs', 'blog', 'shop', 'store', 'app', 'api', 'm', 'mobile'];
+  if (commonSubdomains.includes(parts[0].toLowerCase())) {
+    return parts[1]; // e.g., "help.salla.sa" → "salla"
+  }
+  
+  // For 3+ parts, assume format is "subdomain.brand.tld" or "subdomain.brand.co.tld"
+  // Return the second-to-last non-TLD part
+  const commonTLDs = ['com', 'sa', 'org', 'net', 'gov', 'edu', 'io', 'co', 'me'];
+  for (let i = parts.length - 2; i >= 0; i--) {
+    if (!commonTLDs.includes(parts[i].toLowerCase())) {
+      return parts[i];
+    }
+  }
+  
+  return parts[0];
+}
+
 function isSameDomain(url1: string, url2: string): boolean {
   try {
     const u1 = new URL(url1);
     const u2 = new URL(url2);
-    return u1.hostname === u2.hostname || 
-           u1.hostname.endsWith('.' + u2.hostname) || 
-           u2.hostname.endsWith('.' + u1.hostname);
+    
+    // Exact match or subdomain match
+    if (u1.hostname === u2.hostname || 
+        u1.hostname.endsWith('.' + u2.hostname) || 
+        u2.hostname.endsWith('.' + u1.hostname)) {
+      return true;
+    }
+    
+    // Check if base domain name matches (for cross-TLD domains like salla.com → help.salla.sa)
+    const base1 = extractBaseDomainName(u1.hostname);
+    const base2 = extractBaseDomainName(u2.hostname);
+    
+    if (base1.toLowerCase() === base2.toLowerCase() && base1.length >= 3) {
+      console.log(`[Domain] Allowing cross-TLD domain: ${u1.hostname} ↔ ${u2.hostname} (base: ${base1})`);
+      return true;
+    }
+    
+    return false;
   } catch {
     return false;
   }
@@ -438,6 +480,35 @@ export async function fetchAndDiscoverSitemap(baseUrl: string): Promise<string[]
   return sitemapUrls;
 }
 
+// Known policy URLs for popular Saudi Arabian domains
+// These are used when Cloudflare or anti-bot protection blocks discovery
+const KNOWN_DOMAIN_POLICIES: Record<string, { privacy?: string; terms?: string; cookies?: string }> = {
+  'salla.com': {
+    privacy: 'https://salla.com/privacy/',
+    terms: 'https://salla.com/terms/',
+  },
+  'noon.com': {
+    privacy: 'https://www.noon.com/saudi-ar/privacy-policy/',
+    terms: 'https://www.noon.com/saudi-ar/terms-of-use/',
+  },
+  'jarir.com': {
+    privacy: 'https://www.jarir.com/sa-ar/privacy-policy',
+    terms: 'https://www.jarir.com/sa-ar/terms-conditions',
+  },
+  'extra.com': {
+    privacy: 'https://www.extra.com/ar-sa/privacy-policy',
+    terms: 'https://www.extra.com/ar-sa/terms-and-conditions',
+  },
+  'namshi.com': {
+    privacy: 'https://www.namshi.com/saudi-ar/privacy/',
+    terms: 'https://www.namshi.com/saudi-ar/terms/',
+  },
+  'stcpay.com.sa': {
+    privacy: 'https://stcpay.com.sa/privacy-policy',
+    terms: 'https://stcpay.com.sa/terms-conditions',
+  },
+};
+
 const PLATFORM_FALLBACK_PATHS: Record<string, { privacy: string[]; terms: string[]; refund: string[] }> = {
   shopify: {
     privacy: ['/policies/privacy-policy', '/pages/privacy-policy', '/ar/policies/privacy-policy'],
@@ -456,14 +527,14 @@ const PLATFORM_FALLBACK_PATHS: Record<string, { privacy: string[]; terms: string
   },
   generic: {
     privacy: [
-      '/privacy-policy', '/privacy', '/pages/privacy-policy', '/pages/privacy',
+      '/privacy/', '/privacy-policy', '/privacy', '/pages/privacy-policy', '/pages/privacy',
       '/ar/privacy-policy', '/SA_ar/privacy-policy', '/policies/privacy-policy',
-      '/سياسة-الخصوصية', '/privacy-policy.html', '/legal/privacy'
+      '/سياسة-الخصوصية', '/privacy-policy.html', '/legal/privacy', '/en/privacy/'
     ],
     terms: [
-      '/terms-and-conditions', '/terms', '/pages/terms-and-conditions', '/pages/terms',
+      '/terms/', '/terms-and-conditions', '/terms', '/pages/terms-and-conditions', '/pages/terms',
       '/ar/terms-and-conditions', '/SA_ar/terms-and-conditions', '/policies/terms-of-service',
-      '/الشروط-والأحكام', '/terms.html', '/legal/terms'
+      '/الشروط-والأحكام', '/terms.html', '/legal/terms', '/en/terms/'
     ],
     refund: [
       '/refund-policy', '/return-policy', '/pages/refund-policy', '/pages/return-policy',
@@ -485,6 +556,69 @@ export async function discoverFallbackPolicyUrls(baseUrl: string, html: string):
   const platform = detectPlatform(html);
   console.log(`[FallbackDiscovery] Detected platform: ${platform}`);
   
+  const discovered: DiscoveredPage[] = [];
+  const seenUrls = new Set<string>();
+  
+  // FIRST: Check for known domain policies (for sites with anti-bot protection)
+  try {
+    const urlObj = new URL(baseUrl);
+    const hostname = urlObj.hostname.replace(/^www\./, '');
+    
+    // Check if this domain has known policy URLs
+    for (const [domain, policies] of Object.entries(KNOWN_DOMAIN_POLICIES)) {
+      if (hostname.includes(domain) || domain.includes(hostname.split('.')[0])) {
+        console.log(`[FallbackDiscovery] ✓ Found known domain: ${domain}`);
+        
+        if (policies.privacy) {
+          discovered.push({
+            url: policies.privacy,
+            type: 'privacy',
+            foundBy: 'internal_link',
+            linkText: `(known domain: ${domain})`,
+            confidence: 0.95,
+            depth: 0,
+          });
+          seenUrls.add(policies.privacy);
+          console.log(`[FallbackDiscovery] ✓ Known privacy URL: ${policies.privacy}`);
+        }
+        
+        if (policies.terms) {
+          discovered.push({
+            url: policies.terms,
+            type: 'terms',
+            foundBy: 'internal_link',
+            linkText: `(known domain: ${domain})`,
+            confidence: 0.95,
+            depth: 0,
+          });
+          seenUrls.add(policies.terms);
+          console.log(`[FallbackDiscovery] ✓ Known terms URL: ${policies.terms}`);
+        }
+        
+        if (policies.cookies) {
+          discovered.push({
+            url: policies.cookies,
+            type: 'cookies',
+            foundBy: 'internal_link',
+            linkText: `(known domain: ${domain})`,
+            confidence: 0.95,
+            depth: 0,
+          });
+          seenUrls.add(policies.cookies);
+        }
+        
+        // Return early if we found known domain policies
+        if (discovered.length > 0) {
+          console.log(`[FallbackDiscovery] Using ${discovered.length} known domain policies`);
+          return discovered;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn(`[FallbackDiscovery] Error checking known domains: ${error}`);
+  }
+  
+  // SECOND: Try standard fallback paths
   const fallbackPaths = PLATFORM_FALLBACK_PATHS[platform] || PLATFORM_FALLBACK_PATHS.generic;
   const genericPaths = PLATFORM_FALLBACK_PATHS.generic;
   
@@ -494,9 +628,6 @@ export async function discoverFallbackPolicyUrls(baseUrl: string, html: string):
     refund: Array.from(new Set([...fallbackPaths.refund, ...genericPaths.refund])),
   };
   
-  const discovered: DiscoveredPage[] = [];
-  const seenUrls = new Set<string>();
-  
   async function probeUrl(path: string, type: DiscoveredPage['type']): Promise<boolean> {
     try {
       const fullUrl = new URL(path, baseUrl).href;
@@ -504,22 +635,26 @@ export async function discoverFallbackPolicyUrls(baseUrl: string, html: string):
       
       const response = await fetch(fullUrl, {
         method: 'HEAD',
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PDPLBot/1.0)' },
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
         signal: AbortSignal.timeout(5000),
         redirect: 'follow',
       });
       
-      if (response.ok || response.status === 200) {
+      // Accept 200 OK or 403 (Cloudflare challenge - page exists but blocked)
+      if (response.ok || response.status === 200 || response.status === 403) {
         seenUrls.add(fullUrl);
         discovered.push({
           url: fullUrl,
           type,
           foundBy: 'internal_link',
           linkText: `(fallback: ${path})`,
-          confidence: 0.7,
+          confidence: response.status === 403 ? 0.8 : 0.7, // Higher confidence if Cloudflare blocks (page likely exists)
           depth: 0,
         });
-        console.log(`[FallbackDiscovery] ✓ Found ${type} at: ${fullUrl}`);
+        console.log(`[FallbackDiscovery] ✓ Found ${type} at: ${fullUrl} (status: ${response.status})`);
         return true;
       }
     } catch (error) {
