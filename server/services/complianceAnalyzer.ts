@@ -552,6 +552,7 @@ export async function analyzeSite(
     scan_duration_ms: scanDuration,
     
     privacy_policy: privacyPolicy,
+    terms_and_conditions: termsAndConditions,
     cookies: {
       total: cookies.length,
       first_party: firstPartyCookies.length,
@@ -777,8 +778,8 @@ export function convertToLegacyFormat(result: DeterministicScanResult): {
       complianceLevel: result.compliance_level,
       hasPrivacyPolicy: result.privacy_policy.found,
       privacyPolicyUrl: result.privacy_policy.url || null,
-      hasTermsAndConditions: result.pdpl_passed_rules.some(r => r.rule_id.includes('TERMS')),
-      termsAndConditionsUrl: null,
+      hasTermsAndConditions: result.terms_and_conditions?.found || result.pdpl_passed_rules.some(r => r.rule_id.includes('TERMS')),
+      termsAndConditionsUrl: result.terms_and_conditions?.url || null,
       hasCookieBanner: needsCookieBanner ? !hasCookieBannerIssue : true,
       hasContactInfo: !hasContactIssue,
       partialAnalysis: result.partial_analysis,

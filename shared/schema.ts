@@ -1420,16 +1420,17 @@ export interface TermsConditionsAuditResult {
   isComplete: boolean;
   summary: string;
   modules: Array<{
-    id: string;
+    moduleId: string;
     number: number;
-    nameAr: string;
-    nameEn: string;
+    titleAr: string;
+    titleEn: string;
     status: 'موجود بالكامل' | 'ناقص أو غير واضح' | 'غير موجود';
     statusEn: 'FOUND' | 'PARTIAL' | 'MISSING';
     evidence: string;
     notes: string;
     matchCount: number;
     matchedKeywords: string[];
+    requirementAr?: string;
   }>;
 }
 
@@ -1500,6 +1501,7 @@ export interface DeterministicScanResult {
   
   // Extracted Data Summary
   privacy_policy: PrivacyPolicyResult;
+  terms_and_conditions?: TermsResult;
   cookies: {
     total: number;
     first_party: number;
