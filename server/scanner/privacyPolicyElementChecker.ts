@@ -12,6 +12,7 @@ export interface PolicyElementCheck {
   notes: string;     // Notes if partial/missing
   matchCount: number;
   matchedKeywords: string[];
+  hideFromUI?: boolean; // If true, hide this element from frontend display
 }
 
 export interface PrivacyPolicyAudit {
@@ -54,19 +55,30 @@ function extractEvidence(fullText: string, matchedKeyword: string, maxLength: nu
   return snippet.replace(/\s+/g, ' ').substring(0, maxLength);
 }
 
-// The EXACT 11 elements required by user (contact info removed per user request)
+// The EXACT 12 elements required for PDPL compliance
 const PRIVACY_POLICY_ELEMENTS = [
   {
     id: 'element_1',
     number: 1,
+    nameAr: 'بيانات التواصل الخاصة بالجهة',
+    nameEn: 'Entity contact information',
+    keywordsAr: ['اتصل بنا', 'للتواصل معنا', 'بيانات التواصل معنا', 'بريدنا الإلكتروني', 'رقمنا', 'عنوان الشركة', 'رقم التواصل', 'الاتصال بنا', 'تواصل معنا على', 'راسلنا على', 'يمكنك التواصل', 'للاستفسار', 'للمزيد من المعلومات تواصل', 'مركز الاتصال', 'خدمة العملاء', 'بوابة العملاء', 'منصة التواصل'],
+    keywordsEn: ['contact us at', 'reach us at', 'our email', 'our phone', 'our address', 'get in touch at', 'contact details', 'you can reach us', 'for inquiries contact'],
+    strictPatterns: ['@', '.com', '.sa', '.gov', '+966', '920', '800', '199', '19'],
+    hideFromUI: true, // Hide this element from frontend display per user request
+  },
+  {
+    id: 'element_2',
+    number: 2,
     nameAr: 'تاريخ آخر تحديث لسياسة الخصوصية',
+    hideFromUI: false,
     nameEn: 'Last update date of privacy policy',
     keywordsAr: ['تاريخ التحديث', 'آخر تحديث', 'تم التحديث', 'تاريخ النشر', 'تاريخ المراجعة', 'النسخة', 'تحديث السياسة', 'آخر مراجعة', 'تاريخ السريان', 'تاريخ الإصدار', 'محدثة في', 'تاريخ الاصدار', 'تاريخ النفاذ', 'سارية المفعول', 'تم إصدار', 'صدر بتاريخ', 'اعتباراً من', 'يسري اعتباراً', 'تم اعتماد', 'تاريخ هذا الإشعار', 'إصدار السياسة', 'تحديث الإشعار', 'تاريخ التعديل', 'آخر تعديل', 'تم تعديل', 'تاريخ آخر تعديل'],
     keywordsEn: ['last updated', 'updated on', 'revision date', 'effective date', 'date of update', 'version', 'last modified', 'published on', 'date of revision', 'effective from', 'issued on', 'policy version', 'notice date'],
   },
   {
-    id: 'element_2',
-    number: 2,
+    id: 'element_3',
+    number: 3,
     nameAr: 'ماهي البيانات الشخصية التي يتم جمعها',
     nameEn: 'What personal data is collected',
     // Look for data type listings
@@ -74,8 +86,8 @@ const PRIVACY_POLICY_ELEMENTS = [
     keywordsEn: ['data we collect', 'we collect', 'types of data', 'personal data', 'information we collect', 'including your', 'such as name', 'identity data', 'technical data', 'IP address', 'cookies'],
   },
   {
-    id: 'element_3',
-    number: 3,
+    id: 'element_4',
+    number: 4,
     nameAr: 'كيف يتم جمع البيانات الشخصية وما هو الغرض من جمعها',
     nameEn: 'How data is collected and purpose of collection',
     // Purpose and collection method
@@ -83,8 +95,8 @@ const PRIVACY_POLICY_ELEMENTS = [
     keywordsEn: ['for the purpose', 'purpose of', 'purposes', 'we collect your', 'why we collect', 'how we collect', 'collection method', 'sources of data', 'when you register', 'when you purchase'],
   },
   {
-    id: 'element_4',
-    number: 4,
+    id: 'element_5',
+    number: 5,
     nameAr: 'كيفية استخدام البيانات الشخصية',
     nameEn: 'How personal data is used',
     // Data usage statements
@@ -92,8 +104,8 @@ const PRIVACY_POLICY_ELEMENTS = [
     keywordsEn: ['we use', 'how we use', 'use of data', 'we use your data', 'data usage', 'processing', 'we process', 'used for', 'using your information', 'what we do with'],
   },
   {
-    id: 'element_5',
-    number: 5,
+    id: 'element_6',
+    number: 6,
     nameAr: 'كيفية الإفصاح عن البيانات الشخصية (مع من يتم مشاركتها)',
     nameEn: 'How data is disclosed and with whom it is shared',
     // Sharing and disclosure - includes government terminology
@@ -101,48 +113,48 @@ const PRIVACY_POLICY_ELEMENTS = [
     keywordsEn: ['we share', 'share your data', 'disclosure', 'third parties', 'third party', 'service providers', 'partners', 'external parties', 'we disclose', 'recipients', 'shared with', 'transfer data', 'data sharing'],
   },
   {
-    id: 'element_6',
-    number: 6,
+    id: 'element_7',
+    number: 7,
     nameAr: 'المسوغات النظامية لجمع ومعالجة البيانات الشخصية',
     nameEn: 'Legal basis for collecting and processing personal data',
     keywordsAr: ['المسوغ النظامي', 'الأساس القانوني', 'المسوغات النظامية', 'الموافقة', 'العقد', 'الالتزام القانوني', 'المصلحة المشروعة', 'أساس قانوني', 'سند نظامي', 'المادة', 'نظام حماية البيانات', 'PDPL', 'الأسس النظامية', 'الأحكام النظامية', 'وفقاً للنظام', 'بموجب النظام', 'النظام الأساسي', 'الإطار النظامي', 'السند النظامي', 'الأساس النظامي'],
     keywordsEn: ['legal basis', 'lawful basis', 'consent', 'contract', 'legal obligation', 'legitimate interest', 'legal grounds', 'lawful grounds', 'PDPL', 'data protection law'],
   },
   {
-    id: 'element_7',
-    number: 7,
+    id: 'element_8',
+    number: 8,
     nameAr: 'كيفية تخزين البيانات الشخصية ومدة الاحتفاظ بها',
     nameEn: 'How data is stored and retention period',
     keywordsAr: ['تخزين البيانات', 'نحتفظ', 'مدة الاحتفاظ', 'فترة التخزين', 'نخزن', 'حفظ البيانات', 'الاحتفاظ بالبيانات', 'نحذف', 'الحذف', 'إتلاف', 'مدة الحفظ', 'فترة الاحتفاظ'],
     keywordsEn: ['data storage', 'we retain', 'retention period', 'how long', 'we store', 'keep your data', 'data retention', 'deletion', 'destroy', 'storage period', 'stored for'],
   },
   {
-    id: 'element_8',
-    number: 8,
+    id: 'element_9',
+    number: 9,
     nameAr: 'حقوق صاحب البيانات فيما يتعلق بمعالجة بياناته',
     nameEn: 'Data subject rights regarding data processing',
     keywordsAr: ['حقوقك', 'حقوق صاحب البيانات', 'حق الوصول', 'حق التصحيح', 'حق الحذف', 'حق الاعتراض', 'حق نقل البيانات', 'سحب الموافقة', 'الحق في', 'يحق لك', 'حقوق المستخدم'],
     keywordsEn: ['your rights', 'data subject rights', 'right to access', 'right to rectify', 'right to delete', 'right to object', 'data portability', 'withdraw consent', 'right to', 'you have the right', 'user rights'],
   },
   {
-    id: 'element_9',
-    number: 9,
+    id: 'element_10',
+    number: 10,
     nameAr: 'مسؤول حماية البيانات الشخصية (بيانات التواصل معه إن وجدت)',
     nameEn: 'Data Protection Officer (contact details if available)',
     keywordsAr: ['مسؤول حماية البيانات', 'DPO', 'ضابط حماية البيانات', 'مسؤول الخصوصية', 'المسؤول عن حماية', 'التواصل مع مسؤول', 'مسؤول البيانات', 'مسؤول الحماية', 'مكتب إدارة البيانات', 'إدارة البيانات الوطنية', 'مكتب البيانات', 'فريق حماية البيانات', 'قسم حماية البيانات', 'وحدة حماية البيانات', 'إدارة حماية البيانات', 'المسؤول عن البيانات'],
     keywordsEn: ['data protection officer', 'DPO', 'privacy officer', 'data officer', 'protection officer', 'contact DPO', 'officer responsible', 'data management office', 'data office', 'data team', 'privacy team'],
   },
   {
-    id: 'element_10',
-    number: 10,
+    id: 'element_11',
+    number: 11,
     nameAr: 'كيفية تقديم شكوى أو اعتراض',
     nameEn: 'How to file a complaint or objection',
     keywordsAr: ['تقديم شكوى', 'الشكاوى', 'اعتراض', 'تقديم اعتراض', 'آلية الشكوى', 'الاعتراض على', 'رفع شكوى', 'إرسال شكوى', 'طريقة الشكوى', 'للشكاوى', 'شكوى', 'التظلمات', 'التظلم', 'مركز العناية', 'خدمة العملاء', 'الدعم الفني', 'قنوات التواصل', 'تقديم بلاغ', 'البلاغات', 'الاستفسارات والشكاوى'],
     keywordsEn: ['file a complaint', 'complaint', 'objection', 'lodge complaint', 'submit complaint', 'complaints mechanism', 'how to complain', 'raise objection', 'complaints procedure', 'grievance', 'customer service', 'support center'],
   },
   {
-    id: 'element_11',
-    number: 11,
+    id: 'element_12',
+    number: 12,
     nameAr: 'عنوان الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا) كجهة تنظيمية',
     nameEn: 'SDAIA (Saudi Data & AI Authority) address as regulatory body',
     keywordsAr: ['سدايا', 'SDAIA', 'الهيئة السعودية للبيانات', 'الهيئة السعودية للذكاء الاصطناعي', 'الجهة التنظيمية', 'الجهة الرقابية', 'هيئة البيانات', 'sdaia.gov.sa', 'الهيئة المختصة', 'مكتب إدارة البيانات الوطنية', 'NDMO', 'ndmo', 'إدارة البيانات الوطنية', 'سياسات حوكمة البيانات الوطنية'],
@@ -187,6 +199,7 @@ function checkElement(policyText: string, element: any): PolicyElementCheck {
         notes: 'لا توجد معلومات اتصال فعلية (بريد إلكتروني، رقم هاتف، عنوان). يجب توفير بيانات تواصل حقيقية.',
         matchCount: 0,
         matchedKeywords: [],
+        hideFromUI: element.hideFromUI === true,
       };
     }
   }
@@ -259,6 +272,7 @@ function checkElement(policyText: string, element: any): PolicyElementCheck {
     notes,
     matchCount,
     matchedKeywords,
+    hideFromUI: element.hideFromUI === true,
   };
 }
 
@@ -269,10 +283,11 @@ export function auditPrivacyPolicy(policyText: string): PrivacyPolicyAudit {
   
   if (!policyText || policyText.trim().length < 50) {
     console.log(`[PrivacyPolicyChecker] ⚠️ نص السياسة فارغ أو قصير جداً`);
+    const visibleCount = PRIVACY_POLICY_ELEMENTS.filter((el: any) => !el.hideFromUI).length;
     return {
       elementsFound: 0,
       elementsPartial: 0,
-      elementsMissing: 12,
+      elementsMissing: visibleCount,
       elements: PRIVACY_POLICY_ELEMENTS.map(el => ({
         id: el.id,
         number: el.number,
@@ -284,6 +299,7 @@ export function auditPrivacyPolicy(policyText: string): PrivacyPolicyAudit {
         notes: 'لم يتم العثور على سياسة خصوصية',
         matchCount: 0,
         matchedKeywords: [],
+        hideFromUI: (el as any).hideFromUI === true,
       })),
       compliancePercentage: 0,
       isComplete: false,
@@ -316,24 +332,28 @@ export function auditPrivacyPolicy(policyText: string): PrivacyPolicyAudit {
     return result;
   });
 
-  const elementsFound = elements.filter(e => e.statusEn === 'FOUND').length;
-  const elementsPartial = elements.filter(e => e.statusEn === 'PARTIAL').length;
-  const elementsMissing = elements.filter(e => e.statusEn === 'MISSING').length;
+  // Filter out hidden elements for UI counts (but keep them for internal scoring)
+  const visibleElements = elements.filter(e => !e.hideFromUI);
+  const totalVisibleElements = visibleElements.length; // Should be 11 (excluding contact info)
+  
+  const elementsFound = visibleElements.filter(e => e.statusEn === 'FOUND').length;
+  const elementsPartial = visibleElements.filter(e => e.statusEn === 'PARTIAL').length;
+  const elementsMissing = visibleElements.filter(e => e.statusEn === 'MISSING').length;
 
-  // Policy is complete ONLY if ALL 12 elements are fully present
-  const isComplete = elementsFound === 12;
+  // Policy is complete ONLY if ALL visible elements are fully present
+  const isComplete = elementsFound === totalVisibleElements;
 
-  // Compliance calculation
+  // Compliance calculation based on visible elements only
   const totalScore = elementsFound * 100 + elementsPartial * 50;
-  const compliancePercentage = Math.round((totalScore / (12 * 100)) * 100);
+  const compliancePercentage = Math.round((totalScore / (totalVisibleElements * 100)) * 100);
 
   // Generate summary
   let summary = '';
   if (isComplete) {
-    summary = 'سياسة الخصوصية مكتملة - جميع العناصر الـ 12 موجودة بوضوح';
+    summary = `سياسة الخصوصية مكتملة - جميع العناصر الـ ${totalVisibleElements} موجودة بوضوح`;
   } else {
-    const missingElements = elements.filter(e => e.statusEn === 'MISSING').map(e => e.nameAr);
-    const partialElements = elements.filter(e => e.statusEn === 'PARTIAL').map(e => e.nameAr);
+    const missingElements = visibleElements.filter(e => e.statusEn === 'MISSING').map(e => e.nameAr);
+    const partialElements = visibleElements.filter(e => e.statusEn === 'PARTIAL').map(e => e.nameAr);
     
     summary = 'سياسة الخصوصية غير مكتملة.\n';
     if (missingElements.length > 0) {
@@ -346,9 +366,9 @@ export function auditPrivacyPolicy(policyText: string): PrivacyPolicyAudit {
 
   console.log(`${'─'.repeat(70)}`);
   console.log(`[PrivacyPolicyChecker] ========== ملخص الفحص ==========`);
-  console.log(`[PrivacyPolicyChecker] موجود بالكامل: ${elementsFound}/12`);
-  console.log(`[PrivacyPolicyChecker] ناقص أو غير واضح: ${elementsPartial}/12`);
-  console.log(`[PrivacyPolicyChecker] غير موجود: ${elementsMissing}/12`);
+  console.log(`[PrivacyPolicyChecker] موجود بالكامل: ${elementsFound}/${totalVisibleElements}`);
+  console.log(`[PrivacyPolicyChecker] ناقص أو غير واضح: ${elementsPartial}/${totalVisibleElements}`);
+  console.log(`[PrivacyPolicyChecker] غير موجود: ${elementsMissing}/${totalVisibleElements}`);
   console.log(`[PrivacyPolicyChecker] نسبة الامتثال: ${compliancePercentage}%`);
   console.log(`[PrivacyPolicyChecker] السياسة مكتملة؟ ${isComplete ? 'نعم ✓' : 'لا ✗'}`);
   console.log(`${'='.repeat(70)}\n`);
