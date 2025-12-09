@@ -79,6 +79,66 @@ async function fetchWithCookies(url: string, cookies: BrowserCookie[]): Promise<
   }
 }
 
+// Try to fetch from Wayback Machine (Internet Archive)
+async function fetchFromWaybackMachine(url: string): Promise<string> {
+  console.log(`[Analyzer] Trying Wayback Machine for: ${url}`);
+  
+  try {
+    // First, get the latest snapshot URL
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    
+    const availabilityResponse = await fetch(
+      `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`,
+      { signal: controller.signal }
+    );
+    
+    clearTimeout(timeout);
+    
+    if (!availabilityResponse.ok) {
+      console.log(`[Analyzer] Wayback availability check failed`);
+      return '';
+    }
+    
+    const availability = await availabilityResponse.json() as any;
+    const snapshotUrl = availability?.archived_snapshots?.closest?.url;
+    
+    if (!snapshotUrl) {
+      console.log(`[Analyzer] No Wayback snapshot available`);
+      return '';
+    }
+    
+    console.log(`[Analyzer] Found Wayback snapshot: ${snapshotUrl}`);
+    
+    // Fetch the snapshot content
+    const controller2 = new AbortController();
+    const timeout2 = setTimeout(() => controller2.abort(), 15000);
+    
+    const contentResponse = await fetch(snapshotUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Sirbal/1.0; PDPL Compliance Scanner)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      signal: controller2.signal,
+    });
+    
+    clearTimeout(timeout2);
+    
+    if (contentResponse.ok) {
+      const html = await contentResponse.text();
+      // Remove Wayback Machine banner/toolbar from content
+      const cleanHtml = html.replace(/<!-- BEGIN WAYBACK TOOLBAR INSERT -->[\s\S]*?<!-- END WAYBACK TOOLBAR INSERT -->/g, '');
+      console.log(`[Analyzer] Wayback succeeded: ${cleanHtml.length} bytes`);
+      return cleanHtml;
+    }
+    
+    return '';
+  } catch (error) {
+    console.log(`[Analyzer] Wayback error: ${error instanceof Error ? error.message : String(error)}`);
+    return '';
+  }
+}
+
 export interface AnalysisOptions {
   timeout?: number;
   retryCount?: number;
@@ -211,6 +271,12 @@ export async function analyzeSite(
       if (privacyPolicyContent.length < 500 || privacyResult.errors.length > 0) {
         console.log(`[Analyzer] ⚠ Browser navigation failed, trying HTTP fallback...`);
         privacyPolicyContent = await fetchWithCookies(privacyPolicy.url, browserResult.cookies);
+        
+        // If HTTP fallback also failed, try Wayback Machine
+        if (privacyPolicyContent.length < 500) {
+          console.log(`[Analyzer] ⚠ HTTP fallback failed, trying Wayback Machine...`);
+          privacyPolicyContent = await fetchFromWaybackMachine(privacyPolicy.url);
+        }
       }
       
       console.log(`[Analyzer]   ✓ Loaded ${privacyPolicyContent.length} bytes from privacy policy`);
@@ -238,6 +304,12 @@ export async function analyzeSite(
       if (termsContent.length < 500 || termsResult.errors.length > 0) {
         console.log(`[Analyzer] ⚠ Browser navigation failed for terms, trying HTTP fallback...`);
         termsContent = await fetchWithCookies(termsAndConditions.url, browserResult.cookies);
+        
+        // If HTTP fallback also failed, try Wayback Machine
+        if (termsContent.length < 500) {
+          console.log(`[Analyzer] ⚠ HTTP fallback failed for terms, trying Wayback Machine...`);
+          termsContent = await fetchFromWaybackMachine(termsAndConditions.url);
+        }
       }
       
       console.log(`[Analyzer]   ✓ Loaded ${termsContent.length} bytes from terms page`);
