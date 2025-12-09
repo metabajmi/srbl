@@ -226,12 +226,15 @@ export default function ScanResultsPage() {
                 audit={(scan as any).analysisResult?.privacy_policy_audit || (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit}
                 testId="card-status-privacy"
               />
-              <StatusCard 
+              <TermsConditionsStatusCard 
                 title="الشروط والأحكام" 
                 found={!!scan.hasTermsAndConditions} 
                 url={scan.termsAndConditionsUrl}
-                required 
-                issueCount={termsIssues}
+                audit={(() => {
+                  const tcAudit = (scan as any).analysisResult?.terms_conditions_audit || 
+                                  (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'terms')?.termsConditionsAudit;
+                  return tcAudit;
+                })()}
                 testId="card-status-terms"
               />
               <StatusCard 
@@ -467,6 +470,97 @@ function PrivacyPolicyStatusCard({ title, found, url, audit, testId }: {
     if (!audit) return 'unknown';
     if (audit.elementsMissing > 0) return 'incomplete'; // Red
     if (audit.elementsPartial > 0) return 'needs_improvement'; // Orange
+    if (audit.isComplete) return 'complete'; // Green
+    return 'incomplete';
+  };
+
+  const status = getStatus();
+
+  const getCardStyle = () => {
+    switch (status) {
+      case 'missing':
+      case 'incomplete':
+        return 'border-red-300 bg-red-50/50 dark:bg-red-950/20';
+      case 'needs_improvement':
+        return 'border-orange-300 bg-orange-50/50 dark:bg-orange-950/20';
+      case 'complete':
+        return 'border-green-300 bg-green-50/50 dark:bg-green-950/20';
+      default:
+        return 'border-border bg-muted/30';
+    }
+  };
+
+  const getIcon = () => {
+    switch (status) {
+      case 'missing':
+      case 'incomplete':
+        return <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" />;
+      case 'needs_improvement':
+        return <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />;
+      case 'complete':
+        return <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />;
+      default:
+        return <AlertCircle className="w-5 h-5 text-muted-foreground flex-shrink-0" />;
+    }
+  };
+
+  const getStatusText = () => {
+    switch (status) {
+      case 'missing': return 'غير موجودة';
+      case 'incomplete': return 'غير مكتملة';
+      case 'needs_improvement': return 'تحتاج تحسين';
+      case 'complete': return 'مكتملة';
+      default: return 'غير محدد';
+    }
+  };
+
+  return (
+    <Card className={`p-3 ${getCardStyle()}`} data-testid={testId}>
+      <div className="flex items-center gap-2">
+        {getIcon()}
+        <div className="min-w-0">
+          <p className="font-medium text-sm truncate">{title}</p>
+          {found && url && (
+            <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
+              <span className="truncate max-w-[100px]">عرض</span>
+              <ExternalLink className="w-3 h-3 flex-shrink-0" />
+            </a>
+          )}
+          <p className={`text-xs mt-0.5 ${
+            status === 'complete' ? 'text-green-600' : 
+            status === 'needs_improvement' ? 'text-orange-600' : 
+            'text-red-600'
+          }`}>
+            {getStatusText()}
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// Terms & Conditions Status Card with 12-Module Audit Status
+function TermsConditionsStatusCard({ title, found, url, audit, testId }: { 
+  title: string; 
+  found: boolean; 
+  url?: string | null; 
+  audit?: {
+    isComplete: boolean;
+    modulesFound: number;
+    modulesPartial: number;
+    modulesMissing: number;
+  };
+  testId?: string;
+}) {
+  // Determine status based on audit results
+  // Red: T&C not found OR missing modules
+  // Orange: All found but some need improvement (partial)
+  // Green: All 12 modules complete
+  const getStatus = () => {
+    if (!found) return 'missing';
+    if (!audit) return 'unknown';
+    if (audit.modulesMissing > 0) return 'incomplete'; // Red
+    if (audit.modulesPartial > 0) return 'needs_improvement'; // Orange
     if (audit.isComplete) return 'complete'; // Green
     return 'incomplete';
   };
