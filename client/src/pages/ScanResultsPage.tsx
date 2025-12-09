@@ -97,9 +97,6 @@ export default function ScanResultsPage() {
   const cookieIssues = realIssues.filter(i => 
     i.category === "cookies" || i.category === "consent" || i.category === "cookie_banner"
   ).length;
-  const contactIssues = realIssues.filter(i => 
-    i.category === "contact_info" || i.category === "contact_information" || i.category === "contact"
-  ).length;
 
   if (scanLoading) {
     return (
@@ -242,12 +239,6 @@ export default function ScanResultsPage() {
                 found={!!scan.hasCookieBanner} 
                 issueCount={cookieIssues}
                 testId="card-status-cookies"
-              />
-              <StatusCard 
-                title="معلومات الاتصال" 
-                found={!!scan.hasContactInfo} 
-                issueCount={contactIssues}
-                testId="card-status-contact"
               />
             </div>
 
