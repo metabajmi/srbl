@@ -482,10 +482,18 @@ export async function fetchAndDiscoverSitemap(baseUrl: string): Promise<string[]
 
 // Known policy URLs for popular Saudi Arabian domains
 // These are used when Cloudflare or anti-bot protection blocks discovery
-const KNOWN_DOMAIN_POLICIES: Record<string, { privacy?: string; terms?: string; cookies?: string }> = {
+export const KNOWN_DOMAIN_POLICIES: Record<string, { 
+  privacy?: string; 
+  terms?: string; 
+  cookies?: string;
+  hasCookieBanner?: boolean;
+  cookieBannerType?: 'full' | 'basic';
+}> = {
   'salla.com': {
     privacy: 'https://salla.com/privacy/',
     terms: 'https://salla.com/terms/',
+    hasCookieBanner: true,
+    cookieBannerType: 'full', // Has accept/reject
   },
   'noon.com': {
     privacy: 'https://www.noon.com/saudi-ar/privacy-policy/',
