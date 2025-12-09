@@ -1,4 +1,9 @@
-import puppeteer, { Browser, Page, Cookie } from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { Browser, Page, Cookie } from 'puppeteer';
+
+// Add stealth plugin to evade bot detection
+puppeteer.use(StealthPlugin());
 
 let browserInstance: Browser | null = null;
 
@@ -47,9 +52,8 @@ const BROWSER_OPTIONS = {
     '--disable-accelerated-2d-canvas',
     '--disable-gpu',
     '--window-size=1920,1080',
-    '--disable-web-security',
+    '--disable-blink-features=AutomationControlled',
     '--disable-features=IsolateOrigins,site-per-process',
-    '--disable-http2', // Fallback to HTTP/1.1 for sites with HTTP/2 issues
   ],
 };
 
