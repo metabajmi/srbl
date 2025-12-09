@@ -246,6 +246,11 @@ export default function ScanResultsPage() {
             {((scan as any).analysisResult?.privacy_policy_audit || (scan as any).analysisResult?.document_audits?.[0]?.privacyPolicyAudit) && (
               <PrivacyPolicyAuditCard audit={(scan as any).analysisResult.privacy_policy_audit || (scan as any).analysisResult.document_audits[0].privacyPolicyAudit} />
             )}
+            
+            {/* Terms & Conditions 12-Module Audit */}
+            {(scan as any).analysisResult?.terms_conditions_audit && (
+              <TermsConditionsAuditCard audit={(scan as any).analysisResult.terms_conditions_audit} />
+            )}
 
             {/* Issues List - Simple */}
             {realIssues.length > 0 && (
@@ -653,6 +658,155 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
                     {element.notes && element.statusEn !== 'FOUND' && (
                       <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
                         {element.notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </CardContent>
+    </Card>
+  );
+}
+
+// Terms & Conditions Audit Card - 12 Compliance Modules
+interface TermsConditionsAuditProps {
+  audit: {
+    modulesFound: number;
+    modulesPartial: number;
+    modulesMissing: number;
+    compliancePercentage: number;
+    isComplete: boolean;
+    modules: Array<{
+      moduleId: string;
+      number: number;
+      titleAr: string;
+      titleEn: string;
+      status: string;
+      statusEn: string;
+      evidence: string;
+      notes: string;
+      matchCount: number;
+      matchedKeywords: string[];
+      requirementAr: string;
+    }>;
+    summary: string;
+  };
+}
+
+function TermsConditionsAuditCard({ audit }: TermsConditionsAuditProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  const getStatusIcon = (statusEn: string) => {
+    switch (statusEn) {
+      case 'FOUND': return <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />;
+      case 'PARTIAL': return <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />;
+      default: return <XCircle className="w-4 h-4 text-red-600 flex-shrink-0" />;
+    }
+  };
+
+  const getStatusBadge = (status: string, statusEn: string) => {
+    switch (statusEn) {
+      case 'FOUND': return <Badge variant="outline" className="border-green-500 text-green-600 text-xs">{status}</Badge>;
+      case 'PARTIAL': return <Badge variant="outline" className="border-orange-500 text-orange-600 text-xs">{status}</Badge>;
+      default: return <Badge variant="destructive" className="text-xs">{status}</Badge>;
+    }
+  };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
+            فحص عناصر الشروط والأحكام
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {audit.isComplete ? (
+              <Badge variant="outline" className="border-green-500 text-green-600">مكتملة</Badge>
+            ) : (
+              <Badge variant="destructive">غير مكتملة</Badge>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Summary Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
+            <div className="text-2xl font-bold text-green-600">{audit.modulesFound}</div>
+            <div className="text-xs text-green-700 dark:text-green-400">موجود بالكامل</div>
+          </div>
+          <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
+            <div className="text-2xl font-bold text-orange-600">{audit.modulesPartial}</div>
+            <div className="text-xs text-orange-700 dark:text-orange-400">ناقص أو غير واضح</div>
+          </div>
+          <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
+            <div className="text-2xl font-bold text-red-600">{audit.modulesMissing}</div>
+            <div className="text-xs text-red-700 dark:text-red-400">غير موجود</div>
+          </div>
+        </div>
+
+        {/* Expand/Collapse Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full mb-3"
+          onClick={() => setExpanded(!expanded)}
+          data-testid="button-expand-terms-audit"
+        >
+          {expanded ? (
+            <>
+              <ChevronUp className="w-4 h-4 ml-2" />
+              إخفاء التفاصيل
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4 ml-2" />
+              عرض تفاصيل المواد الـ 12
+            </>
+          )}
+        </Button>
+
+        {/* Detailed Modules Table */}
+        {expanded && (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {audit.modules.map((module) => (
+              <div
+                key={module.moduleId}
+                className={`p-3 rounded-lg border ${
+                  module.statusEn === 'FOUND' 
+                    ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' 
+                    : module.statusEn === 'PARTIAL'
+                    ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'
+                    : 'border-red-200 bg-red-50/50 dark:bg-red-950/20'
+                }`}
+                data-testid={`terms-module-${module.number}`}
+              >
+                <div className="flex items-start gap-2">
+                  {getStatusIcon(module.statusEn)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{module.number}. {module.titleAr}</span>
+                      {getStatusBadge(module.status, module.statusEn)}
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {module.requirementAr}
+                    </p>
+                    
+                    {module.evidence && (
+                      <p className="text-xs text-muted-foreground mt-1 bg-background/50 p-2 rounded border">
+                        <span className="font-medium">الدليل:</span> {module.evidence}
+                      </p>
+                    )}
+                    
+                    {module.notes && module.statusEn !== 'FOUND' && (
+                      <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
+                        {module.notes}
                       </p>
                     )}
                   </div>
