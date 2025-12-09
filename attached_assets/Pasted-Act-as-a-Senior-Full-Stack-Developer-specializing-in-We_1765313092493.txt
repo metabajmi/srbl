@@ -1,0 +1,48 @@
+Act as a Senior Full-Stack Developer specializing in Web Scraping and System Architecture.
+
+### Current System Context:
+I have an existing "Compliance Validator" tool that takes a **Store URL** as input.
+Currently, it has two working modules:
+1. **Privacy Policy Module:** Scrapes and checks the privacy page.
+2. **Cookie Banner Module:** Detects and analyzes the cookie banner.
+These modules run independently and return their results to a main aggregator.
+
+### The Request:
+I need you to develop the **"Terms & Conditions (T&C) Module"** to integrate into this existing system.
+
+**Key Requirements for the T&C Module:**
+
+1.  **Seamless Integration (Non-Destructive):**
+    - This module must NOT interfere with the logic of the Privacy or Cookie modules.
+    - It should be designed as a standalone function/class that accepts the `base_url` and `activity_type` as arguments.
+
+2.  **Smart Navigation (URL Discovery):**
+    - Since the user provides the *Store Home URL*, this module must first **find** the Terms & Conditions page.
+    - Implement logic to search the homepage (specifically footers) for links containing keywords like ["الشروط والأحكام", "Terms", "Conditions", "Terms of Service"].
+    - If found, navigate to that link and scrape the text.
+
+3.  **Data-Driven Validation (The Blueprint):**
+    - Once the text is scraped, validate it against a provided **JSON Blueprint** (I will provide the JSON structure later).
+    - The logic must check for:
+        - **Static Rules:** (e.g., CR Number, VAT).
+        - **Dynamic Rules:** Based on the `activity_type` input (e.g., specific return policies for Electronics vs. Custom Made).
+
+4.  **Unified Output Structure:**
+    - The module must return a JSON object specifically for the T&C section, designed to be merged with the other modules' results.
+    - Expected Output Format:
+      ```json
+      {
+        "module": "terms_and_conditions",
+        "status": "scanned",
+        "found_url": "[https://store.com/terms](https://store.com/terms)",
+        "compliance_score": 85,
+        "missing_clauses": ["CM_05_DELIVERY"],
+        "details": "..."
+      }
+      ```
+
+### Technical Task:
+Write the Python code (using libraries like `BeautifulSoup` or `Selenium` if needed) for this **T&C Module**.
+Focus on the logic of **finding the link** + **checking the text against the JSON rules**.
+
+Do not rewrite the Privacy or Cookie codes; assume they exist and are working. Focus only on this new add-on.
