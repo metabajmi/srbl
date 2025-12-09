@@ -12,6 +12,7 @@ import {
   ComplianceAuditItem
 } from './gapAnalyzer';
 import { auditPrivacyPolicy, PrivacyPolicyAudit } from './privacyPolicyElementChecker';
+import { checkTermsConditions, TermsConditionsAudit } from './termsConditionsChecker';
 import {
   extractScripts,
   extractCookies,
@@ -130,6 +131,28 @@ export interface ComprehensiveScanResult {
       notes: string;
       matchCount: number;
       matchedKeywords: string[];
+    }>;
+    summary: string;
+  };
+  
+  terms_conditions_audit?: {
+    modulesFound: number;
+    modulesPartial: number;
+    modulesMissing: number;
+    compliancePercentage: number;
+    isComplete: boolean;
+    modules: Array<{
+      moduleId: string;
+      number: number;
+      titleAr: string;
+      titleEn: string;
+      status: string;
+      statusEn: string;
+      evidence: string;
+      notes: string;
+      matchCount: number;
+      matchedKeywords: string[];
+      requirementAr: string;
     }>;
     summary: string;
   };
@@ -342,6 +365,17 @@ export async function runComprehensiveScan(
     console.log(`[PrivacyElementCheck] Compliance: ${privacyPolicyAudit.compliancePercentage}%`);
   }
   
+  // Run specialized 12-module Terms & Conditions audit
+  const termsPolicy = parsedPolicies.find(p => p.type === 'terms');
+  let termsConditionsAudit: TermsConditionsAudit | undefined;
+  if (termsPolicy && termsPolicy.fullText && termsPolicy.fullText.length > 50) {
+    console.log(`\n[TermsConditionsCheck] Running 12-module T&C audit...`);
+    console.log(`[TermsConditionsCheck] Terms text length: ${termsPolicy.fullText.length} chars`);
+    termsConditionsAudit = checkTermsConditions(termsPolicy.fullText);
+    console.log(`[TermsConditionsCheck] Results: Found=${termsConditionsAudit.modulesFound}/12, Partial=${termsConditionsAudit.modulesPartial}/12, Missing=${termsConditionsAudit.modulesMissing}/12`);
+    console.log(`[TermsConditionsCheck] Compliance: ${termsConditionsAudit.compliancePercentage}%`);
+  }
+  
   const scanDuration = Date.now() - startTime;
   
   // CRITICAL: Calculate overall score with 60% privacy policy 12-elements + 40% technical PDPL rules
@@ -446,6 +480,17 @@ export async function runComprehensiveScan(
       isComplete: privacyPolicyAudit.isComplete,
       elements: privacyPolicyAudit.elements,
       summary: privacyPolicyAudit.summary,
+    } : undefined,
+    
+    // Include 12-module Terms & Conditions audit
+    terms_conditions_audit: termsConditionsAudit ? {
+      modulesFound: termsConditionsAudit.modulesFound,
+      modulesPartial: termsConditionsAudit.modulesPartial,
+      modulesMissing: termsConditionsAudit.modulesMissing,
+      compliancePercentage: termsConditionsAudit.compliancePercentage,
+      isComplete: termsConditionsAudit.isComplete,
+      modules: termsConditionsAudit.modules,
+      summary: termsConditionsAudit.summary,
     } : undefined,
     
     overall_score: combinedScore,
