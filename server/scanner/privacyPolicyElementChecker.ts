@@ -140,8 +140,8 @@ const PRIVACY_POLICY_ELEMENTS = [
     number: 10,
     nameAr: 'مسؤول حماية البيانات الشخصية (بيانات التواصل معه إن وجدت)',
     nameEn: 'Data Protection Officer (contact details if available)',
-    keywordsAr: ['مسؤول حماية البيانات', 'DPO', 'ضابط حماية البيانات', 'مسؤول الخصوصية', 'المسؤول عن حماية', 'التواصل مع مسؤول', 'مسؤول البيانات', 'مسؤول الحماية'],
-    keywordsEn: ['data protection officer', 'DPO', 'privacy officer', 'data officer', 'protection officer', 'contact DPO', 'officer responsible'],
+    keywordsAr: ['مسؤول حماية البيانات', 'DPO', 'ضابط حماية البيانات', 'مسؤول الخصوصية', 'المسؤول عن حماية', 'التواصل مع مسؤول', 'مسؤول البيانات', 'مسؤول الحماية', 'مكتب إدارة البيانات', 'إدارة البيانات الوطنية', 'مكتب البيانات', 'فريق حماية البيانات', 'قسم حماية البيانات', 'وحدة حماية البيانات', 'إدارة حماية البيانات', 'المسؤول عن البيانات'],
+    keywordsEn: ['data protection officer', 'DPO', 'privacy officer', 'data officer', 'protection officer', 'contact DPO', 'officer responsible', 'data management office', 'data office', 'data team', 'privacy team'],
   },
   {
     id: 'element_11',
@@ -156,8 +156,8 @@ const PRIVACY_POLICY_ELEMENTS = [
     number: 12,
     nameAr: 'عنوان الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا) كجهة تنظيمية',
     nameEn: 'SDAIA (Saudi Data & AI Authority) address as regulatory body',
-    keywordsAr: ['سدايا', 'SDAIA', 'الهيئة السعودية للبيانات', 'الهيئة السعودية للذكاء الاصطناعي', 'الجهة التنظيمية', 'الجهة الرقابية', 'هيئة البيانات', 'sdaia.gov.sa', 'الهيئة المختصة'],
-    keywordsEn: ['SDAIA', 'Saudi Data', 'Saudi AI Authority', 'data authority', 'regulatory authority', 'supervisory authority', 'data protection authority', 'sdaia.gov.sa'],
+    keywordsAr: ['سدايا', 'SDAIA', 'الهيئة السعودية للبيانات', 'الهيئة السعودية للذكاء الاصطناعي', 'الجهة التنظيمية', 'الجهة الرقابية', 'هيئة البيانات', 'sdaia.gov.sa', 'الهيئة المختصة', 'مكتب إدارة البيانات الوطنية', 'NDMO', 'ndmo', 'إدارة البيانات الوطنية', 'سياسات حوكمة البيانات الوطنية'],
+    keywordsEn: ['SDAIA', 'Saudi Data', 'Saudi AI Authority', 'data authority', 'regulatory authority', 'supervisory authority', 'data protection authority', 'sdaia.gov.sa', 'NDMO', 'national data management'],
   },
 ];
 
