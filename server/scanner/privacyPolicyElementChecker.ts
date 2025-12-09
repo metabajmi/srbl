@@ -182,6 +182,10 @@ function checkElement(policyText: string, element: any): PolicyElementCheck {
   // Special handling for element 1 (contact info) - requires ACTUAL contact details
   // Not just mentions of data types like "email" or "phone"
   if (element.id === 'element_1' && element.strictPatterns) {
+    // Extract actual contact evidence
+    const emailMatch = policyText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    const phoneMatch = policyText.match(/(\+966|920|800|199|19\d{7}|0\d{9})/);
+    
     const hasActualContact = element.strictPatterns.some((pattern: string) => 
       policyText.toLowerCase().includes(pattern.toLowerCase())
     );
@@ -199,6 +203,25 @@ function checkElement(policyText: string, element: any): PolicyElementCheck {
         notes: 'لا توجد معلومات اتصال فعلية (بريد إلكتروني، رقم هاتف، عنوان). يجب توفير بيانات تواصل حقيقية.',
         matchCount: 0,
         matchedKeywords: [],
+        hideFromUI: element.hideFromUI === true,
+      };
+    }
+    
+    // If we found actual contact details, mark as FOUND even without keyword matches
+    // This fixes false negatives for sites that provide contact info without context keywords
+    if (hasActualContact && matchCount === 0) {
+      const contactEvidence = emailMatch ? emailMatch[0] : (phoneMatch ? phoneMatch[0] : '');
+      return {
+        id: element.id,
+        number: element.number,
+        nameAr: element.nameAr,
+        nameEn: element.nameEn,
+        status: 'موجود بالكامل',
+        statusEn: 'FOUND',
+        evidence: contactEvidence ? `بيانات التواصل: ${contactEvidence}` : 'تم العثور على بيانات تواصل',
+        notes: '',
+        matchCount: 1,
+        matchedKeywords: contactEvidence ? [contactEvidence] : ['contact detected'],
         hideFromUI: element.hideFromUI === true,
       };
     }
