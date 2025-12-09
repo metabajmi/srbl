@@ -54,30 +54,19 @@ function extractEvidence(fullText: string, matchedKeyword: string, maxLength: nu
   return snippet.replace(/\s+/g, ' ').substring(0, maxLength);
 }
 
-// The EXACT 12 elements required by user
+// The EXACT 11 elements required by user (contact info removed per user request)
 const PRIVACY_POLICY_ELEMENTS = [
   {
     id: 'element_1',
     number: 1,
-    nameAr: 'بيانات التواصل الخاصة بالجهة',
-    nameEn: 'Entity contact information',
-    // Must have ACTUAL contact details like email/phone - not just mentions of data types
-    keywordsAr: ['اتصل بنا', 'للتواصل معنا', 'بيانات التواصل معنا', 'بريدنا الإلكتروني', 'رقمنا', 'عنوان الشركة', 'رقم التواصل', 'الاتصال بنا', 'تواصل معنا على', 'راسلنا على', 'يمكنك التواصل', 'للاستفسار', 'للمزيد من المعلومات تواصل', 'مركز الاتصال', 'خدمة العملاء', 'بوابة العملاء', 'منصة التواصل'],
-    keywordsEn: ['contact us at', 'reach us at', 'our email', 'our phone', 'our address', 'get in touch at', 'contact details', 'you can reach us', 'for inquiries contact'],
-    // Require explicit contact info patterns - includes government formats
-    strictPatterns: ['@', '.com', '.sa', '.gov', '+966', '920', '800', '199', '19'],
-  },
-  {
-    id: 'element_2',
-    number: 2,
     nameAr: 'تاريخ آخر تحديث لسياسة الخصوصية',
     nameEn: 'Last update date of privacy policy',
     keywordsAr: ['تاريخ التحديث', 'آخر تحديث', 'تم التحديث', 'تاريخ النشر', 'تاريخ المراجعة', 'النسخة', 'تحديث السياسة', 'آخر مراجعة', 'تاريخ السريان', 'تاريخ الإصدار', 'محدثة في', 'تاريخ الاصدار', 'تاريخ النفاذ', 'سارية المفعول', 'تم إصدار', 'صدر بتاريخ', 'اعتباراً من', 'يسري اعتباراً', 'تم اعتماد', 'تاريخ هذا الإشعار', 'إصدار السياسة', 'تحديث الإشعار', 'تاريخ التعديل', 'آخر تعديل', 'تم تعديل', 'تاريخ آخر تعديل'],
     keywordsEn: ['last updated', 'updated on', 'revision date', 'effective date', 'date of update', 'version', 'last modified', 'published on', 'date of revision', 'effective from', 'issued on', 'policy version', 'notice date'],
   },
   {
-    id: 'element_3',
-    number: 3,
+    id: 'element_2',
+    number: 2,
     nameAr: 'ماهي البيانات الشخصية التي يتم جمعها',
     nameEn: 'What personal data is collected',
     // Look for data type listings
@@ -85,8 +74,8 @@ const PRIVACY_POLICY_ELEMENTS = [
     keywordsEn: ['data we collect', 'we collect', 'types of data', 'personal data', 'information we collect', 'including your', 'such as name', 'identity data', 'technical data', 'IP address', 'cookies'],
   },
   {
-    id: 'element_4',
-    number: 4,
+    id: 'element_3',
+    number: 3,
     nameAr: 'كيف يتم جمع البيانات الشخصية وما هو الغرض من جمعها',
     nameEn: 'How data is collected and purpose of collection',
     // Purpose and collection method
@@ -94,8 +83,8 @@ const PRIVACY_POLICY_ELEMENTS = [
     keywordsEn: ['for the purpose', 'purpose of', 'purposes', 'we collect your', 'why we collect', 'how we collect', 'collection method', 'sources of data', 'when you register', 'when you purchase'],
   },
   {
-    id: 'element_5',
-    number: 5,
+    id: 'element_4',
+    number: 4,
     nameAr: 'كيفية استخدام البيانات الشخصية',
     nameEn: 'How personal data is used',
     // Data usage statements
@@ -103,8 +92,8 @@ const PRIVACY_POLICY_ELEMENTS = [
     keywordsEn: ['we use', 'how we use', 'use of data', 'we use your data', 'data usage', 'processing', 'we process', 'used for', 'using your information', 'what we do with'],
   },
   {
-    id: 'element_6',
-    number: 6,
+    id: 'element_5',
+    number: 5,
     nameAr: 'كيفية الإفصاح عن البيانات الشخصية (مع من يتم مشاركتها)',
     nameEn: 'How data is disclosed and with whom it is shared',
     // Sharing and disclosure - includes government terminology
@@ -112,48 +101,48 @@ const PRIVACY_POLICY_ELEMENTS = [
     keywordsEn: ['we share', 'share your data', 'disclosure', 'third parties', 'third party', 'service providers', 'partners', 'external parties', 'we disclose', 'recipients', 'shared with', 'transfer data', 'data sharing'],
   },
   {
-    id: 'element_7',
-    number: 7,
+    id: 'element_6',
+    number: 6,
     nameAr: 'المسوغات النظامية لجمع ومعالجة البيانات الشخصية',
     nameEn: 'Legal basis for collecting and processing personal data',
     keywordsAr: ['المسوغ النظامي', 'الأساس القانوني', 'المسوغات النظامية', 'الموافقة', 'العقد', 'الالتزام القانوني', 'المصلحة المشروعة', 'أساس قانوني', 'سند نظامي', 'المادة', 'نظام حماية البيانات', 'PDPL', 'الأسس النظامية', 'الأحكام النظامية', 'وفقاً للنظام', 'بموجب النظام', 'النظام الأساسي', 'الإطار النظامي', 'السند النظامي', 'الأساس النظامي'],
     keywordsEn: ['legal basis', 'lawful basis', 'consent', 'contract', 'legal obligation', 'legitimate interest', 'legal grounds', 'lawful grounds', 'PDPL', 'data protection law'],
   },
   {
-    id: 'element_8',
-    number: 8,
+    id: 'element_7',
+    number: 7,
     nameAr: 'كيفية تخزين البيانات الشخصية ومدة الاحتفاظ بها',
     nameEn: 'How data is stored and retention period',
     keywordsAr: ['تخزين البيانات', 'نحتفظ', 'مدة الاحتفاظ', 'فترة التخزين', 'نخزن', 'حفظ البيانات', 'الاحتفاظ بالبيانات', 'نحذف', 'الحذف', 'إتلاف', 'مدة الحفظ', 'فترة الاحتفاظ'],
     keywordsEn: ['data storage', 'we retain', 'retention period', 'how long', 'we store', 'keep your data', 'data retention', 'deletion', 'destroy', 'storage period', 'stored for'],
   },
   {
-    id: 'element_9',
-    number: 9,
+    id: 'element_8',
+    number: 8,
     nameAr: 'حقوق صاحب البيانات فيما يتعلق بمعالجة بياناته',
     nameEn: 'Data subject rights regarding data processing',
     keywordsAr: ['حقوقك', 'حقوق صاحب البيانات', 'حق الوصول', 'حق التصحيح', 'حق الحذف', 'حق الاعتراض', 'حق نقل البيانات', 'سحب الموافقة', 'الحق في', 'يحق لك', 'حقوق المستخدم'],
     keywordsEn: ['your rights', 'data subject rights', 'right to access', 'right to rectify', 'right to delete', 'right to object', 'data portability', 'withdraw consent', 'right to', 'you have the right', 'user rights'],
   },
   {
-    id: 'element_10',
-    number: 10,
+    id: 'element_9',
+    number: 9,
     nameAr: 'مسؤول حماية البيانات الشخصية (بيانات التواصل معه إن وجدت)',
     nameEn: 'Data Protection Officer (contact details if available)',
     keywordsAr: ['مسؤول حماية البيانات', 'DPO', 'ضابط حماية البيانات', 'مسؤول الخصوصية', 'المسؤول عن حماية', 'التواصل مع مسؤول', 'مسؤول البيانات', 'مسؤول الحماية', 'مكتب إدارة البيانات', 'إدارة البيانات الوطنية', 'مكتب البيانات', 'فريق حماية البيانات', 'قسم حماية البيانات', 'وحدة حماية البيانات', 'إدارة حماية البيانات', 'المسؤول عن البيانات'],
     keywordsEn: ['data protection officer', 'DPO', 'privacy officer', 'data officer', 'protection officer', 'contact DPO', 'officer responsible', 'data management office', 'data office', 'data team', 'privacy team'],
   },
   {
-    id: 'element_11',
-    number: 11,
+    id: 'element_10',
+    number: 10,
     nameAr: 'كيفية تقديم شكوى أو اعتراض',
     nameEn: 'How to file a complaint or objection',
     keywordsAr: ['تقديم شكوى', 'الشكاوى', 'اعتراض', 'تقديم اعتراض', 'آلية الشكوى', 'الاعتراض على', 'رفع شكوى', 'إرسال شكوى', 'طريقة الشكوى', 'للشكاوى', 'شكوى', 'التظلمات', 'التظلم', 'مركز العناية', 'خدمة العملاء', 'الدعم الفني', 'قنوات التواصل', 'تقديم بلاغ', 'البلاغات', 'الاستفسارات والشكاوى'],
     keywordsEn: ['file a complaint', 'complaint', 'objection', 'lodge complaint', 'submit complaint', 'complaints mechanism', 'how to complain', 'raise objection', 'complaints procedure', 'grievance', 'customer service', 'support center'],
   },
   {
-    id: 'element_12',
-    number: 12,
+    id: 'element_11',
+    number: 11,
     nameAr: 'عنوان الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا) كجهة تنظيمية',
     nameEn: 'SDAIA (Saudi Data & AI Authority) address as regulatory body',
     keywordsAr: ['سدايا', 'SDAIA', 'الهيئة السعودية للبيانات', 'الهيئة السعودية للذكاء الاصطناعي', 'الجهة التنظيمية', 'الجهة الرقابية', 'هيئة البيانات', 'sdaia.gov.sa', 'الهيئة المختصة', 'مكتب إدارة البيانات الوطنية', 'NDMO', 'ndmo', 'إدارة البيانات الوطنية', 'سياسات حوكمة البيانات الوطنية'],
