@@ -54,7 +54,7 @@ const BROWSER_OPTIONS = {
 };
 
 const PAGE_OPTIONS = {
-  timeout: 60000,
+  timeout: 20000,
   waitUntil: 'domcontentloaded' as const,
 };
 
@@ -136,9 +136,19 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     } catch (navError) {
       console.log(`[Scanner] Initial navigation failed, trying with shorter wait...`);
       try {
-        response = await page.goto(url, { timeout: 30000, waitUntil: 'domcontentloaded' });
+        response = await page.goto(url, { timeout: 10000, waitUntil: 'networkidle2' });
       } catch (retryError) {
-        console.log(`[Scanner] Retry also failed, attempting to get partial content...`);
+        console.log(`[Scanner] Retry also failed, returning empty result...`);
+        return {
+          html: '',
+          cookies: [],
+          networkRequests,
+          consoleMessages,
+          errors: ['Navigation timeout - site may be blocking automated access'],
+          finalUrl: url,
+          responseHeaders,
+          loadTime: Date.now() - startTime,
+        };
       }
     }
     
@@ -149,12 +159,12 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     }
     
     try {
-      await page.waitForSelector('body', { timeout: 10000 });
+      await page.waitForSelector('body', { timeout: 5000 });
     } catch (e) {
       console.log(`[Scanner] Body selector wait timed out, continuing anyway...`);
     }
     
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     const finalUrl = page.url();
     console.log(`[Scanner] Final URL after redirects: ${finalUrl}`);

@@ -307,8 +307,20 @@ export async function analyzeSite(
   // Factor privacy policy 12-element audit into final score
   let finalScore = scoreResult.overall;
   let privacyPolicyScore = 0;
+  let policyAccessible = true;
   
-  if (auditAllDocumentsResult) {
+  // Check if policy was inaccessible (anti-bot protection)
+  const policyWasBlocked = !!(privacyPolicy.found && privacyPolicy.url && privacyPolicyContent.length < 500);
+  
+  if (policyWasBlocked) {
+    policyAccessible = false;
+    console.log(`[Analyzer] ⚠ Privacy policy inaccessible (anti-bot protection detected)`);
+    console.log(`[Analyzer] Using technical checks only (40% weight) - policy audit skipped`);
+    // Only use technical score when policy is inaccessible
+    // Don't penalize for inaccessible policy - use technical score as final
+    finalScore = scoreResult.overall;
+    privacyPolicy.content_accessible = false;
+  } else if (auditAllDocumentsResult) {
     // Get the 12-element privacy policy audit score from the first document
     const privacyDoc = auditAllDocumentsResult.documents.find((d: any) => d.type === 'privacy');
     if (privacyDoc?.privacyPolicyAudit) {
@@ -434,8 +446,12 @@ export async function analyzeSite(
       criticalGaps: auditAllDocumentsResult.summary.criticalGaps,
     } : undefined,
     
-    scan_errors: [...browserResult.errors, ...errors],
-    partial_analysis: browserResult.errors.length > 0,
+    scan_errors: [
+      ...browserResult.errors, 
+      ...errors,
+      ...(policyWasBlocked ? ['تعذر الوصول لسياسة الخصوصية - الموقع يستخدم حماية ضد الروبوتات. النتيجة مبنية على الفحص التقني فقط.'] : [])
+    ],
+    partial_analysis: browserResult.errors.length > 0 || policyWasBlocked,
   };
   
   console.log(`[Analyzer] Final result: Score=${result.overall_score}, Level=${result.compliance_level}, Violations=${result.pdpl_violations.length}`);
