@@ -108,7 +108,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     
     await page.setExtraHTTPHeaders({
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-      'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
+      'Accept-Language': 'ar-SA,ar;q=0.9,en-US;q=0.8,en;q=0.7',
       'Accept-Encoding': 'gzip, deflate, br',
       'Connection': 'keep-alive',
       'Upgrade-Insecure-Requests': '1',
@@ -117,6 +117,34 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       'Sec-Fetch-Site': 'none',
       'Sec-Fetch-User': '?1',
       'Cache-Control': 'max-age=0',
+      'sec-ch-ua': '"Chromium";v="131", "Not_A Brand";v="24"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+    });
+    
+    // Emulate real browser properties to bypass bot detection
+    await page.evaluateOnNewDocument(() => {
+      // Override webdriver flag
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      
+      // Add realistic plugins
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [
+          { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' },
+          { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai' },
+          { name: 'Native Client', filename: 'internal-nacl-plugin' },
+        ],
+      });
+      
+      // Add realistic languages
+      Object.defineProperty(navigator, 'languages', { get: () => ['ar-SA', 'ar', 'en-US', 'en'] });
+      
+      // Override permissions query
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters: any) =>
+        parameters.name === 'notifications'
+          ? Promise.resolve({ state: 'prompt' } as PermissionStatus)
+          : originalQuery(parameters);
     });
     
     page.on('console', (msg) => {
@@ -173,6 +201,78 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       await page.waitForSelector('body', { timeout: 5000 });
     } catch (e) {
       console.log(`[Scanner] Body selector wait timed out, continuing anyway...`);
+    }
+    
+    // Check for Cloudflare challenge and wait for it to resolve
+    const isCloudflareChallenge = await page.evaluate(() => {
+      const title = document.title?.toLowerCase() || '';
+      const bodyText = document.body?.innerText || '';
+      return (
+        title.includes('just a moment') ||
+        title.includes('checking your browser') ||
+        bodyText.includes('يتم الآن التحقق من أنك إنسان') ||
+        bodyText.includes('challenges.cloudflare.com') ||
+        bodyText.includes('Enable JavaScript and cookies to continue')
+      );
+    });
+    
+    if (isCloudflareChallenge) {
+      console.log(`[Scanner] ⚠️ Cloudflare challenge detected, attempting bypass...`);
+      
+      // Simulate human behavior to try to pass bot detection
+      try {
+        // Move mouse randomly
+        await page.mouse.move(Math.random() * 800 + 100, Math.random() * 400 + 100);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        await page.mouse.move(Math.random() * 800 + 100, Math.random() * 400 + 100);
+        
+        // Try to click the Cloudflare checkbox if present
+        const turnstileFrame = page.frames().find(f => f.url().includes('challenges.cloudflare.com'));
+        if (turnstileFrame) {
+          console.log(`[Scanner] Found Turnstile frame, attempting to interact...`);
+          try {
+            await turnstileFrame.click('input[type="checkbox"]', { timeout: 2000 });
+          } catch (e) {
+            // Checkbox might not be present or visible
+          }
+        }
+      } catch (e) {
+        // Ignore errors during human simulation
+      }
+      
+      // Wait up to 20 seconds for Cloudflare to complete challenge
+      for (let i = 0; i < 20; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Occasional mouse movement to appear more human
+        if (i % 3 === 0) {
+          try {
+            await page.mouse.move(Math.random() * 800 + 100, Math.random() * 400 + 100);
+          } catch (e) {}
+        }
+        
+        try {
+          const html = await page.content();
+          const stillChallenge = (
+            html.includes('يتم الآن التحقق من أنك إنسان') ||
+            html.includes('challenges.cloudflare.com') ||
+            html.includes('Just a moment...') ||
+            html.includes('Enable JavaScript and cookies to continue')
+          );
+          
+          if (!stillChallenge && html.length > 50000) {
+            console.log(`[Scanner] ✓ Cloudflare bypassed after ${i + 1}s (${html.length} bytes)`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            break;
+          }
+          
+          if (i % 5 === 4) {
+            console.log(`[Scanner] Still waiting for Cloudflare... (${i + 1}s, ${html.length} bytes)`);
+          }
+        } catch (e) {
+          console.log(`[Scanner] Page navigating... (${i + 1}s)`);
+        }
+      }
     }
     
     await new Promise(resolve => setTimeout(resolve, 1500));
