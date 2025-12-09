@@ -26,6 +26,7 @@ import {
 } from '../legal-analyzer';
 import { auditAllDocuments, auditPolicyCompliance, type ParsedPolicy } from '../scanner/gapAnalyzer';
 import { discoverFallbackPolicyUrls, KNOWN_DOMAIN_POLICIES } from '../scanner/pagesDiscovery';
+import { checkTermsConditions, TermsConditionsAudit } from '../scanner/termsConditionsChecker';
 import * as cheerio from 'cheerio';
 
 // Helper to get known domain info
@@ -399,11 +400,25 @@ export async function analyzeSite(
   }
   
   // Run per-document compliance audit on extracted content
+  let termsConditionsAudit: TermsConditionsAudit | undefined;
+  
   if (policies.length > 0) {
     auditAllDocumentsResult = auditAllDocuments(policies);
     transparencyScore = auditAllDocumentsResult.summary.overallCompliance;
     console.log(`[Analyzer] Multi-document audit complete. Overall compliance: ${transparencyScore}%`);
     console.log(`[Analyzer] Documents audited: ${auditAllDocumentsResult.documents.filter((d: any) => d.found).length}/3`);
+    
+    // Run specialized 12-module Terms & Conditions audit
+    const termsPolicy = policies.find(p => p.type === 'terms');
+    if (termsPolicy && termsPolicy.fullText && termsPolicy.wordCount > 10) {
+      console.log(`\n[TermsConditionsCheck] Running 12-module T&C audit...`);
+      console.log(`[TermsConditionsCheck] Terms text length: ${termsPolicy.fullText.length} chars, words: ${termsPolicy.wordCount}`);
+      termsConditionsAudit = checkTermsConditions(termsPolicy.fullText);
+      console.log(`[TermsConditionsCheck] Results: Found=${termsConditionsAudit.modulesFound}/12, Partial=${termsConditionsAudit.modulesPartial}/12, Missing=${termsConditionsAudit.modulesMissing}/12`);
+      console.log(`[TermsConditionsCheck] Compliance: ${termsConditionsAudit.compliancePercentage}%`);
+    } else {
+      console.log(`\n[TermsConditionsCheck] Skipped - no valid terms policy found (policy: ${!!termsPolicy}, wordCount: ${termsPolicy?.wordCount || 0})`);
+    }
   } else {
     console.log(`[Analyzer] ⚠ Insufficient policy content for compliance audit (${privacyPolicyContent.length + termsContent.length} bytes)`);
   }
@@ -589,9 +604,22 @@ export async function analyzeSite(
         items: doc.audit.items,
         summary: doc.audit.summary,
       } : null,
-      // Include 11-element privacy policy audit for privacy documents
+      // Include 12-element privacy policy audit for privacy documents
       privacyPolicyAudit: doc.privacyPolicyAudit || undefined,
+      // Include 12-module T&C audit for terms documents (only if audit ran)
+      ...(doc.type === 'terms' && termsConditionsAudit ? { termsConditionsAudit } : {}),
     })) : undefined,
+    
+    // Top-level 12-module Terms & Conditions audit
+    terms_conditions_audit: termsConditionsAudit ? {
+      modulesFound: termsConditionsAudit.modulesFound,
+      modulesPartial: termsConditionsAudit.modulesPartial,
+      modulesMissing: termsConditionsAudit.modulesMissing,
+      compliancePercentage: termsConditionsAudit.compliancePercentage,
+      isComplete: termsConditionsAudit.isComplete,
+      modules: termsConditionsAudit.modules,
+      summary: termsConditionsAudit.summary,
+    } : undefined,
     
     compliance_summary: auditAllDocumentsResult ? {
       allDocumentsFound: auditAllDocumentsResult.summary.allDocumentsFound,

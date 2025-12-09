@@ -223,7 +223,7 @@ export default function ScanResultsPage() {
                 title="سياسة الخصوصية" 
                 found={!!scan.hasPrivacyPolicy} 
                 url={scan.privacyPolicyUrl}
-                audit={(scan as any).analysisResult?.privacy_policy_audit || (scan as any).analysisResult?.document_audits?.[0]?.privacyPolicyAudit}
+                audit={(scan as any).analysisResult?.privacy_policy_audit || (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit}
                 testId="card-status-privacy"
               />
               <StatusCard 
@@ -243,14 +243,22 @@ export default function ScanResultsPage() {
             </div>
 
             {/* Privacy Policy 12-Element Audit */}
-            {((scan as any).analysisResult?.privacy_policy_audit || (scan as any).analysisResult?.document_audits?.[0]?.privacyPolicyAudit) && (
-              <PrivacyPolicyAuditCard audit={(scan as any).analysisResult.privacy_policy_audit || (scan as any).analysisResult.document_audits[0].privacyPolicyAudit} />
-            )}
+            {(() => {
+              const ppAudit = (scan as any).analysisResult?.privacy_policy_audit || 
+                              (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
+              return ppAudit && ppAudit.elements && ppAudit.elements.length > 0 ? (
+                <PrivacyPolicyAuditCard audit={ppAudit} />
+              ) : null;
+            })()}
             
             {/* Terms & Conditions 12-Module Audit */}
-            {(scan as any).analysisResult?.terms_conditions_audit && (
-              <TermsConditionsAuditCard audit={(scan as any).analysisResult.terms_conditions_audit} />
-            )}
+            {(() => {
+              const tcAudit = (scan as any).analysisResult?.terms_conditions_audit || 
+                              (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'terms')?.termsConditionsAudit;
+              return tcAudit && tcAudit.modules && tcAudit.modules.length > 0 ? (
+                <TermsConditionsAuditCard audit={tcAudit} />
+              ) : null;
+            })()}
 
             {/* Issues List - Simple */}
             {realIssues.length > 0 && (
