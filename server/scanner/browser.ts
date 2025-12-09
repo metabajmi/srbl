@@ -23,6 +23,12 @@ export interface BrowserCookie {
   sourceScheme?: 'Unset' | 'NonSecure' | 'Secure';
 }
 
+export interface DynamicCookieBannerResult {
+  found: boolean;
+  selector: string | null;
+  text: string;
+}
+
 export interface BrowserScanResult {
   html: string;
   cookies: BrowserCookie[];
@@ -32,6 +38,7 @@ export interface BrowserScanResult {
   finalUrl: string;
   responseHeaders: Record<string, string>;
   loadTime: number;
+  dynamicCookieBanner?: DynamicCookieBannerResult;
 }
 
 export interface NetworkRequest {
@@ -209,6 +216,78 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     const html = await page.content();
     console.log(`[Scanner] HTML content length: ${html.length} characters`);
     
+    // Wait briefly for JavaScript-injected cookie banners to appear
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Check for dynamically injected cookie banner in live DOM
+    const dynamicCookieBanner = await page.evaluate(() => {
+      const bannerSelectors = [
+        // Common cookie banner classes
+        '[class*="cookie-banner"]', '[class*="cookie-consent"]', '[class*="cookie-notice"]',
+        '[class*="gdpr-banner"]', '[class*="consent-banner"]', '[class*="privacy-banner"]',
+        '[class*="cookieconsent"]', '[class*="cc-banner"]', '[class*="cookie-popup"]',
+        '[class*="cookie-modal"]', '[class*="cookie-dialog"]', '[class*="cookie-alert"]',
+        '[class*="cookies-banner"]', '[class*="cookies-notice"]', '[class*="consent-popup"]',
+        // Common cookie banner IDs
+        '#cookie-banner', '#cookie-consent', '#gdpr-banner', '#consent-banner',
+        '#cookieconsent', '#CybotCookiebotDialog', '#onetrust-consent-sdk',
+        '#onetrust-banner-sdk', '#ot-sdk-container', '#cky-consent-container',
+        '#iubenda-cs-banner', '#cmplz-cookiebanner', '#cookie-law-info-bar',
+        '#didomi-consent-popup', '#usercentrics-root', '#sp-cc',
+        // Arabic-specific
+        '[class*="ملفات-الارتباط"]', '[class*="الكوكيز"]',
+      ];
+      
+      for (const selector of bannerSelectors) {
+        try {
+          const el = document.querySelector(selector) as HTMLElement | null;
+          if (el && (el.offsetParent !== null || el.style.display !== 'none')) { // Check if visible
+            return {
+              found: true,
+              selector,
+              text: el.innerText?.substring(0, 200) || ''
+            };
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      // Check for cookie consent text in any visible element
+      const cookieKeywords = [
+        'نستخدم ملفات تعريف الارتباط', 'نستخدم الكوكيز', 'ملفات الارتباط',
+        'سياسة ملفات تعريف الارتباط', 'قبول الكوكيز', 'إعدادات الكوكيز',
+        'we use cookies', 'this website uses cookies', 'cookie policy',
+        'accept cookies', 'cookie preferences', 'manage cookies'
+      ];
+      
+      const allText = document.body?.innerText?.toLowerCase() || '';
+      for (const keyword of cookieKeywords) {
+        if (allText.includes(keyword.toLowerCase())) {
+          // Try to find the element containing this text
+          const elements = Array.from(document.querySelectorAll('div, section, aside, dialog, [role="dialog"], [role="alertdialog"]'));
+          for (let i = 0; i < elements.length; i++) {
+            const el = elements[i] as HTMLElement;
+            const elText = el.innerText?.toLowerCase() || '';
+            if (elText.includes(keyword.toLowerCase()) && 
+                (elText.includes('قبول') || elText.includes('accept') || elText.includes('موافق'))) {
+              return {
+                found: true,
+                selector: 'text_match',
+                text: keyword
+              };
+            }
+          }
+        }
+      }
+      
+      return { found: false, selector: null, text: '' };
+    });
+    
+    if (dynamicCookieBanner.found) {
+      console.log(`[Scanner] Dynamic cookie banner detected via: ${dynamicCookieBanner.selector}`);
+    }
+    
     const loadTime = Date.now() - startTime;
     console.log(`[Scanner] Scan completed in ${loadTime}ms`);
     
@@ -221,6 +300,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       finalUrl,
       responseHeaders,
       loadTime,
+      dynamicCookieBanner,
     };
     
   } catch (error) {
