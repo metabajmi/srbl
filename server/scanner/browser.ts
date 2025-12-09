@@ -134,9 +134,9 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     try {
       response = await page.goto(url, PAGE_OPTIONS);
     } catch (navError) {
-      console.log(`[Scanner] Initial navigation failed, trying with longer wait...`);
+      console.log(`[Scanner] Initial navigation failed, trying with shorter wait...`);
       try {
-        response = await page.goto(url, { timeout: 90000, waitUntil: 'load' });
+        response = await page.goto(url, { timeout: 30000, waitUntil: 'domcontentloaded' });
       } catch (retryError) {
         console.log(`[Scanner] Retry also failed, attempting to get partial content...`);
       }
@@ -158,6 +158,21 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     
     const finalUrl = page.url();
     console.log(`[Scanner] Final URL after redirects: ${finalUrl}`);
+    
+    // Detect failed page load (about:blank, chrome-error, etc.)
+    if (finalUrl === 'about:blank' || finalUrl.startsWith('chrome-error://')) {
+      console.log(`[Scanner] Page load failed - returning empty result`);
+      return {
+        html: '',
+        cookies: [],
+        networkRequests,
+        consoleMessages,
+        errors: ['Page failed to load - connection blocked or timed out'],
+        finalUrl: url,
+        responseHeaders,
+        loadTime: Date.now() - startTime,
+      };
+    }
     
     const rawCookies = await page.cookies();
     const cookies: BrowserCookie[] = rawCookies.map(c => ({
