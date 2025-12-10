@@ -65,8 +65,8 @@ const BROWSER_OPTIONS = {
 };
 
 const PAGE_OPTIONS = {
-  timeout: 20000,
-  waitUntil: 'domcontentloaded' as const,
+  timeout: 30000,
+  waitUntil: 'networkidle2' as const,
 };
 
 export async function getBrowser(): Promise<Browser> {
@@ -203,6 +203,9 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       console.log(`[Scanner] Body selector wait timed out, continuing anyway...`);
     }
     
+    // Wait additional time for JavaScript-rendered content (SPA sites)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     // Check for Cloudflare challenge and wait for it to resolve
     const isCloudflareChallenge = await page.evaluate(() => {
       const title = document.title?.toLowerCase() || '';
@@ -231,7 +234,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
         if (turnstileFrame) {
           console.log(`[Scanner] Found Turnstile frame, attempting to interact...`);
           try {
-            await turnstileFrame.click('input[type="checkbox"]', { timeout: 2000 });
+            await turnstileFrame.click('input[type="checkbox"]');
           } catch (e) {
             // Checkbox might not be present or visible
           }
@@ -313,8 +316,83 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     }));
     console.log(`[Scanner] Collected ${cookies.length} cookies`);
     
-    const html = await page.content();
+    let html = await page.content();
     console.log(`[Scanner] HTML content length: ${html.length} characters`);
+    
+    // For SPA sites (Nuxt.js/Next.js), try to extract content from state objects and main content area
+    const spaContent = await page.evaluate(() => {
+      let extractedContent = '';
+      
+      // Try Nuxt.js state
+      if ((window as any).__NUXT__) {
+        try {
+          const nuxtData = JSON.stringify((window as any).__NUXT__);
+          if (nuxtData.length > 1000) {
+            extractedContent = nuxtData;
+          }
+        } catch (e) {}
+      }
+      
+      // Try Next.js state
+      const nextDataEl = document.getElementById('__NEXT_DATA__');
+      if (nextDataEl && nextDataEl.textContent) {
+        try {
+          const nextData = nextDataEl.textContent;
+          if (nextData.length > 1000) {
+            extractedContent = nextData;
+          }
+        } catch (e) {}
+      }
+      
+      // Try to find main content area (not nav/header/footer) for policy content
+      const mainContentSelectors = [
+        'main', 'article', '.content', '.main-content', '#content', '#main',
+        '[role="main"]', '.page-content', '.article-content', '.post-content',
+        '.policy-content', '.privacy-content', '.terms-content',
+        // Arabic selectors
+        '.محتوى', '#المحتوى'
+      ];
+      
+      let mainContent = '';
+      for (const selector of mainContentSelectors) {
+        try {
+          const el = document.querySelector(selector) as HTMLElement;
+          if (el && el.innerText && el.innerText.length > 500) {
+            mainContent = el.innerText;
+            break;
+          }
+        } catch (e) {}
+      }
+      
+      // Fallback: get body text but try to exclude navigation
+      if (!mainContent || mainContent.length < 500) {
+        const body = document.body?.cloneNode(true) as HTMLElement;
+        if (body) {
+          // Remove nav, header, footer elements from clone
+          body.querySelectorAll('nav, header, footer, .nav, .header, .footer, .menu, .navigation, .sidebar').forEach(el => el.remove());
+          mainContent = body.innerText || '';
+        }
+      }
+      
+      return { spaState: extractedContent, mainContent };
+    });
+    
+    // If we found main content, inject it for the parser
+    if (spaContent.mainContent.length > 500) {
+      console.log(`[Scanner] SPA main content detected: ${spaContent.mainContent.length} chars`);
+      // Escape HTML entities to prevent XSS
+      const safeContent = spaContent.mainContent
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+      html = html.replace('</body>', `<div id="__SPA_CONTENT__" style="display:none">${safeContent}</div></body>`);
+    }
+    
+    if (spaContent.spaState.length > 1000) {
+      console.log(`[Scanner] SPA state object found: ${spaContent.spaState.length} chars`);
+      html = html.replace('</body>', `<script id="__SPA_STATE__" type="application/json">${spaContent.spaState}</script></body>`);
+    }
     
     // Wait briefly for JavaScript-injected cookie banners to appear
     await new Promise(resolve => setTimeout(resolve, 1500));

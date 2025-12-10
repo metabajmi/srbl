@@ -225,19 +225,149 @@ function extractEvidence(text: string, mapping: string): string {
   return '';
 }
 
+// Helper function to analyze content and detect PDPL elements
+function analyzeContent(text: string): ParsedPolicy['detectedElements'] {
+  const allText = text.toLowerCase() + ' ' + normalizeArabic(text);
+  
+  const detectedElements = {
+    hasContactInfo: false,
+    hasLawfulBasis: false,
+    hasRetentionPeriod: false,
+    hasDataSubjectRights: false,
+    hasThirdPartySharing: false,
+    hasInternationalTransfer: false,
+    hasSecurityMeasures: false,
+    hasCookieInfo: false,
+    hasChildrenData: false,
+    hasSensitiveData: false,
+  };
+  
+  const checkMapping = (mapping: string, field: keyof typeof detectedElements) => {
+    const patterns = PDPL_KEYWORD_MAPPINGS[mapping];
+    if (!patterns) return;
+    
+    for (const keyword of patterns.en) {
+      if (allText.includes(keyword.toLowerCase())) {
+        detectedElements[field] = true;
+        return;
+      }
+    }
+    for (const keyword of patterns.ar) {
+      if (allText.includes(normalizeArabic(keyword))) {
+        detectedElements[field] = true;
+        return;
+      }
+    }
+  };
+  
+  checkMapping('contact_details', 'hasContactInfo');
+  checkMapping('lawful_basis', 'hasLawfulBasis');
+  checkMapping('data_retention', 'hasRetentionPeriod');
+  checkMapping('data_subject_rights', 'hasDataSubjectRights');
+  checkMapping('third_party_sharing', 'hasThirdPartySharing');
+  checkMapping('data_transfer', 'hasInternationalTransfer');
+  checkMapping('security_measures', 'hasSecurityMeasures');
+  checkMapping('cookies', 'hasCookieInfo');
+  checkMapping('children_data', 'hasChildrenData');
+  checkMapping('sensitive_data', 'hasSensitiveData');
+  
+  // Check for email which indicates contact info
+  if (text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)) {
+    detectedElements.hasContactInfo = true;
+  }
+  
+  return detectedElements;
+}
+
+// Helper function to extract all evidence from text
+function extractAllEvidence(text: string): Record<string, string> {
+  const evidence: Record<string, string> = {};
+  
+  const mappings = [
+    'contact_details', 'lawful_basis', 'data_retention', 'data_subject_rights',
+    'third_party_sharing', 'data_transfer', 'security_measures', 'cookies',
+    'children_data', 'sensitive_data'
+  ];
+  
+  for (const mapping of mappings) {
+    const extracted = extractEvidence(text, mapping);
+    if (extracted) {
+      evidence[mapping] = extracted;
+    }
+  }
+  
+  return evidence;
+}
+
 export function parsePolicy(html: string, url: string, type: 'privacy' | 'terms' | 'cookies' | 'refund' | 'other'): ParsedPolicy {
   console.log(`[PolicyParser] Parsing ${type} policy from ${url}`);
   
   const $ = cheerio.load(html);
+  
+  // Log initial body text before cleanup for debugging
+  const rawBodyText = $('body').text().replace(/\s+/g, ' ').trim();
+  console.log(`[PolicyParser] Raw body text length before cleanup: ${rawBodyText.length} chars`);
+  
   $('script, style, noscript, iframe').remove();
+  
+  // Check if SPA content was injected by the browser scanner
+  const spaContentEl = $('#__SPA_CONTENT__');
+  if (spaContentEl.length > 0) {
+    const spaText = spaContentEl.text().trim();
+    // Use SPA content if it's substantial (500+ chars) - this is content from main area
+    if (spaText.length > 500) {
+      console.log(`[PolicyParser] Using SPA-injected content: ${spaText.length} chars`);
+      // Use the SPA content directly, it's already rendered text
+      const wordCount = spaText.split(/\s+/).length;
+      console.log(`[PolicyParser] Parsed ${wordCount} words from SPA content, language: ${detectLanguage(spaText)}`);
+      
+      const sections = extractSections(html);
+      
+      return {
+        url,
+        type,
+        title: $('h1').first().text().trim() || $('title').text().trim() || 'Untitled Policy',
+        fullText: spaText,
+        wordCount,
+        sections,
+        language: detectLanguage(spaText),
+        detectedElements: analyzeContent(spaText),
+        evidence: extractAllEvidence(spaText),
+      };
+    }
+  }
+  
+  // Also remove navigation, header, footer to get only content
+  $('nav, header, footer, .header, .footer, .nav, .menu, .navigation').remove();
   
   const title = $('h1').first().text().trim() || 
                 $('title').text().trim() || 
                 $('meta[property="og:title"]').attr('content') || 
                 'Untitled Policy';
   
-  const fullText = $('body').text().replace(/\s+/g, ' ').trim();
+  // Try to find main content area first
+  const mainSelectors = [
+    'main', 'article', '.content', '.policy-content', '.privacy-content',
+    '#content', '[role="main"]', '.page-content', '.main-content',
+    '.container main', '.prose', '.text-content', '.policy', '.privacy',
+    '.terms-content', '.terms', 'section.content', 'div.content'
+  ];
+  
+  let contentContainer = $('body');
+  for (const selector of mainSelectors) {
+    const found = $(selector);
+    if (found.length > 0 && found.text().trim().length > 500) {
+      contentContainer = found;
+      console.log(`[PolicyParser] Found content container: ${selector} (${found.text().trim().length} chars)`);
+      break;
+    }
+  }
+  
+  const fullText = contentContainer.text().replace(/\s+/g, ' ').trim();
   const wordCount = fullText.split(/\s+/).length;
+  
+  console.log(`[PolicyParser] Extracted text: ${fullText.length} chars, ${wordCount} words`);
+  
   const language = detectLanguage(fullText);
   
   const sections = extractSections(html);
