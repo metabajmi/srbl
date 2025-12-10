@@ -344,33 +344,34 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
         } catch (e) {}
       }
       
-      // Try to find main content area (not nav/header/footer) for policy content
+      // Try to find main content area for policy content
+      // Start with selectors most likely to contain policy text
       const mainContentSelectors = [
         'main', 'article', '.content', '.main-content', '#content', '#main',
         '[role="main"]', '.page-content', '.article-content', '.post-content',
-        '.policy-content', '.privacy-content', '.terms-content',
-        // Arabic selectors
-        '.محتوى', '#المحتوى'
+        '.policy-content', '.privacy-content', '.terms-content'
       ];
       
       let mainContent = '';
-      for (const selector of mainContentSelectors) {
+      for (let s = 0; s < mainContentSelectors.length; s++) {
         try {
-          const el = document.querySelector(selector) as HTMLElement;
-          if (el && el.innerText && el.innerText.length > 500) {
-            mainContent = el.innerText;
+          const el = document.querySelector(mainContentSelectors[s]);
+          if (el && (el as HTMLElement).innerText && (el as HTMLElement).innerText.length > 500) {
+            mainContent = (el as HTMLElement).innerText;
             break;
           }
         } catch (e) {}
       }
       
-      // Fallback: get body text but try to exclude navigation
+      // Fallback: get body text but exclude navigation
       if (!mainContent || mainContent.length < 500) {
-        const body = document.body?.cloneNode(true) as HTMLElement;
+        const body = document.body ? document.body.cloneNode(true) : null;
         if (body) {
-          // Remove nav, header, footer elements from clone
-          body.querySelectorAll('nav, header, footer, .nav, .header, .footer, .menu, .navigation, .sidebar').forEach(el => el.remove());
-          mainContent = body.innerText || '';
+          const toRemove = (body as HTMLElement).querySelectorAll('nav, header, footer, .nav, .header, .footer, .menu, .navigation, .sidebar');
+          for (let j = 0; j < toRemove.length; j++) {
+            toRemove[j].remove();
+          }
+          mainContent = (body as HTMLElement).innerText || '';
         }
       }
       
