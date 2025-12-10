@@ -33,6 +33,7 @@ The Smart Customer Assistant utilizes a Retrieval Augmented Generation (RAG) arc
 **Website Scanner (Deterministic Rule-Based):**
 - **100% Deterministic Analysis:** Eliminates AI hallucinations by using rule-based evaluation instead of AI for compliance scanning.
 - **Puppeteer-Powered Extraction:** Uses headless Chromium browser for runtime JavaScript execution, cookie collection, and network request monitoring.
+- **SPA-Aware Content Extraction:** Handles JavaScript-heavy SPAs (Nuxt.js, Next.js) by extracting content from rendered DOM after JavaScript hydration. Uses `networkidle2` wait strategy and extracts main content areas, filtering out navigation and product data.
 - **Comprehensive Data Extraction:**
   - Cookies: First-party, third-party, security flags (Secure, HttpOnly, SameSite), categorization (analytics, marketing, necessary)
   - Scripts: Inline and external, async/defer attributes, position (head/body)
