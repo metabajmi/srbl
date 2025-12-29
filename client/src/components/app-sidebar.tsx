@@ -70,7 +70,7 @@ export function AppSidebar() {
   const [location] = useLocation();
 
   return (
-    <Sidebar>
+    <Sidebar side="right">
       <SidebarHeader className="px-4 py-3 border-b">
         <Link href="/" className="flex items-center gap-3 no-underline hover-elevate rounded-md px-2 py-1.5" data-testid="link-home">
           <Shield className="w-6 h-6 text-primary" />

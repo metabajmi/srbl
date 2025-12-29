@@ -118,12 +118,14 @@ function AppContent() {
   return (
     <TooltipProvider>
       <SidebarProvider style={style as React.CSSProperties}>
-        <div className="flex h-screen w-full">
-          <AppSidebar />
+        <div className="flex h-screen w-full" dir="rtl">
+          <SidebarTrigger 
+            data-testid="button-sidebar-toggle" 
+            className="fixed top-3 z-50"
+            style={{ right: '12px' }}
+          />
           <div className="flex flex-col flex-1">
-            <header className="flex items-center justify-between px-4 py-2 border-b gap-4">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-              
+            <header className="flex items-center justify-end px-4 py-2 border-b gap-4 pr-14">
               <div className="flex items-center gap-2">
                 {!isLoggedIn() ? (
                   <>
@@ -156,9 +158,12 @@ function AppContent() {
               </div>
             </header>
             <main className="flex-1 overflow-auto">
-              <Router />
+              <div className="mx-auto max-w-7xl">
+                <Router />
+              </div>
             </main>
           </div>
+          <AppSidebar />
         </div>
         
         {/* Cookie Banner */}
