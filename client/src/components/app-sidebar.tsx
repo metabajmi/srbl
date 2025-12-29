@@ -81,10 +81,11 @@ export function AppSidebar() {
             <h1 className="text-lg font-bold text-foreground">سِرْبَال</h1>
           </Link>
           <Button 
-            variant="ghost" 
+            variant="default" 
             size="icon" 
             onClick={toggleSidebar}
             data-testid="button-close-sidebar"
+            className="bg-primary hover:bg-primary/90"
           >
             <X className="w-5 h-5" />
           </Button>

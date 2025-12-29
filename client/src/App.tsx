@@ -119,17 +119,13 @@ function AppContent() {
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={false} style={style as React.CSSProperties}>
-        {createPortal(
-          <SidebarTrigger 
-            data-testid="button-sidebar-toggle" 
-            className="fixed top-3 z-[9999] bg-background border rounded-md shadow-sm"
-            style={{ right: '12px' }}
-          />,
-          document.body
-        )}
         <div className="flex h-screen w-full" dir="rtl">
           <div className="flex flex-col flex-1">
-            <header className="flex items-center justify-end px-4 py-2 border-b gap-4 pr-14">
+            <header className="flex items-center justify-between px-4 py-3 border-b gap-4">
+              <SidebarTrigger 
+                data-testid="button-sidebar-toggle" 
+                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-md p-2.5"
+              />
               <div className="flex items-center gap-2">
                 {!isLoggedIn() ? (
                   <>
