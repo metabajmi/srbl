@@ -117,7 +117,7 @@ function AppContent() {
 
   return (
     <TooltipProvider>
-      <SidebarProvider style={style as React.CSSProperties}>
+      <SidebarProvider defaultOpen={false} style={style as React.CSSProperties}>
         <div className="flex h-screen w-full" dir="rtl">
           <SidebarTrigger 
             data-testid="button-sidebar-toggle" 
