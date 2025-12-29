@@ -121,7 +121,7 @@ function AppContent() {
         <div className="flex h-screen w-full" dir="rtl">
           <SidebarTrigger 
             data-testid="button-sidebar-toggle" 
-            className="fixed top-3 z-50"
+            className="fixed top-3 z-[100]"
             style={{ right: '12px' }}
           />
           <div className="flex flex-col flex-1">
