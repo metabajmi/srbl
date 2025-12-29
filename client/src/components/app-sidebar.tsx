@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Shield, FileText, CheckSquare, ScrollText, Home, FileSearch, Cookie, Sparkles, FileEdit, Users, ShieldAlert } from "lucide-react";
+import { Shield, FileText, CheckSquare, ScrollText, Home, FileSearch, Cookie, Sparkles, FileEdit, Users, ShieldAlert, X } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -10,7 +10,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 
 const menuItems = [
   {
@@ -68,14 +70,25 @@ const complianceItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { toggleSidebar } = useSidebar();
 
   return (
     <Sidebar side="right">
       <SidebarHeader className="px-4 py-3 border-b">
-        <Link href="/" className="flex items-center gap-3 no-underline hover-elevate rounded-md px-2 py-1.5" data-testid="link-home">
-          <Shield className="w-6 h-6 text-primary" />
-          <h1 className="text-lg font-bold text-foreground">سِرْبَال</h1>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 no-underline hover-elevate rounded-md px-2 py-1.5" data-testid="link-home">
+            <Shield className="w-6 h-6 text-primary" />
+            <h1 className="text-lg font-bold text-foreground">سِرْبَال</h1>
+          </Link>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleSidebar}
+            data-testid="button-close-sidebar"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
