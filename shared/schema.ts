@@ -43,6 +43,9 @@ export const complianceScans = pgTable("compliance_scans", {
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  // User ownership - optional for anonymous scans
+  userId: varchar("user_id"), // null = anonymous scan
+  isClaimedByUser: boolean("is_claimed_by_user").default(false), // true when user claims the scan after login
 });
 
 export const insertComplianceScanSchema = createInsertSchema(complianceScans).pick({
@@ -268,6 +271,11 @@ export const policyDocuments = pgTable("policy_documents", {
   publishedAt: timestamp("published_at"), // When it was published
   archivedAt: timestamp("archived_at"), // When it was archived
   
+  // User ownership
+  userId: varchar("user_id"), // Owner of this policy
+  scanId: varchar("scan_id"), // Linked scan if any
+  requestId: varchar("request_id"), // Linked generation request
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -372,6 +380,85 @@ export const insertPolicyDocumentSchema = createInsertSchema(policyDocuments).om
 
 export type InsertPolicyDocument = z.infer<typeof insertPolicyDocumentSchema>;
 export type PolicyDocument = typeof policyDocuments.$inferSelect;
+
+// Policy Generation Requests - طلبات توليد السياسات
+export const policyGenerationRequests = pgTable("policy_generation_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // Owner of this request
+  scanId: varchar("scan_id"), // Linked scan if any
+  
+  // Intake data from the form
+  intakeData: jsonb("intake_data"), // Complete form data
+  
+  // Workflow status
+  workflowStatus: text("workflow_status").notNull().default("draft"), // draft, awaiting_payment, paid, generating, delivered, failed
+  
+  // Payment tracking
+  paymentStatus: text("payment_status").notNull().default("pending"), // pending, processing, paid, failed, refunded
+  
+  // Generated policy reference
+  policyDocumentId: varchar("policy_document_id"), // null until generation completes
+  
+  // Email delivery
+  emailSent: boolean("email_sent").default(false),
+  emailSentAt: timestamp("email_sent_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPolicyGenerationRequestSchema = createInsertSchema(policyGenerationRequests).omit({
+  id: true,
+  workflowStatus: true,
+  paymentStatus: true,
+  policyDocumentId: true,
+  emailSent: true,
+  emailSentAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPolicyGenerationRequest = z.infer<typeof insertPolicyGenerationRequestSchema>;
+export type PolicyGenerationRequest = typeof policyGenerationRequests.$inferSelect;
+
+// Payments - سجل المدفوعات
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestId: varchar("request_id").notNull(), // Link to policy generation request
+  userId: varchar("user_id").notNull(),
+  
+  // Payment provider details
+  provider: text("provider").notNull().default("paypal"), // paypal, stripe, etc.
+  providerPaymentId: text("provider_payment_id"), // PayPal order ID
+  providerPayerId: text("provider_payer_id"), // PayPal payer ID
+  
+  // Amount
+  amount: integer("amount").notNull(), // Amount in smallest currency unit (cents/halalas)
+  currency: text("currency").notNull().default("SAR"),
+  
+  // Status
+  status: text("status").notNull().default("pending"), // pending, processing, succeeded, failed, refunded
+  
+  // Additional data
+  receiptUrl: text("receipt_url"),
+  rawPayload: jsonb("raw_payload"), // Raw response from payment provider
+  errorMessage: text("error_message"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  status: true,
+  rawPayload: true,
+  errorMessage: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
 
 // Consent Records - سجلات الموافقة (CMP)
 export const consentRecords = pgTable("consent_records", {
