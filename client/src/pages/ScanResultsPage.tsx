@@ -4,6 +4,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, Cookie, ExternalLink, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
@@ -18,6 +19,9 @@ export default function ScanResultsPage() {
   const { toast } = useToast();
   const [autoRefresh, setAutoRefresh] = useState(true);
   const { setScanData } = useScanContext();
+  const [scanProgress, setScanProgress] = useState(0);
+  const scanStartTimeRef = useRef<number | null>(null);
+  const SCAN_DURATION_MS = 35000; // ~35 seconds estimated scan time
 
   const { data: scan, isLoading: scanLoading, refetch } = useQuery({
     queryKey: ["/api/scans", scanId],
@@ -57,6 +61,28 @@ export default function ScanResultsPage() {
       setScanData(extractedData);
     }
   }, [scan?.status, scan?.id, refetchIssues, setScanData]);
+
+  // Animate progress bar during scan
+  useEffect(() => {
+    const isScanning = scan?.status === "pending" || scan?.status === "scanning";
+    
+    if (isScanning) {
+      if (!scanStartTimeRef.current) {
+        scanStartTimeRef.current = Date.now();
+      }
+      
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - (scanStartTimeRef.current || Date.now());
+        const progress = Math.min((elapsed / SCAN_DURATION_MS) * 95, 95);
+        setScanProgress(progress);
+      }, 100);
+
+      return () => clearInterval(interval);
+    } else if (scan?.status === "completed") {
+      setScanProgress(100);
+      scanStartTimeRef.current = null;
+    }
+  }, [scan?.status]);
 
   const rescanMutation = useMutation({
     mutationFn: async () => {
@@ -155,7 +181,7 @@ export default function ScanResultsPage() {
 
       <div className="container py-6 max-w-4xl">
         
-        {/* Scanning Progress - without progress bar since scan completes before navigation */}
+        {/* Scanning Progress with animated progress bar */}
         {(scan.status === "pending" || scan.status === "scanning") && (
           <Card className="mb-6">
             <CardContent className="pt-6">
@@ -163,6 +189,12 @@ export default function ScanResultsPage() {
                 <Globe className="w-16 h-16 animate-spin text-primary" />
                 <p className="text-lg font-bold">جاري تحميل النتائج...</p>
                 <p className="text-sm text-muted-foreground text-center" dir="ltr">{scan.url}</p>
+                <Progress 
+                  value={scanProgress} 
+                  animated={true}
+                  className="w-full max-w-md h-2" 
+                  data-testid="progress-results-scan" 
+                />
               </div>
             </CardContent>
           </Card>
