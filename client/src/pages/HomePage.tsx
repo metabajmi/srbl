@@ -210,7 +210,7 @@ export default function HomePage() {
                         <Loader2 className="h-6 w-6 text-primary animate-spin" />
                         <span className="text-lg font-medium text-primary">جاري فحص الموقع</span>
                       </div>
-                      <Progress value={scanProgress} className="h-3 mb-3" data-testid="progress-scan" />
+                      <Progress value={scanProgress} animated={true} className="h-3 mb-3" data-testid="progress-scan" />
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground">{scanSteps[scanStep]}</span>
                         <span className="font-medium text-primary">{Math.round(scanProgress)}%</span>
