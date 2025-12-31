@@ -3,7 +3,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -201,11 +200,6 @@ export default function HomePage() {
                     )}
                   </Button>
                 </div>
-                {scanMutation.isPending && (
-                  <div className="max-w-xl mx-auto mt-4">
-                    <Progress value={100} animated={true} className="h-2" data-testid="progress-scan" />
-                  </div>
-                )}
                 <p className="text-xs text-muted-foreground text-center mt-4">
                   فحص فوري • تقرير شامل • توصيات عملية
                 </p>
