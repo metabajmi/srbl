@@ -457,7 +457,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async publishPolicy(id: string): Promise<PolicyDocument | undefined> {
-    // First, archive the current published policy if exists
+    // Get the policy to publish
+    const policyToPublish = await this.getPolicyDocument(id);
+    if (!policyToPublish) return undefined;
+
+    // Archive current published policy for the SAME company only
     await db
       .update(policyDocuments)
       .set({
@@ -467,14 +471,16 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date(),
       })
       .where(and(
+        eq(policyDocuments.companyName, policyToPublish.companyName),
         eq(policyDocuments.publishStatus, "published"),
         eq(policyDocuments.isCurrent, true)
       ));
 
-    // Get current max version for incrementing
+    // Get current max version for THIS company only
     const currentVersionResult = await db
       .select({ maxVersion: drizzleSql<number>`COALESCE(MAX(${policyDocuments.version}), 0)` })
-      .from(policyDocuments);
+      .from(policyDocuments)
+      .where(eq(policyDocuments.companyName, policyToPublish.companyName));
     const newVersion = (currentVersionResult[0]?.maxVersion || 0) + 1;
 
     // Publish the new policy
