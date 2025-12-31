@@ -1,7 +1,7 @@
 # Saudi Personal Data Protection Compliance Tool
 
 ## Overview
-This project is a web application designed to help organizations comply with Saudi Arabia's Personal Data Protection Law (PDPL). It offers AI-powered tools for website scanning, generating privacy policies and terms & conditions, managing consent, and handling internal compliance. The application features an Arabic-first, RTL-supported design, utilizing OpenAI's GPT models for intelligent document generation and compliance analysis. The project aims to provide a robust, AI-driven solution for PDPL adherence for entities interacting with Saudi Arabian data subjects.
+This project is a web application designed to help organizations comply with Saudi Arabia's Personal Data Protection Law (PDPL). It offers AI-powered tools for website scanning, generating privacy policies and terms & conditions, and handling internal compliance. The application features an Arabic-first, RTL-supported design, utilizing OpenAI's GPT models for intelligent document generation and compliance analysis. The project aims to provide a robust, AI-driven solution for PDPL adherence for entities interacting with Saudi Arabian data subjects.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,10 +9,10 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### UI/UX Decisions
-The application features an Arabic-first design with full RTL support, combining Fluent Design and Material Design aesthetics. The Cairo font is used for typography. The homepage functions as a unified dashboard displaying all core services directly. UI components are designed for clarity, including professional cookie banners, consent management dialogs, and a preferences center. Downloadable documents are securely generated as professionally formatted, print-ready HTML files with Cairo font and responsive RTL layouts, ensuring XSS protection.
+The application features an Arabic-first design with full RTL support, combining Fluent Design and Material Design aesthetics. The Cairo font is used for typography. The homepage functions as a unified dashboard displaying all core services directly. UI components are designed for clarity with a green color scheme. Downloadable documents are securely generated as professionally formatted, print-ready HTML files with Cairo font and responsive RTL layouts, ensuring XSS protection.
 
 ### Frontend
-The frontend is built with React and TypeScript using Vite, incorporating shadcn/ui components (Radix UI primitives) and Tailwind CSS. State management uses TanStack Query, client-side routing uses wouter, and form handling uses react-hook-form with Zod validation. It includes a professional Cookie Banner and a Consent Management Platform (CMP) Dashboard.
+The frontend is built with React and TypeScript using Vite, incorporating shadcn/ui components (Radix UI primitives) and Tailwind CSS. State management uses TanStack Query, client-side routing uses wouter, and form handling uses react-hook-form with Zod validation.
 
 ### Backend
 The backend uses Express.js on Node.js, implementing a RESTful API. It integrates with OpenAI's GPT-4o for AI capabilities, such as PDPL violation analysis, privacy policy generation, terms & conditions generation, and internal compliance analysis. Secure content fetching is ensured through URL validation, protocol restrictions, and IP blocking. The backend supports full CRUD operations for internal compliance modules like ROPA, DSAR Management, and DPIA, with Zod validation and security enhancements.
@@ -26,7 +26,7 @@ The Smart Customer Assistant utilizes a Retrieval Augmented Generation (RAG) arc
 ### Technical Implementations & Feature Specifications
 
 **Unified Compliance Workspaces:**
-- **Unified Compliance Workspace:** A single page (`/workspace`) integrates Privacy Policy Generator, Terms Generator, Consent Management, and Preferences Center into tab-based navigation with RTL support.
+- **Unified Compliance Workspace:** A single page (`/workspace`) integrates Privacy Policy Generator and Terms Generator into tab-based navigation with RTL support.
 - **Unified Internal Compliance Workspace:** A single page (`/internal-compliance`) integrates ROPA, DSAR, and DPIA tools into tab-based navigation with RTL support.
 - **Internal Compliance Module:** Provides full CRUD operations and dedicated pages for ROPA, DSAR, and DPIA, with database schemas and APIs. DSAR includes due date calculation (30 days per PDPL).
 
@@ -49,7 +49,7 @@ The Smart Customer Assistant utilizes a Retrieval Augmented Generation (RAG) arc
   - Security requirements (HTTPS, HSTS, cookie security)
   - Contact information availability
 - **Structured Output:** Returns consistent JSON with exact evidence, rule evaluations, and scoring breakdown.
-- **Scoring System:** Starts from 100, deducts based on severity (critical: 15pts, warning: 8pts, suggestion: 3pts). Levels: High ≥80%, Medium 50-79%, Low <50%.
+- **Scoring System:** Compliance score is calculated from Privacy Policy (50%) + Terms & Conditions (50%). If only one document exists, it gets 100% weight. Levels: High ≥85%, Medium ≥50%, Low <50%.
 - **Modular Architecture:**
   - `server/scanner/browser.ts`: Puppeteer lifecycle management
   - `server/scanner/extractors.ts`: Data extraction functions
