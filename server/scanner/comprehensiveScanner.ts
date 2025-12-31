@@ -1,7 +1,6 @@
 import { scanWithBrowser, BrowserScanResult, NetworkRequest } from './browser';
 import { discoverLegalPages, DiscoveredPage, fetchAndDiscoverSitemap, discoverLinksFromDOM, discoverFallbackPolicyUrls } from './pagesDiscovery';
 import { parsePolicy, ParsedPolicy, analyzePolicyCompleteness } from './policyParser';
-import { analyzeCookieBanner, CookieBannerAnalysis } from './cookieBannerAnalyzer';
 import { evaluatePDPLCompliance, createEvaluationContext, PDPLCheck, PDPLEvaluationResult } from './pdplEvaluator';
 import { 
   analyzePolicyGaps, 
@@ -22,7 +21,6 @@ import {
   extractSecurityHeaders,
   detectPrivacyPolicy,
   detectTerms,
-  detectCookieBanner,
   detectContactInfo,
 } from './extractors';
 
@@ -59,21 +57,6 @@ export interface ComprehensiveScanResult {
   
   legal_pages: LegalPageAnalysis[];
   discovered_pages: DiscoveredPage[];
-  
-  cookie_banner: {
-    present: boolean;
-    banner_type: string;
-    blocking: boolean;
-    granular_controls: boolean;
-    has_accept_button: boolean;
-    has_reject_button: boolean;
-    has_settings_button: boolean;
-    categories: string[];
-    pre_consent_trackers: string[];
-    pre_consent_cookies: string[];
-    compliance_issues: string[];
-    evidence: string;
-  };
   
   pdpl_checks: PDPLCheck[];
   
@@ -329,12 +312,6 @@ export async function runComprehensiveScan(
     console.log(`[Scanner] Completed: ${parsedPolicies.length}/${pagesToFetch.length} pages fetched`);
   }
   
-  const cookieAnalysis = analyzeCookieBanner(
-    mainScanResult.html,
-    [],
-    mainScanResult.cookies.map(c => c.name)
-  );
-  
   const scripts = extractScripts(mainScanResult.html);
   const cookies = extractCookies(mainScanResult.cookies, mainScanResult.finalUrl);
   const tracking = detectTrackers(mainScanResult.html, scripts, cookies, mainScanResult.networkRequests);
@@ -344,7 +321,7 @@ export async function runComprehensiveScan(
   
   const evaluationContext = createEvaluationContext(
     parsedPolicies,
-    cookieAnalysis,
+    null, // Cookie banner analysis removed - compliance based on Privacy Policy + Terms only
     discoveredPages.pages,
     {
       hasHttps: security.https,
@@ -409,28 +386,44 @@ export async function runComprehensiveScan(
   
   const scanDuration = Date.now() - startTime;
   
-  // CRITICAL: Calculate overall score with 60% privacy policy 12-elements + 40% technical PDPL rules
-  const pdplScore = pdplEvaluation.overall_score;
+  // CRITICAL: Calculate overall score ONLY from Privacy Policy + Terms & Conditions (50% each)
   const privacyPolicyScore = privacyPolicyAudit?.compliancePercentage || 0;
+  const termsConditionsScore = termsConditionsAudit?.compliancePercentage || 0;
   
-  // Calculate combined score: 40% PDPL technical + 60% Privacy Policy 12-elements
-  let combinedScore = Math.round((pdplScore * 0.4) + (privacyPolicyScore * 0.6));
+  // Calculate combined score: 50% Privacy Policy + 50% Terms & Conditions ONLY
+  let combinedScore: number;
+  if (privacyPolicyAudit && termsConditionsAudit) {
+    // Both policies exist - average them
+    combinedScore = Math.round((privacyPolicyScore * 0.5) + (termsConditionsScore * 0.5));
+  } else if (privacyPolicyAudit) {
+    // Only privacy policy exists - use it at 100% weight
+    combinedScore = privacyPolicyScore;
+  } else if (termsConditionsAudit) {
+    // Only terms exist - use it at 100% weight
+    combinedScore = termsConditionsScore;
+  } else {
+    // No policies found - score is 0
+    combinedScore = 0;
+  }
   combinedScore = Math.max(0, Math.min(100, combinedScore)); // Clamp 0-100
   
-  // Determine compliance level based on combined score AND privacy policy completeness
+  // Determine compliance level based on combined score
   const privacyPolicyMissingCount = privacyPolicyAudit?.elementsMissing || 12;
+  const termsMissingCount = termsConditionsAudit?.modulesMissing || 12;
+  const totalMissing = privacyPolicyMissingCount + termsMissingCount;
+  
   let finalComplianceLevel: 'high' | 'medium' | 'low';
-  if (privacyPolicyMissingCount >= 3 || combinedScore < 50) {
-    finalComplianceLevel = 'low';
-  } else if (privacyPolicyMissingCount >= 1 || combinedScore < 80) {
+  if (combinedScore >= 85) {
+    finalComplianceLevel = 'high';
+  } else if (combinedScore >= 50) {
     finalComplianceLevel = 'medium';
   } else {
-    finalComplianceLevel = 'high';
+    finalComplianceLevel = 'low';
   }
   
-  console.log(`\n[FinalScoring] PDPL Technical Score: ${pdplScore}% (40%)`);
-  console.log(`[FinalScoring] Privacy Policy 12-Elements Score: ${privacyPolicyScore}% (60%)`);
-  console.log(`[FinalScoring] Combined Score: (${pdplScore} × 0.4) + (${privacyPolicyScore} × 0.6) = ${combinedScore}%`);
+  console.log(`\n[FinalScoring] Privacy Policy Score: ${privacyPolicyScore}% (50%)`);
+  console.log(`[FinalScoring] Terms & Conditions Score: ${termsConditionsScore}% (50%)`);
+  console.log(`[FinalScoring] Combined Score: ${combinedScore}%`);
   console.log(`[FinalScoring] Final Compliance Level: ${finalComplianceLevel.toUpperCase()}`);
   
   // Add recommendations from compliance audit to top recommendations
@@ -447,21 +440,6 @@ export async function runComprehensiveScan(
     
     legal_pages: legalPageAnalyses,
     discovered_pages: discoveredPages.pages,
-    
-    cookie_banner: {
-      present: cookieAnalysis.present,
-      banner_type: cookieAnalysis.bannerType,
-      blocking: cookieAnalysis.blocking,
-      granular_controls: cookieAnalysis.granularControls,
-      has_accept_button: cookieAnalysis.hasAcceptButton,
-      has_reject_button: cookieAnalysis.hasRejectButton,
-      has_settings_button: cookieAnalysis.hasSettingsButton,
-      categories: cookieAnalysis.categories.map(c => c.name),
-      pre_consent_trackers: cookieAnalysis.preConsentTrackers,
-      pre_consent_cookies: cookieAnalysis.preConsentCookies,
-      compliance_issues: cookieAnalysis.complianceIssues,
-      evidence: cookieAnalysis.evidence,
-    },
     
     pdpl_checks: pdplEvaluation.checks,
     
@@ -554,20 +532,6 @@ function createErrorResult(url: string, errors: string[], startTime: number): Co
     scan_duration_ms: Date.now() - startTime,
     legal_pages: [],
     discovered_pages: [],
-    cookie_banner: {
-      present: false,
-      banner_type: 'unknown',
-      blocking: false,
-      granular_controls: false,
-      has_accept_button: false,
-      has_reject_button: false,
-      has_settings_button: false,
-      categories: [],
-      pre_consent_trackers: [],
-      pre_consent_cookies: [],
-      compliance_issues: ['Unable to analyze cookie banner due to scan failure'],
-      evidence: '',
-    },
     pdpl_checks: [],
     security: { https: false, hsts: false, csp: false },
     tracking: { technologies: [], third_party_services: [], cookies_count: 0 },

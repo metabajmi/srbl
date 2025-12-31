@@ -1,14 +1,11 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { BackButton } from "@/components/BackButton";
-import { FileText, Shield, Settings, Cookie, Sparkles, CheckCircle2 } from "lucide-react";
+import { FileText, Shield, Sparkles, CheckCircle2 } from "lucide-react";
 
 import PrivacyGeneratorTab from "@/components/workspace/PrivacyGeneratorTab";
 import TermsGeneratorTab from "@/components/workspace/TermsGeneratorTab";
-import ConsentManagementTab from "@/components/workspace/ConsentManagementTab";
-import PreferencesCenterTab from "@/components/workspace/PreferencesCenterTab";
 
 const tabs = [
   {
@@ -22,18 +19,6 @@ const tabs = [
     label: "الشروط والأحكام",
     icon: FileText,
     description: "إنشاء شروط وأحكام متوافقة مع الأنظمة السعودية",
-  },
-  {
-    id: "consent",
-    label: "إدارة الموافقة",
-    icon: Cookie,
-    description: "إدارة بانر الكوكيز والموافقات والسكربتات",
-  },
-  {
-    id: "preferences",
-    label: "إعدادات الخصوصية",
-    icon: Settings,
-    description: "إدارة تفضيلات الخصوصية والكوكيز للمستخدمين",
   },
 ];
 
@@ -61,7 +46,7 @@ export default function ComplianceWorkspacePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -109,14 +94,6 @@ export default function ComplianceWorkspacePage() {
 
           <TabsContent value="terms" className="mt-0">
             <TermsGeneratorTab />
-          </TabsContent>
-
-          <TabsContent value="consent" className="mt-0">
-            <ConsentManagementTab />
-          </TabsContent>
-
-          <TabsContent value="preferences" className="mt-0">
-            <PreferencesCenterTab />
           </TabsContent>
         </Tabs>
       </div>
