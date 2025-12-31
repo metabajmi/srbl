@@ -112,8 +112,8 @@ export default function LoginPage() {
               <div className="flex items-center justify-between">
                 <Button
                   type="button"
-                  variant="link"
-                  className="p-0 h-auto text-sm"
+                  variant="ghost"
+                  className="p-0 h-auto text-sm underline"
                   onClick={() => toast({ title: "قريباً", description: "ميزة استرجاع كلمة المرور قيد التطوير" })}
                   data-testid="link-forgot-password"
                 >
@@ -136,8 +136,8 @@ export default function LoginPage() {
           <div className="mt-4 text-center text-sm text-muted-foreground">
             ليس لديك حساب؟{" "}
             <Button
-              variant="link"
-              className="p-0 h-auto"
+              variant="ghost"
+              className="p-0 h-auto underline"
               onClick={() => navigate("/signup")}
               data-testid="link-signup"
             >

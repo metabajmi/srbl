@@ -38,6 +38,8 @@ declare module "express-session" {
     userId?: string;
     adminId?: string;
     adminRole?: "admin" | "legal" | "support";
+    // Track last anonymous scan for auto-claiming after registration
+    pendingClaimScanId?: string;
   }
 }
 
@@ -312,6 +314,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
       
+      // Save pending scan ID before session regeneration
+      const pendingClaimScanId = req.session.pendingClaimScanId;
+      
       // Create user
       const user = await storage.createUser({
         email,
@@ -322,10 +327,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create session
       req.session.userId = user.id.toString();
       
+      // Auto-claim any pending scan from before registration
+      let claimedScanId = null;
+      if (pendingClaimScanId) {
+        try {
+          await storage.claimScan(pendingClaimScanId, user.id.toString());
+          claimedScanId = pendingClaimScanId;
+          delete req.session.pendingClaimScanId;
+        } catch (err) {
+          console.error("Failed to auto-claim scan:", err);
+        }
+      }
+      
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       
-      res.status(201).json({ user: userWithoutPassword });
+      res.status(201).json({ 
+        user: userWithoutPassword,
+        claimedScanId, // Include claimed scan ID so frontend can redirect
+      });
     } catch (error) {
       console.error("Error registering user:", error);
       res.status(500).json({ error: "فشل في تسجيل المستخدم" });
@@ -347,6 +367,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "البريد الإلكتروني أو كلمة المرور غير صحيحة" });
       }
       
+      // Save pending scan ID before session regeneration
+      const pendingClaimScanId = req.session.pendingClaimScanId;
+      
       // Regenerate session to prevent session fixation
       await new Promise<void>((resolve, reject) => {
         req.session.regenerate((err) => {
@@ -358,9 +381,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create session
       req.session.userId = user.id.toString();
       
+      // Auto-claim any pending scan from before login
+      let claimedScanId = null;
+      if (pendingClaimScanId) {
+        try {
+          await storage.claimScan(pendingClaimScanId, user.id.toString());
+          claimedScanId = pendingClaimScanId;
+        } catch (err) {
+          console.error("Failed to auto-claim scan:", err);
+        }
+      }
+      
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword });
+      res.json({ 
+        user: userWithoutPassword,
+        claimedScanId, // Include claimed scan ID so frontend can redirect
+      });
     } catch (error) {
       console.error("Error logging in:", error);
       res.status(500).json({ error: "فشل في تسجيل الدخول" });
@@ -461,7 +498,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/scans", async (req, res) => {
     try {
       const validatedData = insertComplianceScanSchema.parse(req.body);
-      const scan = await storage.createScan(validatedData);
+      
+      // If user is logged in, associate scan with their account
+      const userId = req.session.userId || null;
+      
+      // Create scan with userId and isClaimedByUser passed separately
+      const scanData: any = {
+        ...validatedData,
+        userId: userId,
+        isClaimedByUser: !!userId,
+      };
+      const scan = await storage.createScan(scanData);
+      
+      // If not logged in, save scan ID in session for auto-claiming after registration
+      if (!userId) {
+        req.session.pendingClaimScanId = scan.id;
+      }
       
       // Process scan in background
       processScan(scan.id);
@@ -547,7 +599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Claim a scan for authenticated user
   app.post("/api/scans/:id/claim", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }
@@ -578,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's scans
   app.get("/api/user/scans", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }
@@ -588,6 +640,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user scans:", error);
       res.status(500).json({ error: "فشل في جلب فحوصات المستخدم" });
+    }
+  });
+  
+  // Get user's latest scan (for dashboard)
+  app.get("/api/user/scans/latest", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const scans = await storage.getScansByUserId(userId);
+      if (!scans || scans.length === 0) {
+        return res.status(404).json({ error: "لا توجد فحوصات", hasScans: false });
+      }
+      
+      // Return the most recent scan
+      const latestScan = scans[0];
+      res.json(latestScan);
+    } catch (error) {
+      console.error("Error fetching latest user scan:", error);
+      res.status(500).json({ error: "فشل في جلب الفحص الأخير" });
     }
   });
 
@@ -846,7 +920,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User route: Get user's generated policies through their policy requests
   app.get("/api/user/policies", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }
@@ -946,7 +1020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a policy generation request (requires authentication)
   app.post("/api/policy-requests", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }
@@ -969,7 +1043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's policy generation requests
   app.get("/api/policy-requests", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }
@@ -985,7 +1059,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a specific policy generation request
   app.get("/api/policy-requests/:id", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       const request = await storage.getPolicyGenerationRequest(req.params.id);
       
       if (!request) {
@@ -1007,7 +1081,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trigger policy generation after payment verification
   app.post("/api/policy-requests/:id/generate", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       const request = await storage.getPolicyGenerationRequest(req.params.id);
       
       if (!request) {
@@ -1042,14 +1116,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dataCategories: intakeData.dataCategories || [],
         collectionMethod: intakeData.collectionMethod,
         processingMethods: intakeData.processingMethods,
-        sharesWithThirdParties: intakeData.sharesWithThirdParties === "yes",
+        sharesWithThirdParties: intakeData.sharesWithThirdParties || "no",
         thirdPartyDetails: intakeData.thirdPartyDetails,
-        transfersDataAbroad: intakeData.transfersDataAbroad === "yes",
-        transferCountries: intakeData.transferCountries,
+        transfersDataAbroad: intakeData.transfersDataAbroad || "no",
+        transferDestinations: intakeData.transferCountries || intakeData.transferDestinations,
         retentionPeriod: intakeData.retentionPeriod,
-        usesCookies: intakeData.usesCookies === "yes",
-        processesSensitiveData: intakeData.processesSensitiveData === "yes",
-        sensitiveDataTypes: intakeData.sensitiveDataTypes,
+        usesCookies: intakeData.usesCookies || "no",
+        processesSensitiveData: intakeData.processesSensitiveData || "no",
         dpoName: intakeData.dpoName,
         dpoEmail: intakeData.dpoEmail,
         dpoPhone: intakeData.dpoPhone,
@@ -1077,7 +1150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update intake data for a policy generation request
   app.patch("/api/policy-requests/:id", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       const request = await storage.getPolicyGenerationRequest(req.params.id);
       
       if (!request) {
@@ -1110,7 +1183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a payment for a policy generation request
   app.post("/api/payments/create", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }
@@ -1164,7 +1237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Capture/Confirm PayPal payment
   app.post("/api/payments/:paymentId/capture", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       const payment = await storage.getPayment(req.params.paymentId);
       
       if (!payment) {
@@ -1203,7 +1276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's payments
   app.get("/api/payments", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }
@@ -1220,7 +1293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/payments/verify", requireAuth, async (req, res) => {
     try {
-      const userId = (req.user as any)?.id;
+      const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }

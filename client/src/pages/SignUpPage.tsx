@@ -45,14 +45,21 @@ export default function SignUpPage() {
         email: data.email,
         password: data.password,
       });
-      return result;
+      return result.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      // Store user in localStorage
+      if (data && data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+      
       toast({
         title: "تم التسجيل بنجاح",
-        description: "يمكنك الآن تسجيل الدخول",
+        description: data.claimedScanId ? "تم ربط حسابك بالفحص الأخير" : "مرحباً بك في سِرْبَال",
       });
-      navigate("/login");
+      
+      // Redirect to dashboard (which will show the claimed scan automatically)
+      navigate("/dashboard");
     },
     onError: (error: any) => {
       toast({
@@ -169,8 +176,8 @@ export default function SignUpPage() {
           <div className="mt-4 text-center text-sm text-muted-foreground">
             لديك حساب بالفعل؟{" "}
             <Button
-              variant="link"
-              className="p-0 h-auto"
+              variant="ghost"
+              className="p-0 h-auto underline"
               onClick={() => navigate("/login")}
               data-testid="link-login"
             >
