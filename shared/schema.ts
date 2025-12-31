@@ -260,6 +260,14 @@ export const policyDocuments = pgTable("policy_documents", {
   
   generatedContent: text("generated_content"),
   status: text("status").notNull().default("pending"), // pending, generating, completed, failed
+  
+  // Publishing workflow fields
+  publishStatus: text("publish_status").notNull().default("draft"), // draft, published, archived
+  isCurrent: boolean("is_current").notNull().default(false), // Is this the current active policy
+  version: integer("version").notNull().default(1), // Version number
+  publishedAt: timestamp("published_at"), // When it was published
+  archivedAt: timestamp("archived_at"), // When it was archived
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -268,6 +276,11 @@ export const insertPolicyDocumentSchema = createInsertSchema(policyDocuments).om
   id: true,
   generatedContent: true,
   status: true,
+  publishStatus: true,
+  isCurrent: true,
+  version: true,
+  publishedAt: true,
+  archivedAt: true,
   createdAt: true,
   updatedAt: true,
 }).extend({
