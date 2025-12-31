@@ -119,38 +119,44 @@ function AppContent() {
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={false} style={style as React.CSSProperties}>
-        <div className="flex h-screen w-full" dir="rtl">
-          <div className="flex flex-col flex-1">
-            <header className="flex items-center justify-between px-4 py-3 border-b gap-4">
+        <div className="flex min-h-screen w-full" dir="rtl">
+          <div className="flex flex-col flex-1 min-w-0">
+            <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 gap-4">
               <SidebarTrigger 
                 data-testid="button-sidebar-toggle" 
-                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-md p-2.5"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-md p-2.5 shrink-0"
               />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:gap-3">
                 {!isLoggedIn() ? (
                   <>
                     <Button
                       variant="ghost"
+                      size="sm"
                       onClick={() => navigate("/login")}
                       data-testid="button-header-login"
+                      className="text-sm"
                     >
-                      <LogIn className="w-4 h-4 ml-2" />
-                      تسجيل الدخول
+                      <LogIn className="w-4 h-4 ml-1.5" />
+                      <span className="hidden sm:inline">تسجيل الدخول</span>
                     </Button>
                     <Button
                       variant="default"
+                      size="sm"
                       onClick={() => navigate("/signup")}
                       data-testid="button-header-signup"
+                      className="text-sm"
                     >
-                      <UserPlus className="w-4 h-4 ml-2" />
-                      إنشاء حساب
+                      <UserPlus className="w-4 h-4 ml-1.5" />
+                      <span className="hidden sm:inline">إنشاء حساب</span>
                     </Button>
                   </>
                 ) : (
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => navigate("/dashboard")}
                     data-testid="button-header-dashboard"
+                    className="text-sm"
                   >
                     لوحة التحكم
                   </Button>
@@ -158,9 +164,7 @@ function AppContent() {
               </div>
             </header>
             <main className="flex-1 overflow-auto">
-              <div className="mx-auto max-w-7xl">
-                <Router />
-              </div>
+              <Router />
             </main>
           </div>
           <AppSidebar />

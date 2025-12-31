@@ -283,6 +283,61 @@ body {
   }
 }
 
+/* Container utility for consistent layouts */
+@layer components {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      max-width: 768px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      max-width: 1024px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container {
+      max-width: 1200px;
+    }
+  }
+
+  /* Page wrapper for consistent full-width sections */
+  .page-wrapper {
+    width: 100%;
+    min-height: 100%;
+  }
+
+  /* Section spacing */
+  .section {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
+  @media (min-width: 768px) {
+    .section {
+      padding-top: 4rem;
+      padding-bottom: 4rem;
+    }
+  }
+}
+
 /**
  * Using the elevate system.
  * Automatic contrast adjustment.
