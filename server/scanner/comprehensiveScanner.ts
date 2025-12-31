@@ -265,10 +265,10 @@ export async function runComprehensiveScan(
       .filter(p => p.type !== 'other' && p.confidence >= 0.7)
       .slice(0, fullConfig.max_pages_to_crawl);
     
-    console.log(`\n[Scanner] STEP 3: Fetching ${pagesToFetch.length} policy pages (batched, 3 concurrent)...\n`);
+    console.log(`\n[Scanner] STEP 3: Fetching ${pagesToFetch.length} policy pages (batched, 5 concurrent)...\n`);
     
-    // Fetch policy pages with controlled concurrency (3 at a time for speed + stability)
-    const BATCH_SIZE = 3;
+    // Fetch policy pages with controlled concurrency (5 at a time for speed)
+    const BATCH_SIZE = 5;
     
     for (let i = 0; i < pagesToFetch.length; i += BATCH_SIZE) {
       const batch = pagesToFetch.slice(i, i + BATCH_SIZE);

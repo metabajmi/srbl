@@ -198,13 +198,13 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     }
     
     try {
-      await page.waitForSelector('body', { timeout: 3000 });
+      await page.waitForSelector('body', { timeout: 2000 });
     } catch (e) {
       console.log(`[Scanner] Body selector wait timed out, continuing anyway...`);
     }
     
     // Wait for JavaScript-rendered content (SPA sites)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     // Check for Cloudflare challenge and wait for it to resolve
     const isCloudflareChallenge = await page.evaluate(() => {
@@ -268,7 +268,8 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       }
     }
     
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Brief settle time after page load
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     const finalUrl = page.url();
     console.log(`[Scanner] Final URL after redirects: ${finalUrl}`);
@@ -386,7 +387,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     }
     
     // Wait for JavaScript-injected cookie banners to appear
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Check for dynamically injected cookie banner in live DOM
     const dynamicCookieBanner = await page.evaluate(() => {
