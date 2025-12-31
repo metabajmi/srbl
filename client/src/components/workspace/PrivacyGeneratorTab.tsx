@@ -363,17 +363,17 @@ ${policy.generatedContent}
                     <FormItem>
                       <FormLabel>صفة الجهة *</FormLabel>
                       <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col space-y-2">
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col space-y-2">
                           <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="government" id="gov" />
+                            <RadioGroupItem value="government" id="gov" data-testid="radio-entity-government" />
                             <Label htmlFor="gov">جهة حكومية</Label>
                           </div>
                           <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="private" id="priv" />
+                            <RadioGroupItem value="private" id="priv" data-testid="radio-entity-private" />
                             <Label htmlFor="priv">شركة/مؤسسة خاصة</Label>
                           </div>
                           <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="individual" id="ind" />
+                            <RadioGroupItem value="individual" id="ind" data-testid="radio-entity-individual" />
                             <Label htmlFor="ind">فرد</Label>
                           </div>
                         </RadioGroup>
@@ -421,7 +421,7 @@ ${policy.generatedContent}
                         مثل البيانات الصحية أو البيومترية أو الجنائية
                       </FormDescription>
                       <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
                           <div className="flex items-center space-x-2 space-x-reverse">
                             <RadioGroupItem value="yes" id="sens-yes" />
                             <Label htmlFor="sens-yes">نعم</Label>
@@ -563,7 +563,7 @@ ${policy.generatedContent}
                     <FormItem>
                       <FormLabel>طريقة جمع البيانات</FormLabel>
                       <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-wrap gap-4">
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-wrap gap-4">
                           <div className="flex items-center space-x-2 space-x-reverse">
                             <RadioGroupItem value="direct" id="direct" />
                             <Label htmlFor="direct">مباشرة من صاحب البيانات</Label>
@@ -611,7 +611,7 @@ ${policy.generatedContent}
                     <FormItem>
                       <FormLabel>هل تشارك البيانات مع أطراف ثالثة؟</FormLabel>
                       <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
                           <div className="flex items-center space-x-2 space-x-reverse">
                             <RadioGroupItem value="yes" id="share-yes" />
                             <Label htmlFor="share-yes">نعم</Label>
@@ -634,7 +634,7 @@ ${policy.generatedContent}
                     <FormItem>
                       <FormLabel>هل تنقل البيانات خارج المملكة؟</FormLabel>
                       <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
                           <div className="flex items-center space-x-2 space-x-reverse">
                             <RadioGroupItem value="yes" id="abroad-yes" />
                             <Label htmlFor="abroad-yes">نعم</Label>
@@ -671,7 +671,7 @@ ${policy.generatedContent}
                     <FormItem>
                       <FormLabel>هل تستخدم الكوكيز؟</FormLabel>
                       <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
+                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
                           <div className="flex items-center space-x-2 space-x-reverse">
                             <RadioGroupItem value="yes" id="cookie-yes" />
                             <Label htmlFor="cookie-yes">نعم</Label>
