@@ -31,7 +31,6 @@ import { analyzeSite, convertToLegacyFormat } from "./services/complianceAnalyze
 import { runComprehensiveScan } from "./scanner/comprehensiveScanner";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
 declare module "express-session" {
   interface SessionData {
@@ -1110,18 +1109,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ========== PayPal Integration Routes ==========
+  // ========== Moyasar Payment Verification ==========
   
-  app.get("/paypal/setup", async (req, res) => {
-    await loadPaypalDefault(req, res);
+  app.post("/api/payments/verify", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const { paymentId, requestId } = req.body;
+      
+      if (!paymentId) {
+        return res.status(400).json({ error: "معرف الدفع مطلوب" });
+      }
+      
+      const secretKey = process.env.MOYASAR_SECRET_KEY;
+      if (!secretKey) {
+        console.error("MOYASAR_SECRET_KEY not configured");
+        return res.status(503).json({ error: "بوابة الدفع غير مُهيأة" });
+      }
+      
+      const verifyResponse = await fetch(`https://api.moyasar.com/v1/payments/${paymentId}`, {
+        headers: {
+          "Authorization": "Basic " + Buffer.from(`${secretKey}:`).toString("base64"),
+        },
+      });
+      
+      if (!verifyResponse.ok) {
+        console.error("Moyasar verification failed:", verifyResponse.status);
+        return res.status(400).json({ error: "فشل التحقق من الدفع" });
+      }
+      
+      const payment = await verifyResponse.json();
+      
+      if (payment.status !== "paid") {
+        return res.status(400).json({ error: "الدفع غير مكتمل", status: payment.status });
+      }
+      
+      if (requestId) {
+        const policyRequest = await storage.getPolicyGenerationRequest(requestId);
+        if (policyRequest && policyRequest.userId === userId) {
+          await storage.updatePolicyGenerationRequest(requestId, {
+            workflowStatus: "paid",
+            paymentStatus: "paid",
+          });
+          
+          const existingPayment = await storage.getPaymentByRequestId(requestId);
+          if (existingPayment) {
+            await storage.updatePayment(existingPayment.id, {
+              providerPaymentId: paymentId,
+              status: "succeeded",
+              rawPayload: payment,
+            });
+          } else {
+            await storage.createPayment({
+              requestId,
+              userId,
+              amount: payment.amount,
+              currency: payment.currency,
+              provider: "moyasar",
+              providerPaymentId: paymentId,
+            });
+          }
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        status: payment.status,
+        amount: payment.amount,
+        currency: payment.currency,
+      });
+    } catch (error) {
+      console.error("Error verifying payment:", error);
+      res.status(500).json({ error: "فشل في التحقق من الدفع" });
+    }
   });
-
-  app.post("/paypal/order", async (req, res) => {
-    await createPaypalOrder(req, res);
-  });
-
-  app.post("/paypal/order/:orderID/capture", async (req, res) => {
-    await capturePaypalOrder(req, res);
+  
+  app.get("/api/moyasar/config", (req, res) => {
+    const publishableKey = process.env.MOYASAR_PUBLISHABLE_KEY;
+    if (!publishableKey) {
+      return res.status(503).json({ error: "بوابة الدفع غير مُهيأة" });
+    }
+    res.json({ publishableKey });
   });
 
   // ========== Terms Generator Endpoints ==========
