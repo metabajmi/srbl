@@ -198,12 +198,12 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     }
     
     try {
-      await page.waitForSelector('body', { timeout: 5000 });
+      await page.waitForSelector('body', { timeout: 3000 });
     } catch (e) {
       console.log(`[Scanner] Body selector wait timed out, continuing anyway...`);
     }
     
-    // Wait additional time for JavaScript-rendered content (SPA sites)
+    // Wait for JavaScript-rendered content (SPA sites)
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Check for Cloudflare challenge and wait for it to resolve
@@ -224,24 +224,16 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       
       // Simulate human behavior to try to pass bot detection
       try {
-        // Move mouse randomly
         await page.mouse.move(Math.random() * 800 + 100, Math.random() * 400 + 100);
         await new Promise(resolve => setTimeout(resolve, 200));
         await page.mouse.move(Math.random() * 800 + 100, Math.random() * 400 + 100);
         
-        // Try to click the Cloudflare checkbox if present
         const turnstileFrame = page.frames().find(f => f.url().includes('challenges.cloudflare.com'));
         if (turnstileFrame) {
           console.log(`[Scanner] Found Turnstile frame, attempting to interact...`);
-          try {
-            await turnstileFrame.click('input[type="checkbox"]');
-          } catch (e) {
-            // Checkbox might not be present or visible
-          }
+          try { await turnstileFrame.click('input[type="checkbox"]'); } catch (e) {}
         }
-      } catch (e) {
-        // Ignore errors during human simulation
-      }
+      } catch (e) {}
       
       // Wait up to 20 seconds for Cloudflare to complete challenge
       for (let i = 0; i < 20; i++) {
@@ -249,9 +241,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
         
         // Occasional mouse movement to appear more human
         if (i % 3 === 0) {
-          try {
-            await page.mouse.move(Math.random() * 800 + 100, Math.random() * 400 + 100);
-          } catch (e) {}
+          try { await page.mouse.move(Math.random() * 800 + 100, Math.random() * 400 + 100); } catch (e) {}
         }
         
         try {
@@ -395,7 +385,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       html = html.replace('</body>', `<script id="__SPA_STATE__" type="application/json">${spaContent.spaState}</script></body>`);
     }
     
-    // Wait briefly for JavaScript-injected cookie banners to appear
+    // Wait for JavaScript-injected cookie banners to appear
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     // Check for dynamically injected cookie banner in live DOM
