@@ -81,6 +81,17 @@ A RAG-based chatbot with a production-ready backend (8 API endpoints for embeddi
 **Client Authentication System:**
 Includes database tables for users, client policies, and requests, with backend authentication endpoints (register, login, logout, `/me`) using bcrypt and Express-session with a PostgreSQL store. Frontend provides SignUp, Login, and Dashboard pages with RTL support, and secure session management.
 
+**Payment Integration (Moyasar):**
+- **Payment Gateway:** Moyasar integration supporting Mada (Saudi local cards), Visa, Mastercard, and Apple Pay
+- **Client-Side:** `client/src/components/MoyasarPayment.tsx` - React component using Moyasar Web SDK (v1.14.0)
+- **Server-Side:** Payment verification endpoint at `POST /api/payments/verify` validates payments using secret key
+- **Workflow:** 4-phase commercial flow: (1) Free anonymous scan, (2) Registration for details, (3) Moyasar payment, (4) Policy delivery
+- **Environment Variables:** 
+  - `MOYASAR_PUBLISHABLE_KEY` - Client-side key (prefixed as `VITE_MOYASAR_PUBLISHABLE_KEY` for frontend)
+  - `MOYASAR_SECRET_KEY` - Server-side verification key
+- **Amount Format:** Halalas (smallest unit) - 10 SAR = 1000 halalas
+- **Database Tables:** `payments` table tracks all transactions, `policy_generation_requests` tracks workflow status
+
 **Admin Portal:**
 Features a secure admin portal with database tables for admin users (with roles) and audit logs. The backend provides 13 secure admin API endpoints with session-based authentication, role-based access control (requireAuth, requireAdminAuth, requireAdminRole, requireAdminOrLegal), Zod validation, and audit logging. The frontend includes 7 pages (Login, Dashboard, Users, Requests, Policies, Audit Logs, Management) with features like role-based access, audit logging, and statistics.
 
