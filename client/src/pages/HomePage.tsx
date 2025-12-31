@@ -1,20 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertComplianceScanSchema } from "@shared/schema";
 import { useLocation, Link } from "wouter";
-import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers, Lock, Users } from "lucide-react";
+import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers, Lock, Users, Loader2 } from "lucide-react";
 import { z } from "zod";
+
+const scanSteps = [
+  "جاري الاتصال بالموقع...",
+  "تحليل صفحة الخصوصية...",
+  "فحص ملفات تعريف الارتباط...",
+  "تحليل الشروط والأحكام...",
+  "التحقق من معايير الأمان...",
+  "إنشاء التقرير..."
+];
 
 export default function HomePage() {
   const [url, setUrl] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanStep, setScanStep] = useState(0);
 
   const scanMutation = useMutation({
     mutationFn: async (data: { url: string }) => {
@@ -22,13 +34,15 @@ export default function HomePage() {
       return await response.json();
     },
     onSuccess: (data) => {
+      setScanProgress(100);
       toast({
-        title: "بدأ الفحص بنجاح",
-        description: "جاري تحليل الموقع الإلكتروني...",
+        title: "اكتمل الفحص بنجاح",
+        description: "جاري عرض النتائج...",
       });
-      setLocation(`/scan/${data.id}`);
+      setTimeout(() => setLocation(`/scan/${data.id}`), 500);
     },
     onError: (error: any) => {
+      setScanProgress(0);
       toast({
         title: "خطأ في بدء الفحص",
         description: error.message || "حدث خطأ أثناء محاولة فحص الموقع",
@@ -36,6 +50,27 @@ export default function HomePage() {
       });
     },
   });
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (scanMutation.isPending) {
+      setScanProgress(0);
+      setScanStep(0);
+      interval = setInterval(() => {
+        setScanProgress(prev => {
+          const increment = Math.random() * 8 + 2;
+          const newProgress = Math.min(prev + increment, 95);
+          const newStep = Math.min(Math.floor(newProgress / 16), scanSteps.length - 1);
+          setScanStep(newStep);
+          return newProgress;
+        });
+      }, 400);
+    } else {
+      setScanProgress(0);
+      setScanStep(0);
+    }
+    return () => clearInterval(interval);
+  }, [scanMutation.isPending]);
 
   const handleScan = () => {
     try {
@@ -168,41 +203,53 @@ export default function HomePage() {
                 </Badge>
               </CardHeader>
               <CardContent className="pt-0 px-4 sm:px-6 pb-6 sm:pb-8">
-                <div className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="https://example.com"
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      className="text-left h-11 sm:h-12 text-sm sm:text-base"
-                      dir="ltr"
-                      disabled={scanMutation.isPending}
-                      data-testid="input-scan-url"
-                    />
+                {scanMutation.isPending ? (
+                  <div className="max-w-xl mx-auto space-y-4">
+                    <div className="bg-primary/5 rounded-lg p-4 sm:p-6 border border-primary/20">
+                      <div className="flex items-center justify-center gap-3 mb-4">
+                        <Loader2 className="h-6 w-6 text-primary animate-spin" />
+                        <span className="text-lg font-medium text-primary">جاري فحص الموقع</span>
+                      </div>
+                      <Progress value={scanProgress} className="h-3 mb-3" data-testid="progress-scan" />
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">{scanSteps[scanStep]}</span>
+                        <span className="font-medium text-primary">{Math.round(scanProgress)}%</span>
+                      </div>
+                      <p className="text-xs text-center text-muted-foreground mt-4" dir="ltr">
+                        {url}
+                      </p>
+                    </div>
                   </div>
-                  <Button 
-                    onClick={handleScan}
-                    disabled={!url || scanMutation.isPending}
-                    size="lg"
-                    className="px-6 sm:px-8 h-11 sm:h-12 text-sm sm:text-base shrink-0"
-                    data-testid="button-start-scan"
-                  >
-                    {scanMutation.isPending ? (
-                      <>
-                        <Globe className="ml-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                        جاري الفحص...
-                      </>
-                    ) : (
-                      <>
+                ) : (
+                  <>
+                    <div className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
+                      <div className="flex-1">
+                        <Input
+                          placeholder="https://example.com"
+                          value={url}
+                          onChange={(e) => setUrl(e.target.value)}
+                          className="text-left h-11 sm:h-12 text-sm sm:text-base"
+                          dir="ltr"
+                          disabled={scanMutation.isPending}
+                          data-testid="input-scan-url"
+                        />
+                      </div>
+                      <Button 
+                        onClick={handleScan}
+                        disabled={!url || scanMutation.isPending}
+                        size="lg"
+                        className="px-6 sm:px-8 h-11 sm:h-12 text-sm sm:text-base shrink-0"
+                        data-testid="button-start-scan"
+                      >
                         <FileSearch className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                         ابدأ الفحص
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground text-center mt-4">
-                  فحص فوري • تقرير شامل • توصيات عملية
-                </p>
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center mt-4">
+                      فحص فوري • تقرير شامل • توصيات عملية
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
