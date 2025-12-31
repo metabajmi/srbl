@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CheckCircle2, Info, Globe, FileType, File } from "lucide-react";
+import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CheckCircle2, Info, Globe, FileType, File, Lock, CreditCard, UserPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { insertPolicyDocumentSchema, type PolicyDocument } from "@shared/schema";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -20,6 +20,24 @@ import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { useScanContext } from "@/contexts/ScanContext";
+import { useLocation } from "wouter";
+import MoyasarPayment from "@/components/MoyasarPayment";
+
+const isAuthenticated = (): boolean => {
+  try {
+    const userStr = localStorage.getItem("user");
+    if (userStr && userStr !== "undefined" && userStr !== "null") {
+      const user = JSON.parse(userStr);
+      return !!user.id;
+    }
+  } catch (e) {
+    return false;
+  }
+  return false;
+};
+
+const POLICY_PRICE_SAR = 99;
+const POLICY_PRICE_HALALAS = POLICY_PRICE_SAR * 100;
 
 const formSchema = z.object({
   companyName: z.string().min(2, "يجب إدخال اسم الجهة"),
@@ -53,9 +71,24 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function PrivacyGeneratorTab() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [currentSection, setCurrentSection] = useState(1);
   const { scanData, hasScanData } = useScanContext();
   const [lastPreFilledScanId, setLastPreFilledScanId] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated());
+  const [pendingFormData, setPendingFormData] = useState<FormValues | null>(null);
+  const [paymentRequestId, setPaymentRequestId] = useState<string | null>(null);
+  const [isPaymentComplete, setIsPaymentComplete] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => setIsLoggedIn(isAuthenticated());
+    window.addEventListener('storage', checkAuth);
+    const interval = setInterval(checkAuth, 1000);
+    return () => {
+      window.removeEventListener('storage', checkAuth);
+      clearInterval(interval);
+    };
+  }, []);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -147,29 +180,92 @@ export default function PrivacyGeneratorTab() {
     },
   });
 
+  const createPolicyRequestMutation = useMutation({
+    mutationFn: async (data: FormValues) => {
+      const response = await apiRequest("POST", "/api/policy-requests", {
+        scanId: scanData?.scanId || null,
+        companyName: data.companyName,
+        businessType: data.businessType,
+        entityType: data.entityType,
+        contactEmail: data.contactEmail,
+        dataCategories: data.dataCategories,
+      });
+      return await response.json();
+    },
+    onSuccess: (result) => {
+      setPaymentRequestId(result.id);
+      setCurrentSection(4);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ",
+        description: error.message || "حدث خطأ أثناء إنشاء الطلب",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePaymentComplete = async (payment: any) => {
+    try {
+      const response = await apiRequest("POST", "/api/payments/verify", {
+        paymentId: payment.id,
+        requestId: paymentRequestId,
+      });
+      
+      if (response.ok) {
+        setIsPaymentComplete(true);
+        toast({
+          title: "تم الدفع بنجاح",
+          description: "جاري توليد سياسة الخصوصية...",
+        });
+        
+        if (pendingFormData) {
+          const submitData: z.infer<typeof insertPolicyDocumentSchema> = {
+            companyName: pendingFormData.companyName,
+            businessType: pendingFormData.businessType,
+            entityType: pendingFormData.entityType,
+            contactEmail: pendingFormData.contactEmail,
+            contactPhone: pendingFormData.contactPhone || null,
+            contactAddress: pendingFormData.contactAddress || null,
+            processesSensitiveData: pendingFormData.processesSensitiveData || null,
+            requiresDPO: pendingFormData.processesSensitiveData === "yes" ? "yes" : "no",
+            dpoName: pendingFormData.dpoName || null,
+            dpoEmail: pendingFormData.dpoEmail || null,
+            dpoPhone: pendingFormData.dpoPhone || null,
+            dpoAddress: pendingFormData.dpoAddress || null,
+            dataCategories: pendingFormData.dataCategories,
+            collectionMethod: pendingFormData.collectionMethod || null,
+            processingMethods: pendingFormData.processingMethods || null,
+            sharesWithThirdParties: pendingFormData.sharesWithThirdParties || null,
+            transfersDataAbroad: pendingFormData.transfersDataAbroad || null,
+            retentionPeriod: pendingFormData.retentionPeriod || null,
+            usesCookies: pendingFormData.usesCookies || null,
+          };
+          generateMutation.mutate(submitData);
+        }
+      }
+    } catch (error) {
+      console.error("Payment verification failed:", error);
+      toast({
+        title: "خطأ في التحقق من الدفع",
+        description: "يرجى التواصل مع الدعم الفني",
+        variant: "destructive",
+      });
+    }
+  };
+
   const onSubmit = (values: FormValues) => {
-    const submitData: z.infer<typeof insertPolicyDocumentSchema> = {
-      companyName: values.companyName,
-      businessType: values.businessType,
-      entityType: values.entityType,
-      contactEmail: values.contactEmail,
-      contactPhone: values.contactPhone || null,
-      contactAddress: values.contactAddress || null,
-      processesSensitiveData: values.processesSensitiveData || null,
-      requiresDPO: values.processesSensitiveData === "yes" ? "yes" : "no",
-      dpoName: values.dpoName || null,
-      dpoEmail: values.dpoEmail || null,
-      dpoPhone: values.dpoPhone || null,
-      dpoAddress: values.dpoAddress || null,
-      dataCategories: values.dataCategories,
-      collectionMethod: values.collectionMethod || null,
-      processingMethods: values.processingMethods || null,
-      sharesWithThirdParties: values.sharesWithThirdParties || null,
-      transfersDataAbroad: values.transfersDataAbroad || null,
-      retentionPeriod: values.retentionPeriod || null,
-      usesCookies: values.usesCookies || null,
-    };
-    generateMutation.mutate(submitData);
+    if (!isLoggedIn) {
+      toast({
+        title: "يجب تسجيل الدخول",
+        description: "سجّل دخولك لتوليد سياسة الخصوصية",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setPendingFormData(values);
+    createPolicyRequestMutation.mutate(values);
   };
 
   const generateHtmlContent = (policy: PolicyDocument) => {
@@ -290,30 +386,64 @@ ${policy.generatedContent}
 
   return (
     <div className="space-y-6">
+      {!isLoggedIn && (
+        <Card className="mb-6 border-primary/30">
+          <CardContent className="pt-6">
+            <div className="text-center py-4">
+              <Lock className="w-12 h-12 text-primary mx-auto mb-4" />
+              <h3 className="text-xl font-bold mb-2">سجّل للحصول على سياسة خصوصية احترافية</h3>
+              <p className="text-muted-foreground mb-4">
+                أنشئ سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية السعودي
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button onClick={() => setLocation("/signup")} size="lg" data-testid="button-signup-policy">
+                  <UserPlus className="h-5 w-5 ml-2" />
+                  إنشاء حساب مجاني
+                </Button>
+                <Button variant="outline" onClick={() => setLocation("/login")} size="lg" data-testid="button-login-policy">
+                  تسجيل الدخول
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="mb-6 flex gap-2 justify-center flex-wrap">
         <Badge 
           variant={currentSection === 1 ? "default" : "outline"}
           className="cursor-pointer hover-elevate px-4 py-2"
-          onClick={() => setCurrentSection(1)}
+          onClick={() => currentSection !== 4 && setCurrentSection(1)}
           data-testid="badge-privacy-section-1"
         >
-          هوية الجهة
+          ١. هوية الجهة
         </Badge>
         <Badge 
           variant={currentSection === 2 ? "default" : "outline"}
           className="cursor-pointer hover-elevate px-4 py-2"
-          onClick={() => setCurrentSection(2)}
+          onClick={() => currentSection !== 4 && setCurrentSection(2)}
           data-testid="badge-privacy-section-2"
         >
-          جمع البيانات
+          ٢. جمع البيانات
         </Badge>
         <Badge 
           variant={currentSection === 3 ? "default" : "outline"}
           className="cursor-pointer hover-elevate px-4 py-2"
-          onClick={() => setCurrentSection(3)}
+          onClick={() => currentSection !== 4 && setCurrentSection(3)}
           data-testid="badge-privacy-section-3"
         >
-          المعالجة والأمان
+          ٣. المعالجة والأمان
+        </Badge>
+        <Badge 
+          variant={currentSection === 4 ? "default" : "outline"}
+          className={cn(
+            "px-4 py-2",
+            currentSection === 4 ? "" : "opacity-50 cursor-not-allowed"
+          )}
+          data-testid="badge-privacy-section-4"
+        >
+          <CreditCard className="w-3 h-3 ml-1" />
+          ٤. الدفع
         </Badge>
       </div>
 
@@ -691,20 +821,99 @@ ${policy.generatedContent}
                   <Button type="button" variant="outline" onClick={() => setCurrentSection(2)}>
                     السابق
                   </Button>
-                  <Button type="submit" disabled={generateMutation.isPending} data-testid="button-generate-privacy">
-                    {generateMutation.isPending ? (
+                  <Button 
+                    type="submit" 
+                    disabled={createPolicyRequestMutation.isPending || !isLoggedIn} 
+                    data-testid="button-generate-privacy"
+                  >
+                    {createPolicyRequestMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                        جاري التوليد...
+                        جاري الحفظ...
                       </>
                     ) : (
                       <>
-                        <FileText className="h-4 w-4 ml-2" />
-                        توليد السياسة
+                        <CreditCard className="h-4 w-4 ml-2" />
+                        متابعة للدفع ({POLICY_PRICE_SAR} ر.س)
                       </>
                     )}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {currentSection === 4 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  الدفع وتوليد السياسة
+                </CardTitle>
+                <CardDescription>
+                  أكمل الدفع لتوليد سياسة الخصوصية الخاصة بك
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {isPaymentComplete ? (
+                  <div className="text-center py-8">
+                    <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold mb-2">تم الدفع بنجاح!</h3>
+                    <p className="text-muted-foreground mb-4">
+                      جاري توليد سياسة الخصوصية الخاصة بك...
+                    </p>
+                    {generateMutation.isPending && (
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>جاري التوليد...</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="bg-muted/50 rounded-lg p-4 mb-4">
+                      <h4 className="font-semibold mb-2">ملخص الطلب</h4>
+                      <div className="flex justify-between text-sm">
+                        <span>سياسة خصوصية احترافية</span>
+                        <span className="font-bold">{POLICY_PRICE_SAR} ر.س</span>
+                      </div>
+                      {pendingFormData && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          لـ: {pendingFormData.companyName}
+                        </p>
+                      )}
+                    </div>
+
+                    <MoyasarPayment
+                      amount={POLICY_PRICE_HALALAS}
+                      description={`سياسة خصوصية - ${pendingFormData?.companyName || "طلب جديد"}`}
+                      callbackUrl={`${window.location.origin}/workspace?payment=success`}
+                      onCompleted={handlePaymentComplete}
+                      onError={(error) => {
+                        console.error("Payment error:", error);
+                        toast({
+                          title: "فشل الدفع",
+                          description: "حدث خطأ أثناء معالجة الدفع",
+                          variant: "destructive",
+                        });
+                      }}
+                    />
+
+                    <div className="flex justify-start pt-4">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => {
+                          setCurrentSection(3);
+                          setPendingFormData(null);
+                          setPaymentRequestId(null);
+                        }}
+                      >
+                        العودة للتعديل
+                      </Button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
