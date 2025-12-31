@@ -65,6 +65,28 @@ body {
   }
 }
 
+@keyframes progress-stripe {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.progress-animated {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary)) 0%,
+    hsl(var(--primary) / 0.6) 25%,
+    hsl(var(--primary)) 50%,
+    hsl(var(--primary) / 0.6) 75%,
+    hsl(var(--primary)) 100%
+  );
+  background-size: 200% 100%;
+  animation: progress-stripe 1.5s linear infinite;
+}
+
 /* Animation Utilities */
 .animate-fade-in {
   animation: fadeIn 0.6s ease-out;
