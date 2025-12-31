@@ -11,7 +11,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CheckCircle2, Info, Globe, FileType, File, Lock, CreditCard, UserPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { insertPolicyDocumentSchema, type PolicyDocument } from "@shared/schema";
+import { type PolicyDocument } from "@shared/schema";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -147,8 +147,10 @@ export default function PrivacyGeneratorTab() {
     name: "dataCategories",
   });
 
+  // Fetch user's policies (requires authentication)
   const { data: policies } = useQuery<PolicyDocument[]>({
-    queryKey: ["/api/policies"],
+    queryKey: ["/api/user/policies"],
+    enabled: isLoggedIn,
     refetchInterval: (query) => {
       const data = query.state.data as PolicyDocument[] | undefined;
       if (!data || !Array.isArray(data)) return false;
@@ -157,38 +159,31 @@ export default function PrivacyGeneratorTab() {
     },
   });
 
-  const generateMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof insertPolicyDocumentSchema>) => {
-      const response = await apiRequest("POST", "/api/policies", data);
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "تم بدء توليد سياسة الخصوصية",
-        description: "سيتم إشعارك عند اكتمال التوليد",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/policies"] });
-      form.reset();
-      setCurrentSection(1);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "خطأ في التوليد",
-        description: error.message || "حدث خطأ أثناء توليد سياسة الخصوصية",
-        variant: "destructive",
-      });
-    },
-  });
 
   const createPolicyRequestMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       const response = await apiRequest("POST", "/api/policy-requests", {
         scanId: scanData?.scanId || null,
-        companyName: data.companyName,
-        businessType: data.businessType,
-        entityType: data.entityType,
-        contactEmail: data.contactEmail,
-        dataCategories: data.dataCategories,
+        intakeData: {
+          companyName: data.companyName,
+          businessType: data.businessType,
+          entityType: data.entityType,
+          contactEmail: data.contactEmail,
+          contactPhone: data.contactPhone || null,
+          contactAddress: data.contactAddress || null,
+          processesSensitiveData: data.processesSensitiveData || null,
+          dpoName: data.dpoName || null,
+          dpoEmail: data.dpoEmail || null,
+          dpoPhone: data.dpoPhone || null,
+          dpoAddress: data.dpoAddress || null,
+          dataCategories: data.dataCategories,
+          collectionMethod: data.collectionMethod || null,
+          processingMethods: data.processingMethods || null,
+          sharesWithThirdParties: data.sharesWithThirdParties || null,
+          transfersDataAbroad: data.transfersDataAbroad || null,
+          retentionPeriod: data.retentionPeriod || null,
+          usesCookies: data.usesCookies || null,
+        },
       });
       return await response.json();
     },
@@ -207,41 +202,38 @@ export default function PrivacyGeneratorTab() {
 
   const handlePaymentComplete = async (payment: any) => {
     try {
-      const response = await apiRequest("POST", "/api/payments/verify", {
+      const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
         paymentId: payment.id,
         requestId: paymentRequestId,
       });
       
-      if (response.ok) {
+      if (verifyResponse.ok) {
         setIsPaymentComplete(true);
         toast({
           title: "تم الدفع بنجاح",
           description: "جاري توليد سياسة الخصوصية...",
         });
         
-        if (pendingFormData) {
-          const submitData: z.infer<typeof insertPolicyDocumentSchema> = {
-            companyName: pendingFormData.companyName,
-            businessType: pendingFormData.businessType,
-            entityType: pendingFormData.entityType,
-            contactEmail: pendingFormData.contactEmail,
-            contactPhone: pendingFormData.contactPhone || null,
-            contactAddress: pendingFormData.contactAddress || null,
-            processesSensitiveData: pendingFormData.processesSensitiveData || null,
-            requiresDPO: pendingFormData.processesSensitiveData === "yes" ? "yes" : "no",
-            dpoName: pendingFormData.dpoName || null,
-            dpoEmail: pendingFormData.dpoEmail || null,
-            dpoPhone: pendingFormData.dpoPhone || null,
-            dpoAddress: pendingFormData.dpoAddress || null,
-            dataCategories: pendingFormData.dataCategories,
-            collectionMethod: pendingFormData.collectionMethod || null,
-            processingMethods: pendingFormData.processingMethods || null,
-            sharesWithThirdParties: pendingFormData.sharesWithThirdParties || null,
-            transfersDataAbroad: pendingFormData.transfersDataAbroad || null,
-            retentionPeriod: pendingFormData.retentionPeriod || null,
-            usesCookies: pendingFormData.usesCookies || null,
-          };
-          generateMutation.mutate(submitData);
+        // Trigger policy generation through the secured endpoint
+        if (paymentRequestId) {
+          const generateResponse = await apiRequest("POST", `/api/policy-requests/${paymentRequestId}/generate`, {});
+          
+          if (generateResponse.ok) {
+            queryClient.invalidateQueries({ queryKey: ["/api/policy-requests"] });
+            form.reset();
+            setTimeout(() => {
+              setCurrentSection(1);
+              setPaymentRequestId(null);
+              setPendingFormData(null);
+            }, 2000);
+          } else {
+            const errorData = await generateResponse.json().catch(() => ({}));
+            toast({
+              title: "خطأ في توليد السياسة",
+              description: errorData.error || "حدث خطأ غير متوقع",
+              variant: "destructive",
+            });
+          }
         }
       }
     } catch (error) {
@@ -862,12 +854,10 @@ ${policy.generatedContent}
                     <p className="text-muted-foreground mb-4">
                       جاري توليد سياسة الخصوصية الخاصة بك...
                     </p>
-                    {generateMutation.isPending && (
-                      <div className="flex items-center justify-center gap-2">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>جاري التوليد...</span>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>جاري التوليد...</span>
+                    </div>
                   </div>
                 ) : (
                   <>

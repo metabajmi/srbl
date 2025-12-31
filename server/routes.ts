@@ -757,7 +757,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ========== Privacy Policy Generator Endpoints ==========
   
   // Client route: Create new policy (starts as draft)
-  app.post("/api/policies", async (req, res) => {
+  // Policy generation is now payment-gated via /api/policy-requests/:id/generate
+  // This endpoint is restricted to admin use only
+  app.post("/api/policies", requireAdminAuth, async (req, res) => {
     try {
       const validatedData = insertPolicyDocumentSchema.parse(req.body);
       const policyDoc = await storage.createPolicyDocument(validatedData);
@@ -838,6 +840,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching policy:", error);
       res.status(500).json({ error: "فشل في جلب الوثيقة" });
+    }
+  });
+
+  // User route: Get user's generated policies through their policy requests
+  app.get("/api/user/policies", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      // Get all policy requests for this user
+      const requests = await storage.getPolicyGenerationRequestsByUserId(userId);
+      
+      // Fetch policy documents for completed/paid requests
+      const policies: any[] = [];
+      for (const request of requests) {
+        if (request.policyDocumentId) {
+          const policy = await storage.getPolicyDocument(request.policyDocumentId);
+          if (policy) {
+            policies.push({
+              ...policy,
+              requestId: request.id,
+              paymentStatus: request.paymentStatus,
+              workflowStatus: request.workflowStatus,
+            });
+          }
+        }
+      }
+      
+      res.json(policies);
+    } catch (error) {
+      console.error("Error fetching user policies:", error);
+      res.status(500).json({ error: "فشل في جلب السياسات" });
     }
   });
 
@@ -968,6 +1004,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Trigger policy generation after payment verification
+  app.post("/api/policy-requests/:id/generate", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const request = await storage.getPolicyGenerationRequest(req.params.id);
+      
+      if (!request) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      
+      if (request.userId !== userId) {
+        return res.status(403).json({ error: "غير مصرح بالوصول لهذا الطلب" });
+      }
+      
+      if (request.paymentStatus !== "paid") {
+        return res.status(402).json({ error: "يجب دفع الرسوم أولاً" });
+      }
+      
+      if (request.workflowStatus === "generating" || request.workflowStatus === "delivered") {
+        return res.status(400).json({ error: "السياسة قيد التوليد أو تم توليدها بالفعل" });
+      }
+      
+      const intakeData = request.intakeData as Record<string, any> | null;
+      
+      if (!intakeData?.companyName || !intakeData?.businessType) {
+        return res.status(400).json({ error: "بيانات النموذج غير مكتملة" });
+      }
+      
+      const policyDoc = await storage.createPolicyDocument({
+        companyName: intakeData.companyName,
+        businessType: intakeData.businessType,
+        entityType: intakeData.entityType || "private",
+        contactEmail: intakeData.contactEmail || "",
+        contactPhone: intakeData.contactPhone,
+        contactAddress: intakeData.contactAddress,
+        dataCategories: intakeData.dataCategories || [],
+        collectionMethod: intakeData.collectionMethod,
+        processingMethods: intakeData.processingMethods,
+        sharesWithThirdParties: intakeData.sharesWithThirdParties === "yes",
+        thirdPartyDetails: intakeData.thirdPartyDetails,
+        transfersDataAbroad: intakeData.transfersDataAbroad === "yes",
+        transferCountries: intakeData.transferCountries,
+        retentionPeriod: intakeData.retentionPeriod,
+        usesCookies: intakeData.usesCookies === "yes",
+        processesSensitiveData: intakeData.processesSensitiveData === "yes",
+        sensitiveDataTypes: intakeData.sensitiveDataTypes,
+        dpoName: intakeData.dpoName,
+        dpoEmail: intakeData.dpoEmail,
+        dpoPhone: intakeData.dpoPhone,
+        dpoAddress: intakeData.dpoAddress,
+      });
+      
+      await storage.updatePolicyGenerationRequest(req.params.id, {
+        workflowStatus: "generating",
+        policyDocumentId: policyDoc.id,
+      });
+      
+      processPrivacyPolicyGeneration(policyDoc.id);
+      
+      res.json({ 
+        success: true, 
+        policyId: policyDoc.id,
+        message: "تم بدء توليد سياسة الخصوصية",
+      });
+    } catch (error) {
+      console.error("Error generating policy from request:", error);
+      res.status(500).json({ error: "فشل في توليد السياسة" });
+    }
+  });
+
   // Update intake data for a policy generation request
   app.patch("/api/policy-requests/:id", requireAuth, async (req, res) => {
     try {
