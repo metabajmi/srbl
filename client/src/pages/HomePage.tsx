@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -11,10 +12,13 @@ import { useLocation, Link } from "wouter";
 import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers, Lock, Users } from "lucide-react";
 import { z } from "zod";
 
+const SCAN_DURATION_MS = 35000; // Estimated scan duration ~35 seconds
+
 export default function HomePage() {
   const [url, setUrl] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [scanProgress, setScanProgress] = useState(0);
 
   const scanMutation = useMutation({
     mutationFn: async (data: { url: string }) => {
@@ -22,13 +26,18 @@ export default function HomePage() {
       return await response.json();
     },
     onSuccess: (data) => {
+      setScanProgress(100);
       toast({
         title: "اكتمل الفحص بنجاح",
         description: "جاري عرض النتائج...",
       });
-      setTimeout(() => setLocation(`/scan/${data.id}`), 500);
+      setTimeout(() => {
+        setScanProgress(0);
+        setLocation(`/scan/${data.id}`);
+      }, 500);
     },
     onError: (error: any) => {
+      setScanProgress(0);
       toast({
         title: "خطأ في بدء الفحص",
         description: error.message || "حدث خطأ أثناء محاولة فحص الموقع",
@@ -36,6 +45,20 @@ export default function HomePage() {
       });
     },
   });
+
+  // Animate progress bar during scan
+  useEffect(() => {
+    if (!scanMutation.isPending) return;
+    
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / SCAN_DURATION_MS) * 95, 95);
+      setScanProgress(progress);
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [scanMutation.isPending]);
 
   const handleScan = () => {
     try {
@@ -200,7 +223,17 @@ export default function HomePage() {
                     )}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground text-center mt-4">
+                <div className="max-w-xl mx-auto mt-4 h-2">
+                  {scanProgress > 0 && (
+                    <Progress 
+                      value={scanProgress} 
+                      animated={scanMutation.isPending}
+                      className="h-2" 
+                      data-testid="progress-scan" 
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground text-center mt-2">
                   فحص فوري • تقرير شامل • توصيات عملية
                 </p>
               </CardContent>
