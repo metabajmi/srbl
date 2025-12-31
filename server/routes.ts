@@ -680,6 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ========== Privacy Policy Generator Endpoints ==========
   
+  // Client route: Create new policy (starts as draft)
   app.post("/api/policies", async (req, res) => {
     try {
       const validatedData = insertPolicyDocumentSchema.parse(req.body);
@@ -697,27 +698,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client route: Get only the current published policy (no history)
+  app.get("/api/policies/current", async (req, res) => {
+    try {
+      const policy = await storage.getCurrentPublishedPolicy();
+      if (!policy) {
+        return res.status(404).json({ error: "لا توجد سياسة منشورة حالياً" });
+      }
+      // Return only essential fields for client (no internal data)
+      const clientPolicy = {
+        id: policy.id,
+        companyName: policy.companyName,
+        generatedContent: policy.generatedContent,
+        version: policy.version,
+      };
+      res.json(clientPolicy);
+    } catch (error) {
+      console.error("Error fetching current policy:", error);
+      res.status(500).json({ error: "فشل في جلب السياسة الحالية" });
+    }
+  });
+
+  // Client route: Get published policies only (for display)
   app.get("/api/policies", async (req, res) => {
     try {
-      const policies = await storage.getAllPolicyDocuments();
-      res.json(policies);
+      const policies = await storage.getPublishedPolicies();
+      // Return only essential fields for client display
+      const clientPolicies = policies.map(p => ({
+        id: p.id,
+        companyName: p.companyName,
+        generatedContent: p.generatedContent,
+        version: p.version,
+        status: p.status,
+        publishStatus: p.publishStatus,
+      }));
+      res.json(clientPolicies);
     } catch (error) {
       console.error("Error fetching policies:", error);
       res.status(500).json({ error: "فشل في جلب وثائق السياسة" });
     }
   });
 
+  // Client route: Get specific published policy by ID
   app.get("/api/policies/:id", async (req, res) => {
     try {
       const policy = await storage.getPolicyDocument(req.params.id);
       if (!policy) {
         return res.status(404).json({ error: "الوثيقة غير موجودة" });
       }
-      res.json(policy);
+      // Only allow access to published policies for clients
+      if (policy.publishStatus !== "published") {
+        return res.status(403).json({ error: "غير مصرح بالوصول لهذه السياسة" });
+      }
+      res.json({
+        id: policy.id,
+        companyName: policy.companyName,
+        generatedContent: policy.generatedContent,
+        version: policy.version,
+      });
     } catch (error) {
       console.error("Error fetching policy:", error);
       res.status(500).json({ error: "فشل في جلب الوثيقة" });
     }
+  });
+
+  // ========== Admin-Only Policy Routes (History/Versions) ==========
+
+  // Admin route: Get all policies including drafts, history, and archived
+  app.get("/api/admin/policies/all", requireAdminAuth, async (req, res) => {
+    try {
+      const policies = await storage.getAllPolicyDocuments();
+      res.json(policies);
+    } catch (error) {
+      console.error("Error fetching all policies:", error);
+      res.status(500).json({ error: "فشل في جلب السياسات" });
+    }
+  });
+
+  // Admin route: Get policy history/versions - ADMIN ONLY
+  app.get("/api/admin/policies/history", requireAdminAuth, async (req, res) => {
+    try {
+      const policies = await storage.getAllPolicyDocuments();
+      res.json(policies);
+    } catch (error) {
+      console.error("Error fetching policy history:", error);
+      res.status(500).json({ error: "فشل في جلب سجل السياسات" });
+    }
+  });
+
+  // Admin route: Publish a policy
+  app.post("/api/admin/policies/:id/publish", requireAdminAuth, async (req, res) => {
+    try {
+      const policy = await storage.getPolicyDocument(req.params.id);
+      if (!policy) {
+        return res.status(404).json({ error: "السياسة غير موجودة" });
+      }
+      if (policy.status !== "completed") {
+        return res.status(400).json({ error: "يجب أن تكون السياسة مكتملة قبل النشر" });
+      }
+      const publishedPolicy = await storage.publishPolicy(req.params.id);
+      res.json(publishedPolicy);
+    } catch (error) {
+      console.error("Error publishing policy:", error);
+      res.status(500).json({ error: "فشل في نشر السياسة" });
+    }
+  });
+
+  // Admin route: Archive a policy
+  app.post("/api/admin/policies/:id/archive", requireAdminAuth, async (req, res) => {
+    try {
+      const archivedPolicy = await storage.archivePolicy(req.params.id);
+      if (!archivedPolicy) {
+        return res.status(404).json({ error: "السياسة غير موجودة" });
+      }
+      res.json(archivedPolicy);
+    } catch (error) {
+      console.error("Error archiving policy:", error);
+      res.status(500).json({ error: "فشل في أرشفة السياسة" });
+    }
+  });
+
+  // Block client access to history/versions routes with 403
+  app.get("/api/policies/history", (req, res) => {
+    res.status(403).json({ error: "غير مصرح بالوصول - للإدارة فقط" });
+  });
+  app.get("/api/policies/versions", (req, res) => {
+    res.status(403).json({ error: "غير مصرح بالوصول - للإدارة فقط" });
   });
 
   // ========== Terms Generator Endpoints ==========
