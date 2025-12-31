@@ -698,40 +698,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client route: Get only the current published policy (no history)
+  // Client route: Get only the current published policy (no history) - lean DTO
   app.get("/api/policies/current", async (req, res) => {
     try {
       const policy = await storage.getCurrentPublishedPolicy();
       if (!policy) {
         return res.status(404).json({ error: "لا توجد سياسة منشورة حالياً" });
       }
-      // Return only essential fields for client (no internal data)
-      const clientPolicy = {
+      // Only return if content is available (generation complete)
+      if (!policy.generatedContent) {
+        return res.status(404).json({ error: "السياسة قيد التوليد" });
+      }
+      // Return only essential fields for client - no internal data
+      res.json({
         id: policy.id,
         companyName: policy.companyName,
         generatedContent: policy.generatedContent,
         version: policy.version,
-      };
-      res.json(clientPolicy);
+      });
     } catch (error) {
       console.error("Error fetching current policy:", error);
       res.status(500).json({ error: "فشل في جلب السياسة الحالية" });
     }
   });
 
-  // Client route: Get published policies only (for display)
+  // Client route: Get published policies only (for display) - lean DTO
   app.get("/api/policies", async (req, res) => {
     try {
       const policies = await storage.getPublishedPolicies();
-      // Return only essential fields for client display
-      const clientPolicies = policies.map(p => ({
-        id: p.id,
-        companyName: p.companyName,
-        generatedContent: p.generatedContent,
-        version: p.version,
-        status: p.status,
-        publishStatus: p.publishStatus,
-      }));
+      // Return only essential fields for client display - no internal status/timestamps
+      const clientPolicies = policies
+        .filter(p => p.generatedContent) // Only return completed policies with content
+        .map(p => ({
+          id: p.id,
+          companyName: p.companyName,
+          generatedContent: p.generatedContent,
+          version: p.version,
+        }));
       res.json(clientPolicies);
     } catch (error) {
       console.error("Error fetching policies:", error);
