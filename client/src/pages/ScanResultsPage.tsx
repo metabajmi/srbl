@@ -4,7 +4,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, Cookie, ExternalLink, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
@@ -156,15 +155,14 @@ export default function ScanResultsPage() {
 
       <div className="container py-6 max-w-4xl">
         
-        {/* Scanning Progress */}
+        {/* Scanning Progress - without progress bar since scan completes before navigation */}
         {(scan.status === "pending" || scan.status === "scanning") && (
           <Card className="mb-6">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center gap-4">
                 <Globe className="w-16 h-16 animate-spin text-primary" />
-                <p className="text-lg font-bold">جاري فحص الموقع...</p>
+                <p className="text-lg font-bold">جاري تحميل النتائج...</p>
                 <p className="text-sm text-muted-foreground text-center" dir="ltr">{scan.url}</p>
-                <Progress className="w-full max-w-md" value={scan.status === "scanning" ? 60 : 20} />
               </div>
             </CardContent>
           </Card>
