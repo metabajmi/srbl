@@ -129,10 +129,6 @@ export default function PrivacyGeneratorTab() {
         form.setValue("businessType", scanData.businessType);
       }
       
-      if (scanData.hasCookieBanner && !form.getValues("usesCookies")) {
-        form.setValue("usesCookies", "yes");
-      }
-      
       setLastPreFilledScanId(scanData.scanId);
       
       toast({

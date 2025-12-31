@@ -421,12 +421,24 @@ const PDPL_RULES: Array<{
   },
 ];
 
+// Cookie-related rule IDs to skip (removed per product requirements)
+const COOKIE_RULE_IDS = [
+  'PDPL-COOKIE-BANNER-PRESENCE',
+  'PDPL-COOKIE-CONSENT-MECHANISM',
+  'PDPL-COOKIE-GRANULAR-CONTROL',
+  'PDPL-COOKIE-BLOCKING',
+  'PDPL-COOKIE-POLICY-LINK',
+];
+
 export function evaluatePDPLCompliance(context: EvaluationContext): PDPLEvaluationResult {
   console.log('[PDPLEvaluator] Starting comprehensive PDPL evaluation...');
   
   const checks: PDPLCheck[] = [];
   
-  for (const rule of PDPL_RULES) {
+  // Filter out cookie-related rules - compliance is only based on Privacy Policy + Terms
+  const filteredRules = PDPL_RULES.filter(rule => !COOKIE_RULE_IDS.includes(rule.id));
+  
+  for (const rule of filteredRules) {
     const { result, evidence, pointer } = rule.evaluate(context);
     
     checks.push({

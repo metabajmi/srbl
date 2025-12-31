@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, Cookie, ExternalLink, ClipboardList, ChevronDown, ChevronUp, Lock, UserPlus } from "lucide-react";
+import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, ExternalLink, ClipboardList, ChevronDown, ChevronUp, Lock, UserPlus } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
 import { useState, useEffect, useRef } from "react";
 import { BackButton } from "@/components/BackButton";
@@ -128,11 +128,10 @@ export default function ScanResultsPage() {
     },
   });
 
-  const navigateToTool = (tool: "privacy" | "terms" | "consent") => {
+  const navigateToTool = (tool: "privacy" | "terms") => {
     const routes = {
       privacy: "/workspace?tab=privacy&from=scan",
       terms: "/workspace?tab=terms&from=scan",
-      consent: "/workspace?tab=consent&from=scan",
     };
     setLocation(routes[tool]);
   };
@@ -148,9 +147,6 @@ export default function ScanResultsPage() {
   ).length;
   const termsIssues = realIssues.filter(i => 
     i.category === "terms_and_conditions" || i.category === "terms" || i.category === "terms_content"
-  ).length;
-  const cookieIssues = realIssues.filter(i => 
-    i.category === "cookies" || i.category === "consent" || i.category === "cookie_banner"
   ).length;
 
   if (scanLoading) {
@@ -277,8 +273,8 @@ export default function ScanResultsPage() {
               </CardContent>
             </Card>
 
-            {/* Quick Status - 4 Elements */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {/* Quick Status - 2 Elements (Privacy Policy + Terms & Conditions) */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
               <PrivacyPolicyStatusCard 
                 title="سياسة الخصوصية" 
                 found={!!scan.hasPrivacyPolicy} 
@@ -296,12 +292,6 @@ export default function ScanResultsPage() {
                   return tcAudit;
                 })()}
                 testId="card-status-terms"
-              />
-              <StatusCard 
-                title="لافتة الكوكيز" 
-                found={!!scan.hasCookieBanner} 
-                issueCount={cookieIssues}
-                testId="card-status-cookies"
               />
             </div>
 
@@ -377,7 +367,7 @@ export default function ScanResultsPage() {
                   <CardTitle className="text-lg">الخطوات التالية</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <ActionButton 
                       title="سياسة الخصوصية"
                       description={scan.hasPrivacyPolicy ? "تحسين" : "إنشاء"}
@@ -393,14 +383,6 @@ export default function ScanResultsPage() {
                       needed={!scan.hasTermsAndConditions}
                       onClick={() => navigateToTool("terms")}
                       testId="button-action-terms"
-                    />
-                    <ActionButton 
-                      title="إدارة الموافقة"
-                      description={scan.hasCookieBanner ? "إدارة" : "إنشاء"}
-                      icon={<Cookie className="w-5 h-5" />}
-                      needed={!scan.hasCookieBanner}
-                      onClick={() => navigateToTool("consent")}
-                      testId="button-action-consent"
                     />
                   </div>
                 </CardContent>

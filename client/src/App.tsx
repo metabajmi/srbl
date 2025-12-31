@@ -6,16 +6,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
-import CookieBanner from "@/components/CookieBanner";
-import { useConsent } from "@/hooks/useConsent";
 import { ScanProvider } from "@/contexts/ScanContext";
 import { LogIn, UserPlus } from "lucide-react";
 import HomePage from "@/pages/HomePage";
 import ScanResultsPage from "@/pages/ScanResultsPage";
 import PrivacyGeneratorPage from "@/pages/PrivacyGeneratorPage";
 import TermsGeneratorPage from "@/pages/TermsGeneratorPage";
-import ConsentManagementPage from "@/pages/ConsentManagementPage";
-import PreferencesCenterPage from "@/pages/PreferencesCenterPage";
 import SmartAssistantPage from "@/pages/SmartAssistantPage";
 import SignUpPage from "@/pages/SignUpPage";
 import LoginPage from "@/pages/LoginPage";
@@ -200,8 +196,6 @@ function Router() {
       </Route>
       <Route path="/privacy-generator" component={PrivacyGeneratorPage} />
       <Route path="/terms-generator" component={TermsGeneratorPage} />
-      <Route path="/consent-management" component={ConsentManagementPage} />
-      <Route path="/preferences-center" component={PreferencesCenterPage} />
       <Route path="/smart-assistant" component={SmartAssistantPage} />
       
       {/* Internal Compliance - Protected */}
@@ -222,18 +216,7 @@ function Router() {
 }
 
 function AppContent() {
-  const { showBanner, acceptConsent, rejectConsent } = useConsent();
   const [location, navigate] = useLocation();
-  
-  // Load CMP settings
-  const { data: cmpSettings } = useQuery<{
-    bannerTitle: string;
-    bannerDescription: string;
-    privacyPolicyUrl: string;
-    termsUrl: string;
-  }>({
-    queryKey: ["/api/cmp/settings"],
-  });
   
   // Check if user is logged in (for UI display - localStorage for quick response)
   const [isLoggedIn, setIsLoggedIn] = useState(isClientLoggedInLocal());
@@ -316,20 +299,6 @@ function AppContent() {
           {/* Don't show sidebar on admin pages */}
           {!isAdminPage && <AppSidebar />}
         </div>
-        
-        {/* Cookie Banner - not on admin pages */}
-        {showBanner && !isAdminPage && (
-          <CookieBanner
-            onAccept={acceptConsent}
-            onReject={rejectConsent}
-            settings={cmpSettings ? {
-              bannerTitle: cmpSettings.bannerTitle,
-              bannerDescription: cmpSettings.bannerDescription,
-              privacyPolicyUrl: cmpSettings.privacyPolicyUrl || "/privacy-policy",
-              termsUrl: cmpSettings.termsUrl || "/terms",
-            } : undefined}
-          />
-        )}
         
         <Toaster />
       </SidebarProvider>
