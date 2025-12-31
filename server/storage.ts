@@ -104,6 +104,12 @@ export interface IStorage {
   getPolicyDocument(id: string): Promise<PolicyDocument | undefined>;
   updatePolicyDocument(id: string, updates: Partial<PolicyDocument>): Promise<PolicyDocument | undefined>;
   getAllPolicyDocuments(): Promise<PolicyDocument[]>;
+  // Client-only: get current published policy
+  getCurrentPublishedPolicy(): Promise<PolicyDocument | undefined>;
+  getPublishedPolicies(): Promise<PolicyDocument[]>;
+  // Admin-only: publish/archive policies
+  publishPolicy(id: string): Promise<PolicyDocument | undefined>;
+  archivePolicy(id: string): Promise<PolicyDocument | undefined>;
   
   // Consent Records
   createConsentRecord(consent: InsertConsentRecord): Promise<ConsentRecord>;
@@ -428,6 +434,76 @@ export class DatabaseStorage implements IStorage {
       .from(policyDocuments)
       .orderBy(desc(policyDocuments.createdAt));
     return policies;
+  }
+
+  async getCurrentPublishedPolicy(): Promise<PolicyDocument | undefined> {
+    const [policy] = await db
+      .select()
+      .from(policyDocuments)
+      .where(and(
+        eq(policyDocuments.publishStatus, "published"),
+        eq(policyDocuments.isCurrent, true)
+      ));
+    return policy || undefined;
+  }
+
+  async getPublishedPolicies(): Promise<PolicyDocument[]> {
+    const policies = await db
+      .select()
+      .from(policyDocuments)
+      .where(eq(policyDocuments.publishStatus, "published"))
+      .orderBy(desc(policyDocuments.publishedAt));
+    return policies;
+  }
+
+  async publishPolicy(id: string): Promise<PolicyDocument | undefined> {
+    // First, archive the current published policy if exists
+    await db
+      .update(policyDocuments)
+      .set({
+        publishStatus: "archived",
+        isCurrent: false,
+        archivedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(policyDocuments.publishStatus, "published"),
+        eq(policyDocuments.isCurrent, true)
+      ));
+
+    // Get current max version for incrementing
+    const currentVersionResult = await db
+      .select({ maxVersion: drizzleSql<number>`COALESCE(MAX(${policyDocuments.version}), 0)` })
+      .from(policyDocuments);
+    const newVersion = (currentVersionResult[0]?.maxVersion || 0) + 1;
+
+    // Publish the new policy
+    const [publishedPolicy] = await db
+      .update(policyDocuments)
+      .set({
+        publishStatus: "published",
+        isCurrent: true,
+        version: newVersion,
+        publishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(policyDocuments.id, id))
+      .returning();
+    return publishedPolicy || undefined;
+  }
+
+  async archivePolicy(id: string): Promise<PolicyDocument | undefined> {
+    const [archivedPolicy] = await db
+      .update(policyDocuments)
+      .set({
+        publishStatus: "archived",
+        isCurrent: false,
+        archivedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(policyDocuments.id, id))
+      .returning();
+    return archivedPolicy || undefined;
   }
 
   // Consent Records
