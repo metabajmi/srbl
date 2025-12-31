@@ -9,7 +9,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CheckCircle2, Info, Globe } from "lucide-react";
+import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CheckCircle2, Info, Globe, FileType, File } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { insertPolicyDocumentSchema, type PolicyDocument } from "@shared/schema";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -171,9 +172,7 @@ export default function PrivacyGeneratorTab() {
     generateMutation.mutate(submitData);
   };
 
-  const handleDownload = (policy: PolicyDocument) => {
-    if (!policy.generatedContent) return;
-    
+  const generateHtmlContent = (policy: PolicyDocument) => {
     const escapeHtml = (text: string): string => {
       const div = document.createElement('div');
       div.textContent = text;
@@ -187,7 +186,7 @@ export default function PrivacyGeneratorTab() {
       day: 'numeric' 
     }));
     
-    const htmlContent = `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -201,6 +200,7 @@ export default function PrivacyGeneratorTab() {
         .header h1 { color: white; border-bottom: none; }
         .content { background: #fff; padding: 40px; border-radius: 10px; }
         .footer { margin-top: 50px; padding-top: 30px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; }
+        @media print { body { padding: 20px; } .header { background: #2563eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style>
 </head>
 <body>
@@ -215,16 +215,75 @@ export default function PrivacyGeneratorTab() {
     </div>
 </body>
 </html>`;
+  };
+
+  const handleDownload = (policy: PolicyDocument, format: 'html' | 'pdf' | 'word') => {
+    if (!policy.generatedContent) return;
     
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `سياسة-الخصوصية-${policy.companyName}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const htmlContent = generateHtmlContent(policy);
+    const fileName = `سياسة-الخصوصية-${policy.companyName}`;
+    
+    if (format === 'html') {
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else if (format === 'pdf') {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
+      toast({
+        title: "تصدير PDF",
+        description: "استخدم خيار 'حفظ كـ PDF' في نافذة الطباعة",
+      });
+    } else if (format === 'word') {
+      const wordContent = `
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>
+@font-face { font-family: 'Cairo'; src: url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap'); }
+body { font-family: 'Cairo', 'Arial', sans-serif; direction: rtl; text-align: right; line-height: 1.8; }
+h1 { color: #2563eb; text-align: center; }
+h2 { color: #1e40af; border-right: 5px solid #3b82f6; padding-right: 15px; }
+</style>
+</head>
+<body dir="rtl">
+<h1>سياسة الخصوصية</h1>
+<p style="text-align: center; font-weight: bold;">${policy.companyName}</p>
+<p style="text-align: center; color: #6b7280;">تاريخ الإصدار: ${new Date(policy.createdAt!).toLocaleDateString('ar-SA')}</p>
+<hr/>
+${policy.generatedContent}
+<hr/>
+<p style="text-align: center; color: #6b7280; font-size: 12px;">تم توليده بواسطة أداة الامتثال لنظام حماية البيانات الشخصية السعودي</p>
+</body>
+</html>`;
+      const blob = new Blob(['\ufeff', wordContent], { type: 'application/msword;charset=UTF-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.doc`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "تم التحميل",
+        description: "تم تحميل الملف بصيغة Word",
+      });
+    }
   };
 
   const watchProcessesSensitiveData = form.watch("processesSensitiveData");
@@ -653,51 +712,116 @@ export default function PrivacyGeneratorTab() {
       </Form>
 
       {policies && policies.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>السياسات السابقة</CardTitle>
+        <Card className="border-primary/20 shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">السياسات المُنشأة</CardTitle>
+                <CardDescription>
+                  {policies.length} سياسة خصوصية
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {policies.map((policy) => (
-                <div key={policy.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{policy.companyName}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(policy.createdAt!).toLocaleDateString('ar-SA')}
-                      </p>
+                <Card 
+                  key={policy.id} 
+                  className={`p-4 transition-all ${
+                    policy.status === "completed" 
+                      ? "bg-gradient-to-l from-green-50/50 to-transparent dark:from-green-950/20 border-green-200/50 dark:border-green-800/30" 
+                      : "bg-muted/30"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className={`p-2 rounded-lg flex-shrink-0 ${
+                        policy.status === "completed" 
+                          ? "bg-green-100 dark:bg-green-900/30" 
+                          : "bg-muted"
+                      }`}>
+                        <FileText className={`h-5 w-5 ${
+                          policy.status === "completed" 
+                            ? "text-green-600 dark:text-green-400" 
+                            : "text-muted-foreground"
+                        }`} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold truncate">{policy.companyName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(policy.createdAt!).toLocaleDateString('ar-SA', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                        {policy.status === "completed" && (
+                          <Badge variant="outline" className="mt-2 border-green-300 text-green-700 dark:border-green-700 dark:text-green-400">
+                            <CheckCircle2 className="h-3 w-3 ml-1" />
+                            جاهزة للتحميل
+                          </Badge>
+                        )}
+                        {policy.status === "generating" && (
+                          <Badge variant="secondary" className="mt-2">
+                            <Loader2 className="h-3 w-3 ml-1 animate-spin" />
+                            جاري التوليد...
+                          </Badge>
+                        )}
+                        {policy.status === "pending" && (
+                          <Badge variant="outline" className="mt-2">
+                            قيد الانتظار
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
+                    
                     {policy.status === "completed" && (
-                      <>
-                        <Badge variant="default" className="bg-green-600">
-                          <CheckCircle2 className="h-3 w-3 ml-1" />
-                          مكتمل
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownload(policy)}
-                          data-testid={`button-download-${policy.id}`}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                    {policy.status === "generating" && (
-                      <Badge variant="secondary">
-                        <Loader2 className="h-3 w-3 ml-1 animate-spin" />
-                        جاري التوليد
-                      </Badge>
-                    )}
-                    {policy.status === "pending" && (
-                      <Badge variant="outline">قيد الانتظار</Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            className="flex-shrink-0"
+                            data-testid={`button-download-${policy.id}`}
+                          >
+                            <Download className="h-4 w-4 ml-2" />
+                            تحميل
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem 
+                            onClick={() => handleDownload(policy, 'pdf')}
+                            className="cursor-pointer gap-2"
+                            data-testid={`button-download-pdf-${policy.id}`}
+                          >
+                            <FileType className="h-4 w-4 text-red-500" />
+                            <span>تحميل PDF</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDownload(policy, 'word')}
+                            className="cursor-pointer gap-2"
+                            data-testid={`button-download-word-${policy.id}`}
+                          >
+                            <File className="h-4 w-4 text-blue-500" />
+                            <span>تحميل Word</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDownload(policy, 'html')}
+                            className="cursor-pointer gap-2"
+                            data-testid={`button-download-html-${policy.id}`}
+                          >
+                            <Globe className="h-4 w-4 text-orange-500" />
+                            <span>تحميل HTML</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           </CardContent>
