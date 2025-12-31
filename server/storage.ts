@@ -9,6 +9,10 @@ import {
   type InsertRemediationTemplate,
   type PolicyDocument,
   type InsertPolicyDocument,
+  type PolicyGenerationRequest,
+  type InsertPolicyGenerationRequest,
+  type Payment,
+  type InsertPayment,
   type ConsentRecord,
   type InsertConsentRecord,
   type TermsDocument,
@@ -52,6 +56,8 @@ import {
   reports,
   remediationTemplates,
   policyDocuments,
+  policyGenerationRequests,
+  payments,
   consentRecords,
   termsDocuments,
   complianceTasks,
@@ -264,6 +270,24 @@ export interface IStorage {
     pendingRequests: number;
     activeAdmins: number;
   }>;
+  
+  // Policy Generation Requests - طلبات توليد السياسات
+  createPolicyGenerationRequest(request: InsertPolicyGenerationRequest): Promise<PolicyGenerationRequest>;
+  getPolicyGenerationRequest(id: string): Promise<PolicyGenerationRequest | undefined>;
+  updatePolicyGenerationRequest(id: string, updates: Partial<PolicyGenerationRequest>): Promise<PolicyGenerationRequest | undefined>;
+  getPolicyGenerationRequestsByUserId(userId: string): Promise<PolicyGenerationRequest[]>;
+  getPolicyGenerationRequestByScanId(scanId: string): Promise<PolicyGenerationRequest | undefined>;
+  
+  // Payments - المدفوعات
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  getPayment(id: string): Promise<Payment | undefined>;
+  updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | undefined>;
+  getPaymentsByUserId(userId: string): Promise<Payment[]>;
+  getPaymentByRequestId(requestId: string): Promise<Payment | undefined>;
+  
+  // Scan Claiming - ربط الفحوصات بالمستخدمين
+  claimScan(scanId: string, userId: string): Promise<ComplianceScan | undefined>;
+  getScansByUserId(userId: string): Promise<ComplianceScan[]>;
 }
 
 // Database storage implementation using Drizzle ORM
@@ -1614,6 +1638,123 @@ export class DatabaseStorage implements IStorage {
       pendingRequests: pendingCount?.count || 0,
       activeAdmins: adminsCount?.count || 0,
     };
+  }
+
+  // ============================================
+  // Policy Generation Requests - طلبات توليد السياسات
+  // ============================================
+  
+  async createPolicyGenerationRequest(request: InsertPolicyGenerationRequest): Promise<PolicyGenerationRequest> {
+    const [created] = await db
+      .insert(policyGenerationRequests)
+      .values(request)
+      .returning();
+    return created;
+  }
+
+  async getPolicyGenerationRequest(id: string): Promise<PolicyGenerationRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(policyGenerationRequests)
+      .where(eq(policyGenerationRequests.id, id));
+    return request || undefined;
+  }
+
+  async updatePolicyGenerationRequest(id: string, updates: Partial<PolicyGenerationRequest>): Promise<PolicyGenerationRequest | undefined> {
+    const { id: _, ...updateData } = updates;
+    const [updated] = await db
+      .update(policyGenerationRequests)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(policyGenerationRequests.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getPolicyGenerationRequestsByUserId(userId: string): Promise<PolicyGenerationRequest[]> {
+    return await db
+      .select()
+      .from(policyGenerationRequests)
+      .where(eq(policyGenerationRequests.userId, userId))
+      .orderBy(desc(policyGenerationRequests.createdAt));
+  }
+
+  async getPolicyGenerationRequestByScanId(scanId: string): Promise<PolicyGenerationRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(policyGenerationRequests)
+      .where(eq(policyGenerationRequests.scanId, scanId));
+    return request || undefined;
+  }
+
+  // ============================================
+  // Payments - المدفوعات
+  // ============================================
+  
+  async createPayment(payment: InsertPayment): Promise<Payment> {
+    const [created] = await db
+      .insert(payments)
+      .values(payment)
+      .returning();
+    return created;
+  }
+
+  async getPayment(id: string): Promise<Payment | undefined> {
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.id, id));
+    return payment || undefined;
+  }
+
+  async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | undefined> {
+    const { id: _, ...updateData } = updates;
+    const [updated] = await db
+      .update(payments)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(payments.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getPaymentsByUserId(userId: string): Promise<Payment[]> {
+    return await db
+      .select()
+      .from(payments)
+      .where(eq(payments.userId, userId))
+      .orderBy(desc(payments.createdAt));
+  }
+
+  async getPaymentByRequestId(requestId: string): Promise<Payment | undefined> {
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.requestId, requestId));
+    return payment || undefined;
+  }
+
+  // ============================================
+  // Scan Claiming - ربط الفحوصات بالمستخدمين
+  // ============================================
+  
+  async claimScan(scanId: string, userId: string): Promise<ComplianceScan | undefined> {
+    const [updated] = await db
+      .update(complianceScans)
+      .set({ 
+        userId: userId,
+        isClaimedByUser: true,
+        updatedAt: new Date() 
+      })
+      .where(eq(complianceScans.id, scanId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getScansByUserId(userId: string): Promise<ComplianceScan[]> {
+    return await db
+      .select()
+      .from(complianceScans)
+      .where(eq(complianceScans.userId, userId))
+      .orderBy(desc(complianceScans.scanDate));
   }
 }
 

@@ -6,11 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, Cookie, ExternalLink, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
+import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, Cookie, ExternalLink, ClipboardList, ChevronDown, ChevronUp, Lock, UserPlus } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
 import { useState, useEffect, useRef } from "react";
 import { BackButton } from "@/components/BackButton";
 import { useScanContext, extractScanData } from "@/contexts/ScanContext";
+
+// Check if user is authenticated
+const isAuthenticated = (): boolean => {
+  try {
+    const userStr = localStorage.getItem("user");
+    if (userStr && userStr !== "undefined" && userStr !== "null") {
+      const user = JSON.parse(userStr);
+      return !!user.id;
+    }
+  } catch (e) {
+    return false;
+  }
+  return false;
+};
 
 export default function ScanResultsPage() {
   const [, params] = useRoute("/scan/:id");
@@ -22,6 +36,16 @@ export default function ScanResultsPage() {
   const [scanProgress, setScanProgress] = useState(0);
   const scanStartTimeRef = useRef<number | null>(null);
   const SCAN_DURATION_MS = 35000; // ~35 seconds estimated scan time
+  
+  // Check authentication state (reactive to storage changes)
+  const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated());
+  
+  useEffect(() => {
+    // Re-check auth status when component mounts or storage changes
+    const checkAuth = () => setIsLoggedIn(isAuthenticated());
+    window.addEventListener('storage', checkAuth);
+    return () => window.removeEventListener('storage', checkAuth);
+  }, []);
 
   const { data: scan, isLoading: scanLoading, refetch } = useQuery({
     queryKey: ["/api/scans", scanId],
@@ -41,14 +65,20 @@ export default function ScanResultsPage() {
     },
   });
 
-  const { data: issues = [], refetch: refetchIssues } = useQuery({
+  const { data: issues = [], refetch: refetchIssues, isError: issuesError } = useQuery({
     queryKey: ["/api/scans", scanId, "issues"],
     queryFn: async () => {
       const response = await fetch(`/api/scans/${scanId}/issues`);
-      if (!response.ok) throw new Error("Failed to fetch issues");
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Unauthorized");
+        }
+        throw new Error("Failed to fetch issues");
+      }
       return response.json() as Promise<ComplianceIssue[]>;
     },
-    enabled: !!scanId && scan?.status === "completed",
+    enabled: !!scanId && scan?.status === "completed" && isLoggedIn,
+    retry: false, // Don't retry 401 errors
   });
 
   const lastProcessedScanRef = useRef<string | null>(null);
@@ -275,8 +305,8 @@ export default function ScanResultsPage() {
               />
             </div>
 
-            {/* Privacy Policy 12-Element Audit */}
-            {(() => {
+            {/* Privacy Policy 12-Element Audit - Only for authenticated users */}
+            {isLoggedIn && (() => {
               const ppAudit = (scan as any).analysisResult?.privacy_policy_audit || 
                               (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
               return ppAudit && ppAudit.elements && ppAudit.elements.length > 0 ? (
@@ -284,8 +314,8 @@ export default function ScanResultsPage() {
               ) : null;
             })()}
             
-            {/* Terms & Conditions 12-Module Audit */}
-            {(() => {
+            {/* Terms & Conditions 12-Module Audit - Only for authenticated users */}
+            {isLoggedIn && (() => {
               const tcAudit = (scan as any).analysisResult?.terms_conditions_audit || 
                               (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'terms')?.termsConditionsAudit;
               return tcAudit && tcAudit.modules && tcAudit.modules.length > 0 ? (
@@ -293,59 +323,89 @@ export default function ScanResultsPage() {
               ) : null;
             })()}
 
-            {/* Issues List - Simple */}
-            {realIssues.length > 0 && (
-              <Card className="mb-6">
+            {/* Issues Section - Gated for non-authenticated users */}
+            {!isLoggedIn ? (
+              <Card className="mb-6 border-primary/30">
+                <CardContent className="pt-6">
+                  <div className="text-center py-6">
+                    <Lock className="w-12 h-12 text-primary mx-auto mb-4" />
+                    <h3 className="text-xl font-bold mb-2">سجّل للاطلاع على التفاصيل</h3>
+                    <p className="text-muted-foreground mb-1">
+                      عثرنا على <span className="font-bold text-destructive">{scan.criticalCount || 0}</span> مخالفة
+                      و <span className="font-bold text-orange-500">{scan.warningCount || 0}</span> تحذير
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-6">
+                      سجّل مجاناً للاطلاع على تفاصيل المخالفات وتوصيات الإصلاح
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button onClick={() => setLocation("/signup")} size="lg" data-testid="button-signup-cta">
+                        <UserPlus className="h-5 w-5 ml-2" />
+                        إنشاء حساب مجاني
+                      </Button>
+                      <Button variant="outline" onClick={() => setLocation("/login")} size="lg" data-testid="button-login-cta">
+                        تسجيل الدخول
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              /* Issues List - Full details for authenticated users */
+              realIssues.length > 0 && (
+                <Card className="mb-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <AlertCircle className="w-5 h-5 text-destructive" />
+                      المخالفات ({realIssues.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {realIssues.map((issue, idx) => (
+                        <IssueItem key={idx} issue={issue} />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            )}
+
+            {/* Actions - Only visible to authenticated users */}
+            {isLoggedIn && (
+              <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-destructive" />
-                    المخالفات ({realIssues.length})
-                  </CardTitle>
+                  <CardTitle className="text-lg">الخطوات التالية</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {realIssues.map((issue, idx) => (
-                      <IssueItem key={idx} issue={issue} />
-                    ))}
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <ActionButton 
+                      title="سياسة الخصوصية"
+                      description={scan.hasPrivacyPolicy ? "تحسين" : "إنشاء"}
+                      icon={<FileText className="w-5 h-5" />}
+                      needed={!scan.hasPrivacyPolicy}
+                      onClick={() => navigateToTool("privacy")}
+                      testId="button-action-privacy"
+                    />
+                    <ActionButton 
+                      title="الشروط والأحكام"
+                      description={scan.hasTermsAndConditions ? "تحسين" : "إنشاء"}
+                      icon={<ScrollText className="w-5 h-5" />}
+                      needed={!scan.hasTermsAndConditions}
+                      onClick={() => navigateToTool("terms")}
+                      testId="button-action-terms"
+                    />
+                    <ActionButton 
+                      title="إدارة الموافقة"
+                      description={scan.hasCookieBanner ? "إدارة" : "إنشاء"}
+                      icon={<Cookie className="w-5 h-5" />}
+                      needed={!scan.hasCookieBanner}
+                      onClick={() => navigateToTool("consent")}
+                      testId="button-action-consent"
+                    />
                   </div>
                 </CardContent>
               </Card>
             )}
-
-            {/* Actions - Simple */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">الخطوات التالية</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <ActionButton 
-                    title="سياسة الخصوصية"
-                    description={scan.hasPrivacyPolicy ? "تحسين" : "إنشاء"}
-                    icon={<FileText className="w-5 h-5" />}
-                    needed={!scan.hasPrivacyPolicy}
-                    onClick={() => navigateToTool("privacy")}
-                    testId="button-action-privacy"
-                  />
-                  <ActionButton 
-                    title="الشروط والأحكام"
-                    description={scan.hasTermsAndConditions ? "تحسين" : "إنشاء"}
-                    icon={<ScrollText className="w-5 h-5" />}
-                    needed={!scan.hasTermsAndConditions}
-                    onClick={() => navigateToTool("terms")}
-                    testId="button-action-terms"
-                  />
-                  <ActionButton 
-                    title="إدارة الموافقة"
-                    description={scan.hasCookieBanner ? "إدارة" : "إنشاء"}
-                    icon={<Cookie className="w-5 h-5" />}
-                    needed={!scan.hasCookieBanner}
-                    onClick={() => navigateToTool("consent")}
-                    testId="button-action-consent"
-                  />
-                </div>
-              </CardContent>
-            </Card>
           </>
         )}
 

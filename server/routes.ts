@@ -31,6 +31,7 @@ import { analyzeSite, convertToLegacyFormat } from "./services/complianceAnalyze
 import { runComprehensiveScan } from "./scanner/comprehensiveScanner";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault } from "./paypal";
 
 declare module "express-session" {
   interface SessionData {
@@ -504,14 +505,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get issues for a scan
-  app.get("/api/scans/:id/issues", async (req, res) => {
+  // Get issues for a scan (requires authentication for detailed view)
+  app.get("/api/scans/:id/issues", requireAuth, async (req, res) => {
     try {
       const issues = await storage.getIssuesByScanId(req.params.id);
       res.json(issues);
     } catch (error) {
       console.error("Error fetching issues:", error);
       res.status(500).json({ error: "فشل في جلب المخالفات" });
+    }
+  });
+  
+  // Get scan summary (limited info for anonymous users)
+  app.get("/api/scans/:id/summary", async (req, res) => {
+    try {
+      const scan = await storage.getScan(req.params.id);
+      if (!scan) {
+        return res.status(404).json({ error: "الفحص غير موجود" });
+      }
+      
+      // Return limited info - only compliance level and issue counts
+      res.json({
+        id: scan.id,
+        url: scan.url,
+        status: scan.status,
+        overallScore: scan.overallScore,
+        complianceLevel: scan.complianceLevel,
+        issuesCount: scan.issuesCount,
+        criticalCount: scan.criticalCount,
+        warningCount: scan.warningCount,
+        suggestionCount: scan.suggestionCount,
+        scanDate: scan.scanDate,
+        completedAt: scan.completedAt,
+      });
+    } catch (error) {
+      console.error("Error fetching scan summary:", error);
+      res.status(500).json({ error: "فشل في جلب ملخص الفحص" });
+    }
+  });
+  
+  // Claim a scan for authenticated user
+  app.post("/api/scans/:id/claim", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const scan = await storage.getScan(req.params.id);
+      if (!scan) {
+        return res.status(404).json({ error: "الفحص غير موجود" });
+      }
+      
+      // Check if already claimed by another user
+      if (scan.userId && scan.userId !== userId) {
+        return res.status(403).json({ error: "هذا الفحص مملوك لمستخدم آخر" });
+      }
+      
+      // If already claimed by same user, just return
+      if (scan.userId === userId && scan.isClaimedByUser) {
+        return res.json(scan);
+      }
+      
+      const updatedScan = await storage.claimScan(req.params.id, userId);
+      res.json(updatedScan);
+    } catch (error) {
+      console.error("Error claiming scan:", error);
+      res.status(500).json({ error: "فشل في ربط الفحص بالحساب" });
+    }
+  });
+  
+  // Get user's scans
+  app.get("/api/user/scans", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const scans = await storage.getScansByUserId(userId);
+      res.json(scans);
+    } catch (error) {
+      console.error("Error fetching user scans:", error);
+      res.status(500).json({ error: "فشل في جلب فحوصات المستخدم" });
     }
   });
 
@@ -827,6 +903,225 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   app.get("/api/policies/versions", (req, res) => {
     res.status(403).json({ error: "غير مصرح بالوصول - للإدارة فقط" });
+  });
+
+  // ========== Policy Generation Requests (Payment Gated) ==========
+  
+  // Create a policy generation request (requires authentication)
+  app.post("/api/policy-requests", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const { scanId, intakeData } = req.body;
+      
+      const request = await storage.createPolicyGenerationRequest({
+        userId,
+        scanId: scanId || null,
+        intakeData: intakeData || {},
+      });
+      
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating policy request:", error);
+      res.status(500).json({ error: "فشل في إنشاء طلب السياسة" });
+    }
+  });
+  
+  // Get user's policy generation requests
+  app.get("/api/policy-requests", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const requests = await storage.getPolicyGenerationRequestsByUserId(userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching policy requests:", error);
+      res.status(500).json({ error: "فشل في جلب طلبات السياسات" });
+    }
+  });
+  
+  // Get a specific policy generation request
+  app.get("/api/policy-requests/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const request = await storage.getPolicyGenerationRequest(req.params.id);
+      
+      if (!request) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      
+      // Verify ownership
+      if (request.userId !== userId) {
+        return res.status(403).json({ error: "غير مصرح بالوصول لهذا الطلب" });
+      }
+      
+      res.json(request);
+    } catch (error) {
+      console.error("Error fetching policy request:", error);
+      res.status(500).json({ error: "فشل في جلب الطلب" });
+    }
+  });
+  
+  // Update intake data for a policy generation request
+  app.patch("/api/policy-requests/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const request = await storage.getPolicyGenerationRequest(req.params.id);
+      
+      if (!request) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      
+      if (request.userId !== userId) {
+        return res.status(403).json({ error: "غير مصرح بالتعديل على هذا الطلب" });
+      }
+      
+      // Can only update if not yet paid
+      if (request.paymentStatus === "paid") {
+        return res.status(400).json({ error: "لا يمكن تعديل طلب مدفوع" });
+      }
+      
+      const { intakeData } = req.body;
+      const updated = await storage.updatePolicyGenerationRequest(req.params.id, {
+        intakeData: intakeData || request.intakeData,
+      });
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating policy request:", error);
+      res.status(500).json({ error: "فشل في تحديث الطلب" });
+    }
+  });
+  
+  // ========== Payments (PayPal Integration) ==========
+  
+  // Create a payment for a policy generation request
+  app.post("/api/payments/create", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const { requestId, amount, currency = "SAR" } = req.body;
+      
+      if (!requestId) {
+        return res.status(400).json({ error: "معرف الطلب مطلوب" });
+      }
+      
+      // Verify the request exists and belongs to user
+      const policyRequest = await storage.getPolicyGenerationRequest(requestId);
+      if (!policyRequest) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      if (policyRequest.userId !== userId) {
+        return res.status(403).json({ error: "غير مصرح" });
+      }
+      
+      // Check if already paid
+      if (policyRequest.paymentStatus === "paid") {
+        return res.status(400).json({ error: "هذا الطلب مدفوع بالفعل" });
+      }
+      
+      // Create payment record
+      const payment = await storage.createPayment({
+        requestId,
+        userId,
+        amount: amount || 9900, // Default 99 SAR in halalas
+        currency,
+        provider: "paypal",
+      });
+      
+      // Update request status to awaiting payment
+      await storage.updatePolicyGenerationRequest(requestId, {
+        workflowStatus: "awaiting_payment",
+        paymentStatus: "processing",
+      });
+      
+      res.json({
+        paymentId: payment.id,
+        amount: payment.amount,
+        currency: payment.currency,
+      });
+    } catch (error) {
+      console.error("Error creating payment:", error);
+      res.status(500).json({ error: "فشل في إنشاء الدفع" });
+    }
+  });
+  
+  // Capture/Confirm PayPal payment
+  app.post("/api/payments/:paymentId/capture", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const payment = await storage.getPayment(req.params.paymentId);
+      
+      if (!payment) {
+        return res.status(404).json({ error: "الدفع غير موجود" });
+      }
+      
+      if (payment.userId !== userId) {
+        return res.status(403).json({ error: "غير مصرح" });
+      }
+      
+      const { providerPaymentId, providerPayerId } = req.body;
+      
+      // Update payment with PayPal details
+      const updatedPayment = await storage.updatePayment(req.params.paymentId, {
+        providerPaymentId,
+        providerPayerId,
+        status: "succeeded",
+      });
+      
+      // Update policy request status
+      await storage.updatePolicyGenerationRequest(payment.requestId, {
+        workflowStatus: "paid",
+        paymentStatus: "paid",
+      });
+      
+      res.json({
+        success: true,
+        payment: updatedPayment,
+      });
+    } catch (error) {
+      console.error("Error capturing payment:", error);
+      res.status(500).json({ error: "فشل في تأكيد الدفع" });
+    }
+  });
+  
+  // Get user's payments
+  app.get("/api/payments", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const payments = await storage.getPaymentsByUserId(userId);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      res.status(500).json({ error: "فشل في جلب المدفوعات" });
+    }
+  });
+
+  // ========== PayPal Integration Routes ==========
+  
+  app.get("/paypal/setup", async (req, res) => {
+    await loadPaypalDefault(req, res);
+  });
+
+  app.post("/paypal/order", async (req, res) => {
+    await createPaypalOrder(req, res);
+  });
+
+  app.post("/paypal/order/:orderID/capture", async (req, res) => {
+    await capturePaypalOrder(req, res);
   });
 
   // ========== Terms Generator Endpoints ==========
