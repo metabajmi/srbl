@@ -37,8 +37,8 @@ import InternalComplianceWorkspacePage from "@/pages/InternalComplianceWorkspace
 import NotFound from "@/pages/not-found";
 import { useEffect, useState } from "react";
 
-// Check if user (client) is logged in
-const isClientLoggedIn = (): boolean => {
+// Check if user (client) is logged in (for UI display purposes only)
+const isClientLoggedInLocal = (): boolean => {
   try {
     const userStr = localStorage.getItem("user");
     if (userStr && userStr !== "undefined" && userStr !== "null") {
@@ -60,18 +60,43 @@ const useAdminAuth = () => {
   return { isAdmin: !!data, isLoading };
 };
 
-// Protected route wrapper for client pages
+// Check if client is logged in via server session (secure)
+const useClientAuth = () => {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+  });
+  
+  // Clear localStorage if server says not authenticated
+  useEffect(() => {
+    if (!isLoading && (error || !data)) {
+      localStorage.removeItem("user");
+    }
+  }, [isLoading, error, data]);
+  
+  return { isAuthenticated: !!data && !error, isLoading, user: (data as any)?.user };
+};
+
+// Protected route wrapper for client pages (server-verified)
 function ClientRoute({ component: Component }: { component: React.ComponentType }) {
   const [, navigate] = useLocation();
-  const isLoggedIn = isClientLoggedIn();
+  const { isAuthenticated, isLoading } = useClientAuth();
   
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoading && !isAuthenticated) {
       navigate("/login");
     }
-  }, [isLoggedIn, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
   
-  if (!isLoggedIn) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
     return null;
   }
   
@@ -107,15 +132,15 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
 // Redirect logged-in clients away from admin pages
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const [, navigate] = useLocation();
-  const isClient = isClientLoggedIn();
+  const { isAuthenticated } = useClientAuth();
   const { isAdmin } = useAdminAuth();
   
   // If a client (not admin) tries to access admin pages, redirect to dashboard
   useEffect(() => {
-    if (isClient && !isAdmin) {
+    if (isAuthenticated && !isAdmin) {
       navigate("/dashboard");
     }
-  }, [isClient, isAdmin, navigate]);
+  }, [isAuthenticated, isAdmin, navigate]);
   
   return <>{children}</>;
 }
@@ -210,11 +235,11 @@ function AppContent() {
     queryKey: ["/api/cmp/settings"],
   });
   
-  // Check if user is logged in (reactive)
-  const [isLoggedIn, setIsLoggedIn] = useState(isClientLoggedIn());
+  // Check if user is logged in (for UI display - localStorage for quick response)
+  const [isLoggedIn, setIsLoggedIn] = useState(isClientLoggedInLocal());
   
   useEffect(() => {
-    const checkAuth = () => setIsLoggedIn(isClientLoggedIn());
+    const checkAuth = () => setIsLoggedIn(isClientLoggedInLocal());
     // Check on mount and when storage changes
     checkAuth();
     window.addEventListener('storage', checkAuth);

@@ -560,6 +560,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get issues for a scan (requires authentication for detailed view)
   app.get("/api/scans/:id/issues", requireAuth, async (req, res) => {
     try {
+      // First verify the scan belongs to this user
+      const scan = await storage.getScan(req.params.id);
+      if (!scan) {
+        return res.status(404).json({ error: "الفحص غير موجود" });
+      }
+      
+      // Check ownership - scan must belong to the authenticated user
+      if (scan.userId && scan.userId !== req.session.userId) {
+        return res.status(403).json({ error: "غير مصرح بالوصول لهذا الفحص" });
+      }
+      
       const issues = await storage.getIssuesByScanId(req.params.id);
       res.json(issues);
     } catch (error) {
