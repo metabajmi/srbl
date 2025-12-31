@@ -31,6 +31,7 @@ import { analyzeSite, convertToLegacyFormat } from "./services/complianceAnalyze
 import { runComprehensiveScan } from "./scanner/comprehensiveScanner";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { sendPolicyEmail, sendPaymentConfirmationEmail } from "./email";
 
 declare module "express-session" {
   interface SessionData {
@@ -1147,9 +1148,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "الدفع غير مكتمل", status: payment.status });
       }
       
+      let companyName = "طلب جديد";
+      let contactEmail = "";
+      
       if (requestId) {
         const policyRequest = await storage.getPolicyGenerationRequest(requestId);
         if (policyRequest && policyRequest.userId === userId) {
+          const intakeData = policyRequest.intakeData as Record<string, any> | null;
+          companyName = intakeData?.companyName || companyName;
+          contactEmail = intakeData?.contactEmail || "";
+          
           await storage.updatePolicyGenerationRequest(requestId, {
             workflowStatus: "paid",
             paymentStatus: "paid",
@@ -1171,6 +1179,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               provider: "moyasar",
               providerPaymentId: paymentId,
             });
+          }
+          
+          if (contactEmail) {
+            sendPaymentConfirmationEmail({
+              to: contactEmail,
+              companyName,
+              amount: payment.amount,
+              paymentId,
+            }).catch(err => console.error("Failed to send payment email:", err));
           }
         }
       }
@@ -2316,6 +2333,15 @@ async function processPrivacyPolicyGeneration(policyId: string) {
       status: "completed",
       generatedContent,
     });
+    
+    if (policy.contactEmail && generatedContent) {
+      sendPolicyEmail({
+        to: policy.contactEmail,
+        companyName: policy.companyName,
+        policyContent: generatedContent,
+        policyId: policyId,
+      }).catch(err => console.error("Failed to send policy email:", err));
+    }
   } catch (error) {
     console.error("Error processing privacy policy generation:", error);
     await storage.updatePolicyDocument(policyId, { status: "failed" });
