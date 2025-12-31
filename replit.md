@@ -81,6 +81,22 @@ A RAG-based chatbot with a production-ready backend (8 API endpoints for embeddi
 **Client Authentication System:**
 Includes database tables for users, client policies, and requests, with backend authentication endpoints (register, login, logout, `/me`) using bcrypt and Express-session with a PostgreSQL store. Frontend provides SignUp, Login, and Dashboard pages with RTL support, and secure session management.
 
+**Admin & Client Portal Separation:**
+- **Complete Isolation:** Admin portal (`/admin/*`) and Client dashboard (`/dashboard`) are completely separated with no UI crossover
+- **Route Protection:** 
+  - `ClientRoute` wrapper uses server-side session verification via `/api/auth/me` before rendering protected content
+  - `AdminRoute` wrapper checks admin session via `/api/admin/me`
+  - `AdminGuard` redirects authenticated clients away from admin pages
+- **Scan Auto-Linking:** Anonymous scans are tracked via `session.pendingClaimScanId` and automatically linked to user accounts upon registration/login
+- **Client Dashboard Tabs:**
+  - Scan Results: Shows compliance score, issue counts (critical/warning/suggestion), and scan date
+  - Violations: Lists detailed issues by severity with Moyasar payment CTA for policy generation (99 SAR)
+  - Policies: Displays generated policies with preview and download capability
+- **Security Measures:**
+  - All scan-related endpoints verify ownership (user can only see their own scans)
+  - `/api/scans/:id/issues` validates scan ownership before returning data
+  - LocalStorage is only used for UI display; actual auth relies on server session
+
 **Payment Integration (Moyasar):**
 - **Payment Gateway:** Moyasar integration supporting Mada (Saudi local cards), Visa, Mastercard, and Apple Pay
 - **Client-Side:** `client/src/components/MoyasarPayment.tsx` - React component using Moyasar Web SDK (v1.14.0)
