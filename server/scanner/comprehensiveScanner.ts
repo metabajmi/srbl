@@ -265,43 +265,68 @@ export async function runComprehensiveScan(
       .filter(p => p.type !== 'other' && p.confidence >= 0.7)
       .slice(0, fullConfig.max_pages_to_crawl);
     
-    console.log(`\n[Scanner] STEP 3: Navigating to and analyzing ${pagesToFetch.length} policy pages...\n`);
+    console.log(`\n[Scanner] STEP 3: Fetching ${pagesToFetch.length} policy pages (batched, 3 concurrent)...\n`);
     
-    for (const page of pagesToFetch) {
-      try {
-        console.log(`[Scanner] ➤ Navigating to ${page.type.toUpperCase()} at: ${page.url}`);
-        const pageResult = await scanWithBrowser(page.url);
-        console.log(`[Scanner]   ✓ Successfully loaded (${pageResult.html?.length || 0} bytes)`);
-        
-        const parsed = parsePolicy(pageResult.html, page.url, page.type);
-        parsedPolicies.push(parsed);
-        
-        const completeness = analyzePolicyCompleteness(parsed);
-        
-        legalPageAnalyses.push({
-          url: parsed.url,
-          type: parsed.type,
-          found_by: page.foundBy,
-          title: parsed.title,
-          word_count: parsed.wordCount,
-          language: parsed.language,
-          sections: parsed.sections.slice(0, 20).map(s => ({
-            title: s.title,
-            text: s.text.substring(0, 500),
-            mappings: s.pdplMappings,
-          })),
-          completeness_score: completeness.score,
-          missing_elements: completeness.missingElements,
-          present_elements: completeness.presentElements,
-        });
-        
-        console.log(`[Scanner]   ✓ Parsed: ${parsed.wordCount} words in ${parsed.sections.length} sections (Language: ${parsed.language})`);
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        errors.push(`Failed to fetch ${page.type} page (${page.url}): ${errorMsg}`);
-        console.error(`[ComprehensiveScan] Failed to fetch ${page.url}: ${errorMsg}`);
+    // Fetch policy pages with controlled concurrency (3 at a time for speed + stability)
+    const BATCH_SIZE = 3;
+    
+    for (let i = 0; i < pagesToFetch.length; i += BATCH_SIZE) {
+      const batch = pagesToFetch.slice(i, i + BATCH_SIZE);
+      console.log(`[Scanner] Batch ${Math.floor(i / BATCH_SIZE) + 1}: Fetching ${batch.length} pages...`);
+      
+      const batchPromises = batch.map(async (page) => {
+        try {
+          console.log(`[Scanner] ➤ Fetching: ${page.type.toUpperCase()} at ${page.url}`);
+          const pageResult = await scanWithBrowser(page.url);
+          console.log(`[Scanner]   ✓ Loaded ${page.type}: ${pageResult.html?.length || 0} bytes`);
+          
+          const parsed = parsePolicy(pageResult.html, page.url, page.type);
+          const completeness = analyzePolicyCompleteness(parsed);
+          
+          return {
+            success: true,
+            page,
+            parsed,
+            analysis: {
+              url: parsed.url,
+              type: parsed.type,
+              found_by: page.foundBy,
+              title: parsed.title,
+              word_count: parsed.wordCount,
+              language: parsed.language,
+              sections: parsed.sections.slice(0, 20).map(s => ({
+                title: s.title,
+                text: s.text.substring(0, 500),
+                mappings: s.pdplMappings,
+              })),
+              completeness_score: completeness.score,
+              missing_elements: completeness.missingElements,
+              present_elements: completeness.presentElements,
+            } as LegalPageAnalysis,
+          };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          console.error(`[Scanner] ✗ Failed ${page.type}: ${errorMsg}`);
+          return { success: false, page, error: errorMsg };
+        }
+      });
+      
+      // Wait for batch to complete
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Process batch results
+      for (const result of batchResults) {
+        if (result.success && result.parsed && result.analysis) {
+          parsedPolicies.push(result.parsed);
+          legalPageAnalyses.push(result.analysis);
+          console.log(`[Scanner]   ✓ Parsed: ${result.parsed.wordCount} words (${result.parsed.language})`);
+        } else if (!result.success) {
+          errors.push(`Failed to fetch ${result.page.type} page (${result.page.url}): ${result.error}`);
+        }
       }
     }
+    
+    console.log(`[Scanner] Completed: ${parsedPolicies.length}/${pagesToFetch.length} pages fetched`);
   }
   
   const cookieAnalysis = analyzeCookieBanner(
