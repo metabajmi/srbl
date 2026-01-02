@@ -352,18 +352,59 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   {!showPayment && (
-                    <Button 
-                      onClick={() => createRequestMutation.mutate()}
-                      disabled={createRequestMutation.isPending}
-                      data-testid="button-generate-policy"
-                    >
-                      {createRequestMutation.isPending ? (
-                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <CreditCard className="ml-2 h-4 w-4" />
-                      )}
-                      توليد السياسة (99 ر.س)
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => createRequestMutation.mutate()}
+                        disabled={createRequestMutation.isPending}
+                        data-testid="button-generate-policy"
+                      >
+                        {createRequestMutation.isPending ? (
+                          <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <CreditCard className="ml-2 h-4 w-4" />
+                        )}
+                        توليد السياسة (99 ر.س)
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const response = await apiRequest("POST", "/api/policy-requests", {
+                              scanId: latestScan?.id,
+                              intakeData: {
+                                companyName: extractDomainName(latestScan?.url || ""),
+                                businessType: "تجارة إلكترونية",
+                                entityType: "private",
+                                contactEmail: user.email,
+                                dataCategories: [],
+                              },
+                            });
+                            const data = await response.json();
+                            
+                            const generateResponse = await apiRequest("POST", `/api/policy-requests/${data.id}/generate`);
+                            if (!generateResponse.ok) throw new Error("فشل في بدء توليد السياسة");
+                            
+                            toast({
+                              title: "تم تجاوز الدفع",
+                              description: "جاري توليد سياسة الخصوصية...",
+                            });
+                            
+                            queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
+                            queryClient.invalidateQueries({ queryKey: ["/api/policy-requests"] });
+                            setActiveTab("policies");
+                          } catch (error: any) {
+                            toast({
+                              title: "خطأ",
+                              description: error.message || "حدث خطأ",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        data-testid="button-bypass-payment"
+                      >
+                        تجاوز الدفع (تجريبي)
+                      </Button>
+                    </div>
                   )}
                 </div>
                 
