@@ -78,8 +78,19 @@ Features a hybrid system with a robust backend architecture including junction t
 **Smart Customer Assistant:**
 A RAG-based chatbot with a production-ready backend (8 API endpoints for embeddings, search, chat, conversations, feedback, knowledge) and a frontend chat UI with RTL support, suggested questions, context display, and feedback. The database stores PDPL articles with embeddings and tracks conversations.
 
-**Client Authentication System:**
-Includes database tables for users, client policies, and requests, with backend authentication endpoints (register, login, logout, `/me`) using bcrypt and Express-session with a PostgreSQL store. Frontend provides SignUp, Login, and Dashboard pages with RTL support, and secure session management.
+**Client Authentication System (Passwordless OTP):**
+- **Passwordless Flow:** Users authenticate via 6-digit OTP codes sent to email - no passwords required
+- **Database Schema:** `otp_tokens` table stores bcrypt-hashed codes with 10-minute expiry
+- **Rate Limiting:** 60-second cooldown between OTP requests, max 5 verification attempts per token
+- **API Endpoints:**
+  - `POST /api/auth/otp/send` - Sends OTP to email via Resend
+  - `POST /api/auth/otp/verify` - Verifies code and creates session
+  - `GET /api/auth/me` - Returns authenticated user
+  - `POST /api/auth/logout` - Destroys session
+- **Frontend:** OTPModal component (`client/src/components/OTPModal.tsx`) with 3-step flow: email input → code verification → success
+- **Teaser UI:** Anonymous users see compliance score and violation counts, but violations are blurred with "Unlock Details" CTA that triggers OTP modal
+- **Auto-Claim:** Anonymous scans tracked via `session.pendingClaimScanId` and automatically linked to user after OTP verification
+- **Session Management:** Express-session with `connect-pg-simple` PostgreSQL store
 
 **Admin & Client Portal Separation:**
 - **Complete Isolation:** Admin portal (`/admin/*`) and Client dashboard (`/dashboard`) are completely separated with no UI crossover
