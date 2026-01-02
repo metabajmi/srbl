@@ -99,6 +99,8 @@ export default function DashboardPage() {
   };
   
   // Create policy request mutation
+  // ========== BYPASS MODE FOR TESTING ==========
+  // Changed to bypass Moyasar payment and use dummy payment ID
   const createRequestMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/policy-requests", {
@@ -113,9 +115,14 @@ export default function DashboardPage() {
       });
       return response.json();
     },
-    onSuccess: (data) => {
-      setCurrentRequestId(data.id);
-      setShowPayment(true);
+    onSuccess: async (data) => {
+      // BYPASS: Skip Moyasar payment form and call success directly with dummy ID
+      // Original code:
+      // setCurrentRequestId(data.id);
+      // setShowPayment(true);
+      
+      // BYPASS: Simulate successful payment with dummy ID
+      await handlePaymentComplete("BYPASS_TEST", data.id);
     },
     onError: () => {
       toast({
@@ -125,14 +132,17 @@ export default function DashboardPage() {
       });
     },
   });
+  // ========== END BYPASS MODE ==========
   
   // Handle payment completion
-  const handlePaymentComplete = async (paymentId: string) => {
+  // Modified to accept optional requestId for BYPASS mode
+  const handlePaymentComplete = async (paymentId: string, requestIdOverride?: string) => {
+    const activeRequestId = requestIdOverride || currentRequestId;
     try {
       // Verify payment
       const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
         paymentId,
-        requestId: currentRequestId,
+        requestId: activeRequestId,
       });
       
       if (!verifyResponse.ok) {
@@ -140,7 +150,7 @@ export default function DashboardPage() {
       }
       
       // Trigger policy generation
-      const generateResponse = await apiRequest("POST", `/api/policy-requests/${currentRequestId}/generate`);
+      const generateResponse = await apiRequest("POST", `/api/policy-requests/${activeRequestId}/generate`);
       
       if (!generateResponse.ok) {
         throw new Error("فشل في بدء توليد السياسة");

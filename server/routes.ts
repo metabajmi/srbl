@@ -1464,6 +1464,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "معرف الدفع مطلوب" });
       }
       
+      // ========== BYPASS MODE FOR TESTING ==========
+      // Accept "BYPASS_TEST" as a dummy payment ID to skip Moyasar verification
+      if (paymentId === "BYPASS_TEST") {
+        console.log("[BYPASS] Payment verification bypassed for testing");
+        const payment = { 
+          id: "BYPASS_TEST", 
+          status: "paid", 
+          amount: 9900, 
+          currency: "SAR" 
+        };
+        
+        // Handle request update for bypass mode
+        if (requestId) {
+          const policyRequest = await storage.getPolicyGenerationRequest(requestId);
+          if (policyRequest && policyRequest.userId === userId) {
+            await storage.updatePolicyGenerationRequest(requestId, {
+              workflowStatus: "paid",
+              paymentStatus: "paid",
+            });
+          }
+        }
+        
+        return res.json({ 
+          success: true, 
+          status: "paid",
+          message: "تم تجاوز الدفع للاختبار",
+          bypassed: true,
+        });
+      }
+      // ========== END BYPASS MODE ==========
+      
       const secretKey = process.env.MOYASAR_SECRET_KEY;
       if (!secretKey) {
         console.error("MOYASAR_SECRET_KEY not configured");
