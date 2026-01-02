@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CheckCircle2, Info, Globe, FileType, File, Lock, CreditCard, UserPlus } from "lucide-react";
+import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CheckCircle2, Info, Globe, FileType, File, Lock, CreditCard, Unlock } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { type PolicyDocument } from "@shared/schema";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { useScanContext } from "@/contexts/ScanContext";
 import { useLocation } from "wouter";
 import MoyasarPayment from "@/components/MoyasarPayment";
+import { OTPModal } from "@/components/OTPModal";
 
 const isAuthenticated = (): boolean => {
   try {
@@ -79,6 +80,7 @@ export default function PrivacyGeneratorTab() {
   const [pendingFormData, setPendingFormData] = useState<FormValues | null>(null);
   const [paymentRequestId, setPaymentRequestId] = useState<string | null>(null);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
+  const [showOTPModal, setShowOTPModal] = useState(false);
 
   useEffect(() => {
     const checkAuth = () => setIsLoggedIn(isAuthenticated());
@@ -89,6 +91,15 @@ export default function PrivacyGeneratorTab() {
       clearInterval(interval);
     };
   }, []);
+
+  // Handle OTP success
+  const handleOTPSuccess = () => {
+    setIsLoggedIn(true);
+    toast({
+      title: "مرحباً بك!",
+      description: "يمكنك الآن إنشاء سياسة الخصوصية",
+    });
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -378,24 +389,35 @@ ${policy.generatedContent}
         <Card className="mb-6 border-primary/30">
           <CardContent className="pt-6">
             <div className="text-center py-4">
-              <Lock className="w-12 h-12 text-primary mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">سجّل للحصول على سياسة خصوصية احترافية</h3>
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">تحقق من هويتك لإنشاء سياسة خصوصية</h3>
               <p className="text-muted-foreground mb-4">
                 أنشئ سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية السعودي
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button onClick={() => setLocation("/signup")} size="lg" data-testid="button-signup-policy">
-                  <UserPlus className="h-5 w-5 ml-2" />
-                  إنشاء حساب مجاني
-                </Button>
-                <Button variant="outline" onClick={() => setLocation("/login")} size="lg" data-testid="button-login-policy">
-                  تسجيل الدخول
-                </Button>
-              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                أدخل بريدك الإلكتروني فقط - بدون كلمة مرور
+              </p>
+              <Button 
+                onClick={() => setShowOTPModal(true)} 
+                size="lg" 
+                className="min-w-[200px]"
+                data-testid="button-unlock-policy"
+              >
+                <Unlock className="h-5 w-5 ml-2" />
+                التحقق والمتابعة
+              </Button>
             </div>
           </CardContent>
         </Card>
       )}
+
+      <OTPModal
+        open={showOTPModal}
+        onOpenChange={setShowOTPModal}
+        onSuccess={handleOTPSuccess}
+      />
 
       <div className="mb-6 flex gap-2 justify-center flex-wrap">
         <Badge 

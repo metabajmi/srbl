@@ -51,6 +51,8 @@ import {
   type InsertAdminUser,
   type AuditLog,
   type InsertAuditLog,
+  type OtpToken,
+  type InsertOtpToken,
   complianceScans,
   complianceIssues,
   reports,
@@ -78,7 +80,8 @@ import {
   clientPolicies,
   clientRequests,
   adminUsers,
-  auditLogs
+  auditLogs,
+  otpTokens
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql as drizzleSql } from "drizzle-orm";
@@ -227,6 +230,14 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
+  createOrGetUserByEmail(email: string, name?: string): Promise<User>;
+  
+  // OTP Tokens - رموز التحقق
+  createOtpToken(email: string, codeHash: string, expiresAt: Date): Promise<OtpToken>;
+  getLatestOtpByEmail(email: string): Promise<OtpToken | undefined>;
+  markOtpVerified(id: string): Promise<void>;
+  incrementOtpAttempt(id: string): Promise<void>;
+  deleteExpiredOtpTokens(): Promise<void>;
   
   // Client Policies - سياسات العملاء
   createClientPolicy(policy: InsertClientPolicy): Promise<ClientPolicy>;
@@ -1391,6 +1402,58 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: string): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
+  }
+
+  async createOrGetUserByEmail(email: string, name?: string): Promise<User> {
+    const existing = await this.getUserByEmail(email);
+    if (existing) {
+      return existing;
+    }
+    const [created] = await db.insert(users).values({ 
+      email, 
+      name: name || null,
+      isEmailVerified: true 
+    }).returning();
+    return created;
+  }
+
+  // OTP Tokens - رموز التحقق
+  async createOtpToken(email: string, codeHash: string, expiresAt: Date): Promise<OtpToken> {
+    const [created] = await db.insert(otpTokens).values({ 
+      email, 
+      codeHash, 
+      expiresAt 
+    }).returning();
+    return created;
+  }
+
+  async getLatestOtpByEmail(email: string): Promise<OtpToken | undefined> {
+    const [token] = await db
+      .select()
+      .from(otpTokens)
+      .where(and(
+        eq(otpTokens.email, email),
+        eq(otpTokens.verified, false)
+      ))
+      .orderBy(desc(otpTokens.createdAt))
+      .limit(1);
+    return token || undefined;
+  }
+
+  async markOtpVerified(id: string): Promise<void> {
+    await db.update(otpTokens).set({ verified: true }).where(eq(otpTokens.id, id));
+  }
+
+  async incrementOtpAttempt(id: string): Promise<void> {
+    await db.update(otpTokens).set({ 
+      attemptCount: drizzleSql`${otpTokens.attemptCount} + 1` 
+    }).where(eq(otpTokens.id, id));
+  }
+
+  async deleteExpiredOtpTokens(): Promise<void> {
+    await db.delete(otpTokens).where(
+      drizzleSql`${otpTokens.expiresAt} < NOW()`
+    );
   }
 
   // Client Policies - سياسات العملاء

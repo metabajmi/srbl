@@ -45,10 +45,10 @@ export default function DashboardPage() {
     console.error("Failed to parse user from localStorage", e);
   }
   
-  // Redirect to login if not authenticated
+  // Redirect to home if not authenticated (OTP modal handles auth)
   useEffect(() => {
     if (!user.id) {
-      navigate("/login");
+      navigate("/");
     }
   }, [user.id, navigate]);
   
@@ -91,10 +91,10 @@ export default function DashboardPage() {
         title: "تم تسجيل الخروج",
         description: "نراك قريباً!",
       });
-      navigate("/login");
+      navigate("/");
     } catch (error) {
       localStorage.removeItem("user");
-      navigate("/login");
+      navigate("/");
     }
   };
   

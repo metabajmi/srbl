@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, ExternalLink, ClipboardList, ChevronDown, ChevronUp, Lock, UserPlus } from "lucide-react";
+import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, ExternalLink, ClipboardList, ChevronDown, ChevronUp, Lock, Unlock } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
 import { useState, useEffect, useRef } from "react";
 import { BackButton } from "@/components/BackButton";
 import { useScanContext, extractScanData } from "@/contexts/ScanContext";
+import { OTPModal } from "@/components/OTPModal";
 
 // Check if user is authenticated
 const isAuthenticated = (): boolean => {
@@ -39,6 +40,7 @@ export default function ScanResultsPage() {
   
   // Check authentication state (reactive to storage changes)
   const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated());
+  const [showOTPModal, setShowOTPModal] = useState(false);
   
   useEffect(() => {
     // Re-check auth status when component mounts or storage changes
@@ -46,6 +48,18 @@ export default function ScanResultsPage() {
     window.addEventListener('storage', checkAuth);
     return () => window.removeEventListener('storage', checkAuth);
   }, []);
+
+  // Handle successful OTP verification
+  const handleOTPSuccess = (user: any, claimedScanId?: string | null) => {
+    setIsLoggedIn(true);
+    // Refetch issues and scan data now that user is authenticated
+    refetch();
+    refetchIssues();
+    toast({
+      title: "مرحباً بك!",
+      description: "تم التحقق بنجاح. يمكنك الآن مشاهدة تفاصيل المخالفات.",
+    });
+  };
 
   const { data: scan, isLoading: scanLoading, refetch } = useQuery({
     queryKey: ["/api/scans", scanId],
@@ -315,27 +329,49 @@ export default function ScanResultsPage() {
 
             {/* Issues Section - Gated for non-authenticated users */}
             {!isLoggedIn ? (
-              <Card className="mb-6 border-primary/30">
+              <Card className="mb-6 border-primary/30 relative overflow-hidden">
                 <CardContent className="pt-6">
-                  <div className="text-center py-6">
-                    <Lock className="w-12 h-12 text-primary mx-auto mb-4" />
-                    <h3 className="text-xl font-bold mb-2">سجّل للاطلاع على التفاصيل</h3>
+                  {/* Blurred preview of issues (decorative) */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div className="p-6 blur-sm opacity-30">
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="border rounded-lg p-3">
+                            <div className="flex items-start gap-3">
+                              <div className="w-8 h-8 rounded-full bg-red-100" />
+                              <div className="flex-1">
+                                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+                                <div className="h-3 bg-gray-100 rounded w-full" />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Overlay CTA */}
+                  <div className="relative z-10 text-center py-8 bg-gradient-to-b from-background/80 via-background to-background/80 rounded-lg">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                      <Lock className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">تحقق من هويتك لمشاهدة التفاصيل</h3>
                     <p className="text-muted-foreground mb-1">
                       عثرنا على <span className="font-bold text-destructive">{scan.criticalCount || 0}</span> مخالفة
                       و <span className="font-bold text-orange-500">{scan.warningCount || 0}</span> تحذير
                     </p>
                     <p className="text-sm text-muted-foreground mb-6">
-                      سجّل مجاناً للاطلاع على تفاصيل المخالفات وتوصيات الإصلاح
+                      أدخل بريدك الإلكتروني فقط - بدون كلمة مرور
                     </p>
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <Button onClick={() => setLocation("/signup")} size="lg" data-testid="button-signup-cta">
-                        <UserPlus className="h-5 w-5 ml-2" />
-                        إنشاء حساب مجاني
-                      </Button>
-                      <Button variant="outline" onClick={() => setLocation("/login")} size="lg" data-testid="button-login-cta">
-                        تسجيل الدخول
-                      </Button>
-                    </div>
+                    <Button 
+                      onClick={() => setShowOTPModal(true)} 
+                      size="lg" 
+                      className="min-w-[200px]"
+                      data-testid="button-unlock-violations"
+                    >
+                      <Unlock className="h-5 w-5 ml-2" />
+                      فتح التفاصيل
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -407,6 +443,13 @@ export default function ScanResultsPage() {
         )}
 
       </div>
+
+      {/* OTP Authentication Modal */}
+      <OTPModal 
+        open={showOTPModal} 
+        onOpenChange={setShowOTPModal}
+        onSuccess={handleOTPSuccess}
+      />
     </div>
   );
 }
