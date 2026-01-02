@@ -2,6 +2,10 @@ import { Resend } from "resend";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
+// Use verified domain or Resend's testing address
+// When sirbal.sa is verified in Resend, change this to "Sirbal <noreply@sirbal.sa>"
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "Sirbal <onboarding@resend.dev>";
+
 interface PolicyEmailData {
   to: string;
   companyName: string;
@@ -129,7 +133,7 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
     `;
 
     const { data: result, error } = await resend.emails.send({
-      from: "Sirbal <noreply@sirbal.sa>",
+      from: FROM_EMAIL,
       to: [data.to],
       subject: `سياسة الخصوصية جاهزة - ${data.companyName}`,
       html: htmlContent,
@@ -291,7 +295,7 @@ export async function sendPaymentConfirmationEmail(data: PaymentConfirmationData
     `;
 
     const { data: result, error } = await resend.emails.send({
-      from: "Sirbal <noreply@sirbal.sa>",
+      from: FROM_EMAIL,
       to: [data.to],
       subject: `تأكيد الدفع - ${amountSAR} ر.س`,
       html: htmlContent,
@@ -426,7 +430,7 @@ export async function sendOtpEmail(data: OtpEmailData): Promise<boolean> {
     `;
 
     const { data: result, error } = await resend.emails.send({
-      from: "Sirbal <noreply@sirbal.sa>",
+      from: FROM_EMAIL,
       to: [data.to],
       subject: `رمز التحقق: ${data.code}`,
       html: htmlContent,
