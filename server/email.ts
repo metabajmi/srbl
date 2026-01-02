@@ -1,10 +1,26 @@
 import { Resend } from "resend";
+import Mailgun from "mailgun.js";
+import formData from "form-data";
 
+// Mailgun configuration (recommended for Saudi Arabia)
+const mailgun = new Mailgun(formData);
+const mg = process.env.MAILGUN_API_KEY 
+  ? mailgun.client({ 
+      username: 'api', 
+      key: process.env.MAILGUN_API_KEY,
+      url: process.env.MAILGUN_EU ? "https://api.eu.mailgun.net" : "https://api.mailgun.net"
+    }) 
+  : null;
+const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || "";
+
+// Resend configuration (fallback)
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Use verified domain or Resend's testing address
-// When sirbal.sa is verified in Resend, change this to "Sirbal <noreply@sirbal.sa>"
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "Sirbal <onboarding@resend.dev>";
+// Use verified domain or testing address
+const FROM_EMAIL = process.env.EMAIL_FROM || "Sirbal <noreply@sirbal.sa>";
+
+// Email provider selection: Mailgun first, then Resend
+const useMailgun = !!mg && !!MAILGUN_DOMAIN;
 
 interface PolicyEmailData {
   to: string;
@@ -14,13 +30,7 @@ interface PolicyEmailData {
 }
 
 export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
-  if (!resend) {
-    console.log("Resend not configured, skipping email");
-    return false;
-  }
-
-  try {
-    const htmlContent = `
+  const htmlContent = `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -130,26 +140,49 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
     </div>
 </body>
 </html>
-    `;
+  `;
 
-    const { data: result, error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [data.to],
-      subject: `سياسة الخصوصية جاهزة - ${data.companyName}`,
-      html: htmlContent,
-    });
+  // Try Mailgun first
+  if (useMailgun) {
+    try {
+      const result = await mg!.messages.create(MAILGUN_DOMAIN, {
+        from: FROM_EMAIL,
+        to: [data.to],
+        subject: `سياسة الخصوصية جاهزة - ${data.companyName}`,
+        html: htmlContent,
+      });
+      console.log("Policy email sent via Mailgun:", result.id);
+      return true;
+    } catch (error) {
+      console.error("Mailgun error:", error);
+    }
+  }
 
-    if (error) {
-      console.error("Resend error:", error);
+  // Fallback to Resend
+  if (resend) {
+    try {
+      const { data: result, error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: [data.to],
+        subject: `سياسة الخصوصية جاهزة - ${data.companyName}`,
+        html: htmlContent,
+      });
+
+      if (error) {
+        console.error("Resend error:", error);
+        return false;
+      }
+
+      console.log("Policy email sent via Resend:", result?.id);
+      return true;
+    } catch (error) {
+      console.error("Failed to send email:", error);
       return false;
     }
-
-    console.log("Email sent successfully:", result?.id);
-    return true;
-  } catch (error) {
-    console.error("Failed to send email:", error);
-    return false;
   }
+
+  console.log("No email provider configured, skipping email");
+  return false;
 }
 
 interface PaymentConfirmationData {
@@ -160,15 +193,9 @@ interface PaymentConfirmationData {
 }
 
 export async function sendPaymentConfirmationEmail(data: PaymentConfirmationData): Promise<boolean> {
-  if (!resend) {
-    console.log("Resend not configured, skipping email");
-    return false;
-  }
-
-  try {
-    const amountSAR = (data.amount / 100).toFixed(2);
-    
-    const htmlContent = `
+  const amountSAR = (data.amount / 100).toFixed(2);
+  
+  const htmlContent = `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -292,26 +319,49 @@ export async function sendPaymentConfirmationEmail(data: PaymentConfirmationData
     </div>
 </body>
 </html>
-    `;
+  `;
 
-    const { data: result, error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [data.to],
-      subject: `تأكيد الدفع - ${amountSAR} ر.س`,
-      html: htmlContent,
-    });
+  // Try Mailgun first
+  if (useMailgun) {
+    try {
+      const result = await mg!.messages.create(MAILGUN_DOMAIN, {
+        from: FROM_EMAIL,
+        to: [data.to],
+        subject: `تأكيد الدفع - ${amountSAR} ر.س`,
+        html: htmlContent,
+      });
+      console.log("Payment confirmation email sent via Mailgun:", result.id);
+      return true;
+    } catch (error) {
+      console.error("Mailgun error:", error);
+    }
+  }
 
-    if (error) {
-      console.error("Resend error:", error);
+  // Fallback to Resend
+  if (resend) {
+    try {
+      const { data: result, error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: [data.to],
+        subject: `تأكيد الدفع - ${amountSAR} ر.س`,
+        html: htmlContent,
+      });
+
+      if (error) {
+        console.error("Resend error:", error);
+        return false;
+      }
+
+      console.log("Payment confirmation email sent via Resend:", result?.id);
+      return true;
+    } catch (error) {
+      console.error("Failed to send payment confirmation email:", error);
       return false;
     }
-
-    console.log("Payment confirmation email sent:", result?.id);
-    return true;
-  } catch (error) {
-    console.error("Failed to send payment confirmation email:", error);
-    return false;
   }
+
+  console.log("No email provider configured, skipping email");
+  return false;
 }
 
 interface OtpEmailData {
@@ -320,14 +370,7 @@ interface OtpEmailData {
 }
 
 export async function sendOtpEmail(data: OtpEmailData): Promise<boolean> {
-  if (!resend) {
-    console.log("Resend not configured, skipping OTP email");
-    console.log(`[DEV MODE] OTP Code for ${data.to}: ${data.code}`);
-    return false;
-  }
-
-  try {
-    const htmlContent = `
+  const htmlContent = `
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -427,24 +470,48 @@ export async function sendOtpEmail(data: OtpEmailData): Promise<boolean> {
     </div>
 </body>
 </html>
-    `;
+  `;
 
-    const { data: result, error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [data.to],
-      subject: `رمز التحقق: ${data.code}`,
-      html: htmlContent,
-    });
+  // Try Mailgun first
+  if (useMailgun) {
+    try {
+      const result = await mg!.messages.create(MAILGUN_DOMAIN, {
+        from: FROM_EMAIL,
+        to: [data.to],
+        subject: `رمز التحقق: ${data.code}`,
+        html: htmlContent,
+      });
+      console.log("OTP email sent via Mailgun:", result.id);
+      return true;
+    } catch (error) {
+      console.error("Mailgun error:", error);
+    }
+  }
 
-    if (error) {
-      console.error("Resend error:", error);
+  // Fallback to Resend
+  if (resend) {
+    try {
+      const { data: result, error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: [data.to],
+        subject: `رمز التحقق: ${data.code}`,
+        html: htmlContent,
+      });
+
+      if (error) {
+        console.error("Resend error:", error);
+        return false;
+      }
+
+      console.log("OTP email sent via Resend:", result?.id);
+      return true;
+    } catch (error) {
+      console.error("Failed to send OTP email:", error);
       return false;
     }
-
-    console.log("OTP email sent:", result?.id);
-    return true;
-  } catch (error) {
-    console.error("Failed to send OTP email:", error);
-    return false;
   }
+
+  // Development mode - log the code
+  console.log(`[DEV MODE] No email provider configured. OTP Code for ${data.to}: ${data.code}`);
+  return false;
 }
