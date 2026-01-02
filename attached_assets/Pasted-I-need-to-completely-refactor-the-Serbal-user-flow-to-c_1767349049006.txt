@@ -1,0 +1,31 @@
+I need to completely refactor the "Serbal" user flow to create a high-conversion, friction-free experience. Please implement the following strict workflow, replacing the current login system:
+
+### Phase 1: Guest Scanner (The Teaser)
+1.  **Input:** Allow any visitor to enter a URL and run the compliance scan immediately.
+2.  **Result Display:** Once the scan finishes, display **ONLY**:
+    - The Compliance Score (percentage).
+    - The Total Number of Violations.
+3.  **The "Blur" Effect:** Do NOT show the specific violations list yet. Instead, display a blurred or locked section with a prominent button: "Verify Identity to View Full Report".
+
+### Phase 2: Frictionless Authentication (Passwordless OTP)
+1.  **Trigger:** Clicking the button opens a clean modal.
+2.  **Input Fields:** Ask for:
+    - Name (Optional).
+    - Email Address (or Phone Number).
+3.  **Logic:** Remove the "Password" field entirely. Use a "Magic Link" or "OTP Code" flow (e.g., via Supabase Auth).
+    - If the user exists: Log them in.
+    - If new: Auto-register and log them in.
+4.  **Verification:** User enters the code sent to their email/phone to verify.
+
+### Phase 3: State Persistence (The "No-Delay" Requirement)
+1.  **Critical:** Ensure the scan results from Phase 1 are saved temporarily (e.g., LocalStorage or Session).
+2.  **Handover:** Immediately after the OTP verification is successful, attach those scan results to the user's session.
+3.  **Result:** The user is redirected instantly to the "Violations Dashboard" **without** running the scan again.
+
+### Phase 4: Monetization (The Paywall)
+1.  **Dashboard View:** The user can now see the specific list of violations.
+2.  **Action:** Display a locked "Generate & Download Privacy Policy" button.
+3.  **Payment:** Clicking this button triggers the payment gateway.
+4.  **Delivery:** Only after successful payment, generate the customized Privacy Policy for them to download.
+
+**Summary of Goal:** A seamless flow where a user scans, verifies via OTP to see errors, and pays to fix them—all in one smooth session without reloading or re-entering data.

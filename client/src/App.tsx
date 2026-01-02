@@ -7,14 +7,14 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { ScanProvider } from "@/contexts/ScanContext";
-import { LogIn, UserPlus } from "lucide-react";
+import { LogIn } from "lucide-react";
+import { OTPModal } from "@/components/OTPModal";
 import HomePage from "@/pages/HomePage";
 import ScanResultsPage from "@/pages/ScanResultsPage";
 import PrivacyGeneratorPage from "@/pages/PrivacyGeneratorPage";
 import TermsGeneratorPage from "@/pages/TermsGeneratorPage";
 import SmartAssistantPage from "@/pages/SmartAssistantPage";
-import SignUpPage from "@/pages/SignUpPage";
-import LoginPage from "@/pages/LoginPage";
+// Old auth pages removed - OTP modal handles authentication now
 import DashboardPage from "@/pages/DashboardPage";
 import MyPoliciesPage from "@/pages/MyPoliciesPage";
 import MyRequestsPage from "@/pages/MyRequestsPage";
@@ -80,7 +80,8 @@ function ClientRoute({ component: Component }: { component: React.ComponentType 
   
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      navigate("/login");
+      // Redirect to home - OTP modal handles auth now
+      navigate("/");
     }
   }, [isAuthenticated, isLoading, navigate]);
   
@@ -93,7 +94,15 @@ function ClientRoute({ component: Component }: { component: React.ComponentType 
   }
   
   if (!isAuthenticated) {
-    return null;
+    // Show redirecting message instead of blank screen
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">جاري إعادة التوجيه...</p>
+        </div>
+      </div>
+    );
   }
   
   return <Component />;
@@ -169,9 +178,13 @@ function Router() {
         <AdminRoute component={AdminManagementPage} />
       </Route>
       
-      {/* Auth pages */}
-      <Route path="/signup" component={SignUpPage} />
-      <Route path="/login" component={LoginPage} />
+      {/* Auth pages - Redirect to home (OTP modal handles auth now) */}
+      <Route path="/signup">
+        <Redirect to="/" />
+      </Route>
+      <Route path="/login">
+        <Redirect to="/" />
+      </Route>
       
       {/* Client Dashboard & Pages - Protected */}
       <Route path="/dashboard">
@@ -220,6 +233,7 @@ function AppContent() {
   
   // Check if user is logged in (for UI display - localStorage for quick response)
   const [isLoggedIn, setIsLoggedIn] = useState(isClientLoggedInLocal());
+  const [showOTPModal, setShowOTPModal] = useState(false);
   
   useEffect(() => {
     const checkAuth = () => setIsLoggedIn(isClientLoggedInLocal());
@@ -233,6 +247,11 @@ function AppContent() {
       clearInterval(interval);
     };
   }, []);
+
+  // Handle OTP success
+  const handleOTPSuccess = () => {
+    setIsLoggedIn(true);
+  };
   
   // Check if on admin pages
   const isAdminPage = location.startsWith("/admin");
@@ -256,28 +275,16 @@ function AppContent() {
                 />
                 <div className="flex items-center gap-2 sm:gap-3">
                   {!isLoggedIn ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/login")}
-                        data-testid="button-header-login"
-                        className="text-sm"
-                      >
-                        <LogIn className="w-4 h-4 ml-1.5" />
-                        <span className="hidden sm:inline">تسجيل الدخول</span>
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => navigate("/signup")}
-                        data-testid="button-header-signup"
-                        className="text-sm"
-                      >
-                        <UserPlus className="w-4 h-4 ml-1.5" />
-                        <span className="hidden sm:inline">إنشاء حساب</span>
-                      </Button>
-                    </>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setShowOTPModal(true)}
+                      data-testid="button-header-login"
+                      className="text-sm"
+                    >
+                      <LogIn className="w-4 h-4 ml-1.5" />
+                      <span className="hidden sm:inline">تسجيل الدخول</span>
+                    </Button>
                   ) : (
                     <Button
                       variant="outline"
@@ -301,6 +308,13 @@ function AppContent() {
         </div>
         
         <Toaster />
+        
+        {/* Global OTP Modal */}
+        <OTPModal
+          open={showOTPModal}
+          onOpenChange={setShowOTPModal}
+          onSuccess={handleOTPSuccess}
+        />
       </SidebarProvider>
     </TooltipProvider>
   );

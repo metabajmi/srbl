@@ -96,7 +96,7 @@ export default function MyRequestsPage() {
           title: "انتهت الجلسة",
           description: "يرجى تسجيل الدخول مرة أخرى",
         });
-        navigate("/login");
+        navigate("/");
       } else {
         toast({
           variant: "destructive",

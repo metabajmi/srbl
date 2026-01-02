@@ -31,7 +31,7 @@ import { analyzeSite, convertToLegacyFormat } from "./services/complianceAnalyze
 import { runComprehensiveScan } from "./scanner/comprehensiveScanner";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { sendPolicyEmail, sendPaymentConfirmationEmail } from "./email";
+import { sendPolicyEmail, sendPaymentConfirmationEmail, sendOtpEmail } from "./email";
 
 declare module "express-session" {
   interface SessionData {
@@ -40,6 +40,8 @@ declare module "express-session" {
     adminRole?: "admin" | "legal" | "support";
     // Track last anonymous scan for auto-claiming after registration
     pendingClaimScanId?: string;
+    // Store optional name during OTP flow
+    pendingUserName?: string;
   }
 }
 
@@ -430,6 +432,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.clearCookie("connect.sid");
       res.json({ message: "تم تسجيل الخروج بنجاح" });
     });
+  });
+
+  // ============================================
+  // OTP Authentication (Passwordless)
+  // ============================================
+
+  // Generate 6-digit OTP code
+  function generateOtpCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  // Send OTP code
+  app.post("/api/auth/otp/send", async (req, res) => {
+    try {
+      const { email, name } = req.body;
+      
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ error: "يجب إدخال البريد الإلكتروني" });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "صيغة البريد الإلكتروني غير صحيحة" });
+      }
+      
+      // Rate limiting: check if recent OTP exists (within 1 minute)
+      const existingOtp = await storage.getLatestOtpByEmail(email);
+      if (existingOtp) {
+        const timeSinceCreation = Date.now() - new Date(existingOtp.createdAt!).getTime();
+        if (timeSinceCreation < 60000) { // 1 minute cooldown
+          const remainingSeconds = Math.ceil((60000 - timeSinceCreation) / 1000);
+          return res.status(429).json({ 
+            error: `يرجى الانتظار ${remainingSeconds} ثانية قبل طلب رمز جديد`,
+            retryAfter: remainingSeconds
+          });
+        }
+      }
+      
+      // Generate OTP
+      const code = generateOtpCode();
+      const codeHash = await bcrypt.hash(code, 10);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      
+      // Store OTP
+      await storage.createOtpToken(email, codeHash, expiresAt);
+      
+      // Send OTP email
+      await sendOtpEmail({ to: email, code });
+      
+      // Store optional name for later user creation
+      if (name) {
+        req.session.pendingUserName = name;
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "تم إرسال رمز التحقق إلى بريدك الإلكتروني",
+        expiresIn: 600 // 10 minutes in seconds
+      });
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      res.status(500).json({ error: "فشل في إرسال رمز التحقق" });
+    }
+  });
+
+  // Verify OTP code and authenticate
+  app.post("/api/auth/otp/verify", async (req, res) => {
+    try {
+      const { email, code } = req.body;
+      
+      if (!email || !code) {
+        return res.status(400).json({ error: "يجب إدخال البريد الإلكتروني ورمز التحقق" });
+      }
+      
+      // Get latest OTP for email
+      const otpToken = await storage.getLatestOtpByEmail(email);
+      if (!otpToken) {
+        return res.status(401).json({ error: "لم يتم العثور على رمز تحقق. يرجى طلب رمز جديد" });
+      }
+      
+      // Check expiration
+      if (new Date(otpToken.expiresAt) < new Date()) {
+        return res.status(401).json({ error: "انتهت صلاحية رمز التحقق. يرجى طلب رمز جديد" });
+      }
+      
+      // Check attempt count (max 5 attempts)
+      if ((otpToken.attemptCount || 0) >= 5) {
+        return res.status(429).json({ error: "تم تجاوز عدد المحاولات المسموح. يرجى طلب رمز جديد" });
+      }
+      
+      // Verify code
+      const isValid = await bcrypt.compare(code, otpToken.codeHash);
+      if (!isValid) {
+        await storage.incrementOtpAttempt(otpToken.id);
+        const remaining = 5 - (otpToken.attemptCount || 0) - 1;
+        return res.status(401).json({ 
+          error: `رمز التحقق غير صحيح. المحاولات المتبقية: ${remaining}` 
+        });
+      }
+      
+      // Mark OTP as verified
+      await storage.markOtpVerified(otpToken.id);
+      
+      // Get or create user
+      const pendingName = (req.session as any).pendingUserName;
+      const user = await storage.createOrGetUserByEmail(email, pendingName);
+      delete (req.session as any).pendingUserName;
+      
+      // Save pending scan ID before session regeneration
+      const pendingClaimScanId = req.session.pendingClaimScanId;
+      
+      // Regenerate session to prevent session fixation
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
+      // Create session
+      req.session.userId = user.id.toString();
+      
+      // Auto-claim any pending scan
+      let claimedScanId = null;
+      if (pendingClaimScanId) {
+        try {
+          await storage.claimScan(pendingClaimScanId, user.id.toString());
+          claimedScanId = pendingClaimScanId;
+        } catch (err) {
+          console.error("Failed to auto-claim scan:", err);
+        }
+      }
+      
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+      
+      res.json({ 
+        success: true,
+        user: userWithoutPassword,
+        claimedScanId,
+        message: "تم تسجيل الدخول بنجاح"
+      });
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      res.status(500).json({ error: "فشل في التحقق من الرمز" });
+    }
   });
 
   // ============================================

@@ -1206,8 +1206,8 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(), // hashed password
-  name: text("name").notNull(),
+  password: text("password"), // nullable for OTP-only users
+  name: text("name"), // optional for OTP flow
   isEmailVerified: boolean("is_email_verified").default(false),
   emailVerificationToken: text("email_verification_token"),
   resetPasswordToken: text("reset_password_token"),
@@ -1226,12 +1226,33 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 }).extend({
   email: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
-  password: z.string().min(8, "يجب أن تكون كلمة المرور 8 أحرف على الأقل"),
-  name: z.string().min(2, "يجب إدخال الاسم"),
+  password: z.string().min(8, "يجب أن تكون كلمة المرور 8 أحرف على الأقل").optional(),
+  name: z.string().min(2, "يجب إدخال الاسم").optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// OTP Tokens - رموز التحقق المؤقتة
+export const otpTokens = pgTable("otp_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  codeHash: text("code_hash").notNull(), // bcrypt hashed OTP code
+  expiresAt: timestamp("expires_at").notNull(),
+  verified: boolean("verified").default(false),
+  attemptCount: integer("attempt_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOtpTokenSchema = createInsertSchema(otpTokens).omit({
+  id: true,
+  verified: true,
+  attemptCount: true,
+  createdAt: true,
+});
+
+export type InsertOtpToken = z.infer<typeof insertOtpTokenSchema>;
+export type OtpToken = typeof otpTokens.$inferSelect;
 
 // Client Policies - سياسات العملاء
 export const clientPolicies = pgTable("client_policies", {

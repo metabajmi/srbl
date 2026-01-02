@@ -309,3 +309,138 @@ export async function sendPaymentConfirmationEmail(data: PaymentConfirmationData
     return false;
   }
 }
+
+interface OtpEmailData {
+  to: string;
+  code: string;
+}
+
+export async function sendOtpEmail(data: OtpEmailData): Promise<boolean> {
+  if (!resend) {
+    console.log("Resend not configured, skipping OTP email");
+    console.log(`[DEV MODE] OTP Code for ${data.to}: ${data.code}`);
+    return false;
+  }
+
+  try {
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رمز التحقق - سِرْبَال</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+        body { 
+            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; 
+            line-height: 1.8; 
+            color: #1a1a1a; 
+            background: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header { 
+            text-align: center; 
+            padding: 30px 20px; 
+            background: linear-gradient(135deg, #059669, #10b981); 
+            color: white; 
+        }
+        .header h1 { 
+            margin: 0;
+            font-size: 24px;
+        }
+        .content { 
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .code-box {
+            background: #f0fdf4;
+            border: 2px dashed #10b981;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+        }
+        .code {
+            font-size: 42px;
+            font-weight: 700;
+            letter-spacing: 12px;
+            color: #059669;
+            font-family: 'Courier New', monospace;
+        }
+        .expiry {
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        .warning {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #92400e;
+        }
+        .footer { 
+            padding: 20px; 
+            background: #f8f9fa;
+            text-align: center; 
+            color: #6b7280;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>سِرْبَال - Sirbal</h1>
+        </div>
+        <div class="content">
+            <h2 style="margin-top: 0;">رمز التحقق</h2>
+            <p>استخدم الرمز التالي لتسجيل الدخول إلى حسابك:</p>
+            
+            <div class="code-box">
+                <div class="code">${data.code}</div>
+                <p class="expiry">صالح لمدة 10 دقائق</p>
+            </div>
+            
+            <div class="warning">
+                ⚠️ لا تشارك هذا الرمز مع أي شخص. فريق سِرْبَال لن يطلب منك هذا الرمز أبداً.
+            </div>
+        </div>
+        <div class="footer">
+            <p>إذا لم تطلب هذا الرمز، يمكنك تجاهل هذا البريد.</p>
+        </div>
+    </div>
+</body>
+</html>
+    `;
+
+    const { data: result, error } = await resend.emails.send({
+      from: "Sirbal <noreply@sirbal.sa>",
+      to: [data.to],
+      subject: `رمز التحقق: ${data.code}`,
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error("Resend error:", error);
+      return false;
+    }
+
+    console.log("OTP email sent:", result?.id);
+    return true;
+  } catch (error) {
+    console.error("Failed to send OTP email:", error);
+    return false;
+  }
+}

@@ -170,7 +170,7 @@ export default function MoyasarPayment({
             alt="Mastercard" 
             className="h-6"
           />
-          <Smartphone className="w-5 h-5" title="Apple Pay" />
+          <Smartphone className="w-5 h-5" aria-label="Apple Pay" />
         </div>
       </CardContent>
     </Card>
