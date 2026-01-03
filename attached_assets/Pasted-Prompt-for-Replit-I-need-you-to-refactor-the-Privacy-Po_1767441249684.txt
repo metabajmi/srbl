@@ -1,0 +1,105 @@
+Prompt for Replit:
+
+I need you to refactor the Privacy Policy Generator logic. We are moving from a generic input to a specific, streamlined 4-step wizard that complies with Saudi PDPL.
+
+Please implement the following changes:
+
+Part 1: The Input Form (UI/UX)
+Replace the current form with these 4 Steps. Use the specified variable names for binding.
+
+Step 1: Entity Identity (Identity)
+
+Input: company_name (Text)
+
+Input: activity_type (Dropdown: E-commerce, Fintech, Health, Education, Other)
+
+Input: service_description (Short Text)
+
+Input: cr_number (Text - Commercial Registration / License ID)
+
+Input: contact_address (Text)
+
+Input: contact_email (Email)
+
+Input: contact_phone (Phone)
+
+Boolean: has_dpo (Has Data Protection Officer?)
+
+If True: Show inputs for dpo_name, dpo_email, dpo_phone.
+
+Step 2: Data Map (Data Collection)
+
+Multi-Select Checkbox: data_collected
+
+Options: Identity Data, Contact Data, Financial Data, Location Data, Technical Data (Cookies/IP), Sensitive/Health Data.
+
+Multi-Select Checkbox: collection_methods
+
+Options: Direct (Forms), Automated (Cookies), Third Party.
+
+Step 3: Storage & Sharing
+
+Radio Button: storage_location
+
+Options: Inside Saudi Arabia, Outside Saudi Arabia.
+
+Radio Button: retention_period
+
+Options: Delete Immediately, Specific Period (allow number input), Statutory Period.
+
+Radio Button: data_sharing
+
+Options: No Sharing, Service Providers, Government Entities (Auto-included in policy).
+
+Step 4: Complaints
+
+Radio Button: complaint_dept
+
+Options: Customer Service, Legal Dept, Compliance Dept.
+
+Part 2: The Document Generation Logic (Backend)
+Construct the final Privacy Policy document using the user's answers. Use the exact Arabic legal text provided below for the static parts.
+
+Logic Rules:
+
+Header: Insert company_name and service_description into the introduction.
+
+Section 3 (Data Collected): Dynamically list the items selected in data_collected.
+
+Logic: If "Financial Data" is selected, automatically add "Performance of a Contract" to the "Legal Basis" section later.
+
+Section 5 (Storage): If storage_location is "Outside Saudi Arabia", add the standard clause for cross-border transfer compliance.
+
+Static Sections: The sections for "User Rights" (ثامناً: حقوق أصحاب البيانات) and "SDAIA Contact Info" must be hardcoded exactly as per the Saudi PDPL text below.
+
+Template Structure (Markdown/HTML):
+
+Note: Generate the text in Arabic.
+
+Title: سياسة الخصوصية - company_name
+
+Intro: [Insert service_description] & [Insert Contact Info].
+
+Data Collection: "نقوم بجمع البيانات التالية:" -> List data_collected.
+
+Purpose & Methods: Based on collection_methods.
+
+Use of Data: Generic clause + Specifics based on activity_type.
+
+Sharing: Based on data_sharing selection.
+
+Storage: Based on storage_location + retention_period.
+
+Legal Basis:
+
+Hardcode: "الالتزام بالنظام" (Legal Obligation).
+
+If data_collected includes Financial -> Add "تنفيذ عقد" (Contractual).
+
+If collection_methods includes Cookies -> Add "الموافقة" (Consent).
+
+Rights (Static Text): "بموجب نظام حماية البيانات الشخصية، لديك الحق في العلم، الوصول، التصحيح، الإتلاف، والرجوع عن الموافقة..." (Use full legal text).
+
+Complaints: "لتقديم شكوى، تواصل مع complaint_dept عبر contact_email." "في حال عدم الرضا، يمكنك التواصل مع الهيئة السعودية للبيانات والذكاء الاصطناعي (SDAIA)..." [Keep SDAIA address static].
+
+Implementation Note: Focus on a clean UI for the questions (Step-by-step wizard) and ensure the generated text flows naturally in Arabic, replacing the variables {variable} with the user input.

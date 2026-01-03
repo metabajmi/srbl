@@ -6,13 +6,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CheckCircle2, Info, Globe, FileType, File, Lock, CreditCard, Unlock } from "lucide-react";
+import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { type PolicyDocument } from "@shared/schema";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
@@ -41,46 +42,72 @@ const POLICY_PRICE_SAR = 99;
 const POLICY_PRICE_HALALAS = POLICY_PRICE_SAR * 100;
 
 const formSchema = z.object({
-  companyName: z.string().min(2, "يجب إدخال اسم الجهة"),
-  businessType: z.string().min(2, "يجب إدخال نوع النشاط"),
-  entityType: z.enum(["government", "private", "individual"], {
-    required_error: "يجب تحديد صفة الجهة"
+  company_name: z.string().min(2, "يجب إدخال اسم الجهة"),
+  activity_type: z.enum(["ecommerce", "fintech", "health", "education", "other"], {
+    required_error: "يجب تحديد نوع النشاط"
   }),
-  contactEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
-  contactPhone: z.string().optional(),
-  contactAddress: z.string().optional(),
-  processesSensitiveData: z.enum(["yes", "no"]).optional(),
-  dpoName: z.string().optional(),
-  dpoEmail: z.string().email("يجب إدخال بريد إلكتروني صحيح").optional().or(z.literal("")),
-  dpoPhone: z.string().optional(),
-  dpoAddress: z.string().optional(),
-  dataCategories: z.array(z.object({
-    name: z.string().min(1, "يجب إدخال اسم البيان"),
-    required: z.boolean(),
-    purpose: z.string().min(1, "يجب إدخال الغرض"),
-    legalBasis: z.enum(["consent", "contract", "legal_obligation", "legitimate_interest"]),
-  })).min(1, "يجب إضافة فئة واحدة على الأقل"),
-  collectionMethod: z.enum(["direct", "indirect", "both"]).optional(),
-  processingMethods: z.string().optional(),
-  sharesWithThirdParties: z.enum(["yes", "no"]).optional(),
-  transfersDataAbroad: z.enum(["yes", "no"]).optional(),
-  retentionPeriod: z.string().optional(),
-  usesCookies: z.enum(["yes", "no"]).optional(),
+  service_description: z.string().min(10, "يجب وصف الخدمة بشكل مختصر"),
+  cr_number: z.string().min(1, "يجب إدخال رقم السجل التجاري"),
+  contact_address: z.string().min(5, "يجب إدخال العنوان"),
+  contact_email: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
+  contact_phone: z.string().min(9, "يجب إدخال رقم الهاتف"),
+  has_dpo: z.boolean().default(false),
+  dpo_name: z.string().optional(),
+  dpo_email: z.string().email("يجب إدخال بريد إلكتروني صحيح").optional().or(z.literal("")),
+  dpo_phone: z.string().optional(),
+  data_collected: z.array(z.string()).min(1, "يجب اختيار نوع واحد على الأقل"),
+  collection_methods: z.array(z.string()).min(1, "يجب اختيار طريقة واحدة على الأقل"),
+  storage_location: z.enum(["inside_ksa", "outside_ksa"], {
+    required_error: "يجب تحديد موقع التخزين"
+  }),
+  retention_period: z.enum(["delete_immediately", "specific_period", "statutory_period"], {
+    required_error: "يجب تحديد مدة الاحتفاظ"
+  }),
+  retention_period_value: z.string().optional(),
+  data_sharing: z.enum(["no_sharing", "service_providers", "government_entities"], {
+    required_error: "يجب تحديد سياسة المشاركة"
+  }),
+  complaint_dept: z.enum(["customer_service", "legal_dept", "compliance_dept"], {
+    required_error: "يجب تحديد قسم الشكاوى"
+  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
+const DATA_TYPES = [
+  { id: "identity", label: "بيانات الهوية", labelEn: "Identity Data" },
+  { id: "contact", label: "بيانات التواصل", labelEn: "Contact Data" },
+  { id: "financial", label: "بيانات مالية", labelEn: "Financial Data" },
+  { id: "location", label: "بيانات الموقع", labelEn: "Location Data" },
+  { id: "technical", label: "بيانات تقنية (ملفات الارتباط/IP)", labelEn: "Technical Data (Cookies/IP)" },
+  { id: "sensitive", label: "بيانات حساسة/صحية", labelEn: "Sensitive/Health Data" },
+];
+
+const COLLECTION_METHODS = [
+  { id: "direct", label: "مباشرة (النماذج)", labelEn: "Direct (Forms)" },
+  { id: "automated", label: "آلية (ملفات الارتباط)", labelEn: "Automated (Cookies)" },
+  { id: "third_party", label: "طرف ثالث", labelEn: "Third Party" },
+];
+
+const ACTIVITY_TYPES = [
+  { value: "ecommerce", label: "تجارة إلكترونية" },
+  { value: "fintech", label: "تقنية مالية" },
+  { value: "health", label: "صحة" },
+  { value: "education", label: "تعليم" },
+  { value: "other", label: "أخرى" },
+];
+
 export default function PrivacyGeneratorTab() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [currentSection, setCurrentSection] = useState(1);
+  const [currentStep, setCurrentStep] = useState(1);
   const { scanData, hasScanData } = useScanContext();
   const [lastPreFilledScanId, setLastPreFilledScanId] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated());
-  const [pendingFormData, setPendingFormData] = useState<FormValues | null>(null);
   const [paymentRequestId, setPaymentRequestId] = useState<string | null>(null);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
   const [showOTPModal, setShowOTPModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     const checkAuth = () => setIsLoggedIn(isAuthenticated());
@@ -92,7 +119,6 @@ export default function PrivacyGeneratorTab() {
     };
   }, []);
 
-  // Handle OTP success
   const handleOTPSuccess = () => {
     setIsLoggedIn(true);
     toast({
@@ -104,57 +130,44 @@ export default function PrivacyGeneratorTab() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      companyName: "",
-      businessType: "",
-      entityType: undefined,
-      contactEmail: "",
-      contactPhone: "",
-      contactAddress: "",
-      processesSensitiveData: undefined,
-      dpoName: "",
-      dpoEmail: "",
-      dpoPhone: "",
-      dpoAddress: "",
-      dataCategories: [],
-      collectionMethod: undefined,
-      processingMethods: "",
-      sharesWithThirdParties: undefined,
-      transfersDataAbroad: undefined,
-      retentionPeriod: "",
-      usesCookies: undefined,
+      company_name: "",
+      activity_type: undefined,
+      service_description: "",
+      cr_number: "",
+      contact_address: "",
+      contact_email: "",
+      contact_phone: "",
+      has_dpo: false,
+      dpo_name: "",
+      dpo_email: "",
+      dpo_phone: "",
+      data_collected: [],
+      collection_methods: [],
+      storage_location: undefined,
+      retention_period: undefined,
+      retention_period_value: "",
+      data_sharing: undefined,
+      complaint_dept: undefined,
     },
   });
 
-  // Pre-fill form with scan data (react to new scans)
   useEffect(() => {
     if (hasScanData && scanData && scanData.scanId !== lastPreFilledScanId) {
-      // Pre-fill empty fields only - don't overwrite user edits
-      const currentCompanyName = form.getValues("companyName");
-      const currentBusinessType = form.getValues("businessType");
+      const currentCompanyName = form.getValues("company_name");
       
       if (!currentCompanyName && scanData.companyName) {
-        form.setValue("companyName", scanData.companyName);
-      }
-      
-      if (!currentBusinessType && scanData.businessType) {
-        form.setValue("businessType", scanData.businessType);
+        form.setValue("company_name", scanData.companyName);
       }
       
       setLastPreFilledScanId(scanData.scanId);
       
       toast({
         title: "بيانات الفحص متاحة",
-        description: `تم تحميل بيانات من فحص ${scanData.websiteUrl} - أكمل البيانات المتبقية`,
+        description: `تم تحميل بيانات من فحص ${scanData.websiteUrl}`,
       });
     }
   }, [hasScanData, scanData, lastPreFilledScanId, form, toast]);
 
-  const { fields: dataFields, append: appendData, remove: removeData } = useFieldArray({
-    control: form.control,
-    name: "dataCategories",
-  });
-
-  // Fetch user's policies (requires authentication)
   const { data: policies } = useQuery<PolicyDocument[]>({
     queryKey: ["/api/user/policies"],
     enabled: isLoggedIn,
@@ -166,37 +179,51 @@ export default function PrivacyGeneratorTab() {
     },
   });
 
-
   const createPolicyRequestMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       const response = await apiRequest("POST", "/api/policy-requests", {
         scanId: scanData?.scanId || null,
-        intakeData: {
-          companyName: data.companyName,
-          businessType: data.businessType,
-          entityType: data.entityType,
-          contactEmail: data.contactEmail,
-          contactPhone: data.contactPhone || null,
-          contactAddress: data.contactAddress || null,
-          processesSensitiveData: data.processesSensitiveData || null,
-          dpoName: data.dpoName || null,
-          dpoEmail: data.dpoEmail || null,
-          dpoPhone: data.dpoPhone || null,
-          dpoAddress: data.dpoAddress || null,
-          dataCategories: data.dataCategories,
-          collectionMethod: data.collectionMethod || null,
-          processingMethods: data.processingMethods || null,
-          sharesWithThirdParties: data.sharesWithThirdParties || null,
-          transfersDataAbroad: data.transfersDataAbroad || null,
-          retentionPeriod: data.retentionPeriod || null,
-          usesCookies: data.usesCookies || null,
-        },
+        intakeData: data,
       });
       return await response.json();
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       setPaymentRequestId(result.id);
-      setCurrentSection(4);
+      
+      // ========== BYPASS MODE FOR TESTING ==========
+      // Skip payment and generate directly
+      setIsGenerating(true);
+      try {
+        const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
+          paymentId: "BYPASS_TEST",
+          requestId: result.id,
+        });
+        
+        if (verifyResponse.ok) {
+          const generateResponse = await apiRequest("POST", `/api/policy-requests/${result.id}/generate`, {});
+          
+          if (generateResponse.ok) {
+            toast({
+              title: "جاري توليد السياسة",
+              description: "سيتم توليد سياسة الخصوصية خلال لحظات...",
+            });
+            queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
+            form.reset();
+            setCurrentStep(1);
+          } else {
+            throw new Error("فشل في بدء توليد السياسة");
+          }
+        }
+      } catch (error: any) {
+        toast({
+          title: "خطأ",
+          description: error.message || "حدث خطأ أثناء معالجة الطلب",
+          variant: "destructive",
+        });
+      } finally {
+        setIsGenerating(false);
+      }
+      // ========== END BYPASS MODE ==========
     },
     onError: (error: any) => {
       toast({
@@ -206,52 +233,6 @@ export default function PrivacyGeneratorTab() {
       });
     },
   });
-
-  const handlePaymentComplete = async (payment: any) => {
-    try {
-      const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
-        paymentId: payment.id,
-        requestId: paymentRequestId,
-      });
-      
-      if (verifyResponse.ok) {
-        setIsPaymentComplete(true);
-        toast({
-          title: "تم الدفع بنجاح",
-          description: "جاري توليد سياسة الخصوصية...",
-        });
-        
-        // Trigger policy generation through the secured endpoint
-        if (paymentRequestId) {
-          const generateResponse = await apiRequest("POST", `/api/policy-requests/${paymentRequestId}/generate`, {});
-          
-          if (generateResponse.ok) {
-            queryClient.invalidateQueries({ queryKey: ["/api/policy-requests"] });
-            form.reset();
-            setTimeout(() => {
-              setCurrentSection(1);
-              setPaymentRequestId(null);
-              setPendingFormData(null);
-            }, 2000);
-          } else {
-            const errorData = await generateResponse.json().catch(() => ({}));
-            toast({
-              title: "خطأ في توليد السياسة",
-              description: errorData.error || "حدث خطأ غير متوقع",
-              variant: "destructive",
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Payment verification failed:", error);
-      toast({
-        title: "خطأ في التحقق من الدفع",
-        description: "يرجى التواصل مع الدعم الفني",
-        variant: "destructive",
-      });
-    }
-  };
 
   const onSubmit = (values: FormValues) => {
     if (!isLoggedIn) {
@@ -263,8 +244,41 @@ export default function PrivacyGeneratorTab() {
       return;
     }
     
-    setPendingFormData(values);
     createPolicyRequestMutation.mutate(values);
+  };
+
+  const validateStep = (step: number): boolean => {
+    const values = form.getValues();
+    
+    switch (step) {
+      case 1:
+        return !!(values.company_name && values.activity_type && values.service_description && 
+                  values.cr_number && values.contact_address && values.contact_email && values.contact_phone);
+      case 2:
+        return values.data_collected.length > 0 && values.collection_methods.length > 0;
+      case 3:
+        return !!(values.storage_location && values.retention_period && values.data_sharing);
+      case 4:
+        return !!values.complaint_dept;
+      default:
+        return false;
+    }
+  };
+
+  const nextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => Math.min(prev + 1, 4));
+    } else {
+      toast({
+        title: "أكمل البيانات المطلوبة",
+        description: "يرجى ملء جميع الحقول الإلزامية",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
   const generateHtmlContent = (policy: PolicyDocument) => {
@@ -289,13 +303,15 @@ export default function PrivacyGeneratorTab() {
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
         body { font-family: 'Cairo', sans-serif; line-height: 1.8; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 40px 20px; }
-        h1 { color: #2563eb; text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; }
-        h2 { color: #1e40af; border-right: 5px solid #3b82f6; padding-right: 15px; }
-        .header { text-align: center; margin-bottom: 40px; padding: 30px; background: linear-gradient(135deg, #2563eb, #3b82f6); color: white; border-radius: 10px; }
+        h1 { color: #16a34a; text-align: center; border-bottom: 3px solid #16a34a; padding-bottom: 20px; }
+        h2 { color: #15803d; border-right: 5px solid #22c55e; padding-right: 15px; margin-top: 30px; }
+        .header { text-align: center; margin-bottom: 40px; padding: 30px; background: linear-gradient(135deg, #16a34a, #22c55e); color: white; border-radius: 10px; }
         .header h1 { color: white; border-bottom: none; }
         .content { background: #fff; padding: 40px; border-radius: 10px; }
         .footer { margin-top: 50px; padding-top: 30px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; }
-        @media print { body { padding: 20px; } .header { background: #2563eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        ul { list-style-type: disc; padding-right: 20px; }
+        li { margin-bottom: 8px; }
+        @media print { body { padding: 20px; } .header { background: #16a34a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style>
 </head>
 <body>
@@ -306,7 +322,7 @@ export default function PrivacyGeneratorTab() {
     </div>
     <div class="content">${policy.generatedContent}</div>
     <div class="footer">
-        <p>تم توليده بواسطة أداة الامتثال لنظام حماية البيانات الشخصية السعودي</p>
+        <p>تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)</p>
     </div>
 </body>
 </html>`;
@@ -337,22 +353,15 @@ export default function PrivacyGeneratorTab() {
           printWindow.print();
         }, 500);
       }
-      toast({
-        title: "تصدير PDF",
-        description: "استخدم خيار 'حفظ كـ PDF' في نافذة الطباعة",
-      });
     } else if (format === 'word') {
       const wordContent = `
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>
-@font-face { font-family: 'Cairo'; src: url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap'); }
 body { font-family: 'Cairo', 'Arial', sans-serif; direction: rtl; text-align: right; line-height: 1.8; }
-h1 { color: #2563eb; text-align: center; }
-h2 { color: #1e40af; border-right: 5px solid #3b82f6; padding-right: 15px; }
+h1 { color: #16a34a; text-align: center; }
+h2 { color: #15803d; border-right: 5px solid #22c55e; padding-right: 15px; }
 </style>
 </head>
 <body dir="rtl">
@@ -361,8 +370,6 @@ h2 { color: #1e40af; border-right: 5px solid #3b82f6; padding-right: 15px; }
 <p style="text-align: center; color: #6b7280;">تاريخ الإصدار: ${new Date(policy.createdAt!).toLocaleDateString('ar-SA')}</p>
 <hr/>
 ${policy.generatedContent}
-<hr/>
-<p style="text-align: center; color: #6b7280; font-size: 12px;">تم توليده بواسطة أداة الامتثال لنظام حماية البيانات الشخصية السعودي</p>
 </body>
 </html>`;
       const blob = new Blob(['\ufeff', wordContent], { type: 'application/msword;charset=UTF-8' });
@@ -374,14 +381,18 @@ ${policy.generatedContent}
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast({
-        title: "تم التحميل",
-        description: "تم تحميل الملف بصيغة Word",
-      });
     }
   };
 
-  const watchProcessesSensitiveData = form.watch("processesSensitiveData");
+  const watchHasDpo = form.watch("has_dpo");
+  const watchRetentionPeriod = form.watch("retention_period");
+
+  const steps = [
+    { number: 1, title: "هوية الجهة", icon: Building2 },
+    { number: 2, title: "خريطة البيانات", icon: Database },
+    { number: 3, title: "التخزين والمشاركة", icon: HardDrive },
+    { number: 4, title: "الشكاوى", icon: MessageSquare },
+  ];
 
   return (
     <div className="space-y-6">
@@ -395,9 +406,6 @@ ${policy.generatedContent}
               <h3 className="text-xl font-bold mb-2">تحقق من هويتك لإنشاء سياسة خصوصية</h3>
               <p className="text-muted-foreground mb-4">
                 أنشئ سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية السعودي
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                أدخل بريدك الإلكتروني فقط - بدون كلمة مرور
               </p>
               <Button 
                 onClick={() => setShowOTPModal(true)} 
@@ -419,63 +427,160 @@ ${policy.generatedContent}
         onSuccess={handleOTPSuccess}
       />
 
-      <div className="mb-6 flex gap-2 justify-center flex-wrap">
-        <Badge 
-          variant={currentSection === 1 ? "default" : "outline"}
-          className="cursor-pointer hover-elevate px-4 py-2"
-          onClick={() => currentSection !== 4 && setCurrentSection(1)}
-          data-testid="badge-privacy-section-1"
-        >
-          ١. هوية الجهة
-        </Badge>
-        <Badge 
-          variant={currentSection === 2 ? "default" : "outline"}
-          className="cursor-pointer hover-elevate px-4 py-2"
-          onClick={() => currentSection !== 4 && setCurrentSection(2)}
-          data-testid="badge-privacy-section-2"
-        >
-          ٢. جمع البيانات
-        </Badge>
-        <Badge 
-          variant={currentSection === 3 ? "default" : "outline"}
-          className="cursor-pointer hover-elevate px-4 py-2"
-          onClick={() => currentSection !== 4 && setCurrentSection(3)}
-          data-testid="badge-privacy-section-3"
-        >
-          ٣. المعالجة والأمان
-        </Badge>
-        <Badge 
-          variant={currentSection === 4 ? "default" : "outline"}
-          className={cn(
-            "px-4 py-2",
-            currentSection === 4 ? "" : "opacity-50 cursor-not-allowed"
-          )}
-          data-testid="badge-privacy-section-4"
-        >
-          <CreditCard className="w-3 h-3 ml-1" />
-          ٤. الدفع
-        </Badge>
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          {steps.map((step, index) => (
+            <div key={step.number} className="flex items-center flex-1">
+              <div 
+                className={cn(
+                  "flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all cursor-pointer",
+                  currentStep === step.number 
+                    ? "bg-primary text-primary-foreground border-primary" 
+                    : currentStep > step.number
+                    ? "bg-green-500 text-white border-green-500"
+                    : "bg-muted text-muted-foreground border-muted-foreground/30"
+                )}
+                onClick={() => step.number < currentStep && setCurrentStep(step.number)}
+                data-testid={`step-indicator-${step.number}`}
+              >
+                {currentStep > step.number ? (
+                  <CheckCircle2 className="w-6 h-6" />
+                ) : (
+                  <step.icon className="w-5 h-5" />
+                )}
+              </div>
+              {index < steps.length - 1 && (
+                <div 
+                  className={cn(
+                    "flex-1 h-1 mx-2",
+                    currentStep > step.number ? "bg-green-500" : "bg-muted"
+                  )}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-between">
+          {steps.map((step) => (
+            <div key={step.number} className="text-center flex-1">
+              <span className={cn(
+                "text-sm font-medium",
+                currentStep === step.number ? "text-primary" : "text-muted-foreground"
+              )}>
+                {step.title}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {currentSection === 1 && (
+          {currentStep === 1 && (
             <Card>
               <CardHeader>
-                <CardTitle>هوية الجهة والمسؤولية</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="w-5 h-5" />
+                  الخطوة ١: هوية الجهة
+                </CardTitle>
                 <CardDescription>
-                  المعلومات الأساسية عن جهتك ومسؤولية معالجة البيانات
+                  معلومات أساسية عن جهتك ومسؤول حماية البيانات
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="company_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>اسم الجهة *</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="الاسم الرسمي للجهة" data-testid="input-company-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="activity_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>نوع النشاط *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-activity-type">
+                              <SelectValue placeholder="اختر نوع النشاط" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {ACTIVITY_TYPES.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <FormField
                   control={form.control}
-                  name="companyName"
+                  name="service_description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>اسم الجهة *</FormLabel>
+                      <FormLabel>وصف الخدمة *</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="الاسم الرسمي للجهة" data-testid="input-privacy-company" />
+                        <Textarea {...field} placeholder="وصف مختصر للخدمات المقدمة" data-testid="input-service-description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="cr_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>رقم السجل التجاري / الترخيص *</FormLabel>
+                        <FormControl>
+                          <Input {...field} dir="ltr" placeholder="1010XXXXXX" data-testid="input-cr-number" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="contact_phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>رقم الهاتف *</FormLabel>
+                        <FormControl>
+                          <Input {...field} dir="ltr" placeholder="+966 XX XXX XXXX" data-testid="input-phone" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="contact_address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>العنوان *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="العنوان الكامل" data-testid="input-address" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -484,561 +589,513 @@ ${policy.generatedContent}
 
                 <FormField
                   control={form.control}
-                  name="businessType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>نوع النشاط *</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} placeholder="وصف مختصر للنشاط" data-testid="input-privacy-business" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="entityType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>صفة الجهة *</FormLabel>
-                      <FormControl>
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-col space-y-2">
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="government" id="gov" data-testid="radio-entity-government" />
-                            <Label htmlFor="gov">جهة حكومية</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="private" id="priv" data-testid="radio-entity-private" />
-                            <Label htmlFor="priv">شركة/مؤسسة خاصة</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="individual" id="ind" data-testid="radio-entity-individual" />
-                            <Label htmlFor="ind">فرد</Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="contactEmail"
+                  name="contact_email"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>البريد الإلكتروني *</FormLabel>
                       <FormControl>
-                        <Input {...field} type="email" dir="ltr" placeholder="email@example.com" data-testid="input-privacy-email" />
+                        <Input {...field} type="email" dir="ltr" placeholder="email@example.com" data-testid="input-email" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="contactPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>رقم الهاتف</FormLabel>
-                      <FormControl>
-                        <Input {...field} dir="ltr" placeholder="+966 XX XXX XXXX" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="processesSensitiveData"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>هل تعالج بيانات حساسة؟</FormLabel>
-                      <FormDescription>
-                        مثل البيانات الصحية أو البيومترية أو الجنائية
-                      </FormDescription>
-                      <FormControl>
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="yes" id="sens-yes" />
-                            <Label htmlFor="sens-yes">نعم</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="no" id="sens-no" />
-                            <Label htmlFor="sens-no">لا</Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {watchProcessesSensitiveData === "yes" && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      يتطلب تعيين مسؤول حماية البيانات (DPO)
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="flex justify-end">
-                  <Button type="button" onClick={() => setCurrentSection(2)} data-testid="button-privacy-next-1">
-                    التالي
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {currentSection === 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>جمع البيانات</CardTitle>
-                <CardDescription>
-                  أنواع البيانات المجمعة وأغراض الاستخدام
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <Label>فئات البيانات *</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => appendData({ name: "", required: false, purpose: "", legalBasis: "consent" })}
-                      data-testid="button-add-data-category"
-                    >
-                      <Plus className="h-4 w-4 ml-1" />
-                      إضافة فئة
-                    </Button>
-                  </div>
-
-                  {dataFields.map((field, index) => (
-                    <Card key={field.id} className="p-4">
-                      <div className="grid gap-4">
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">فئة {index + 1}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeData(index)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                <div className="border rounded-lg p-4 space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="has_dpo"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-x-reverse">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="checkbox-has-dpo"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>لدينا مسؤول حماية بيانات (DPO)</FormLabel>
+                          <FormDescription>
+                            إذا كان لديك مسؤول معين لحماية البيانات الشخصية
+                          </FormDescription>
                         </div>
-                        <FormField
-                          control={form.control}
-                          name={`dataCategories.${index}.name`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>نوع البيان</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="مثال: الاسم الكامل" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`dataCategories.${index}.purpose`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>الغرض</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="مثال: التواصل مع العميل" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`dataCategories.${index}.legalBasis`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>الأساس القانوني</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="اختر الأساس القانوني" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="consent">الموافقة</SelectItem>
-                                  <SelectItem value="contract">تنفيذ عقد</SelectItem>
-                                  <SelectItem value="legal_obligation">التزام قانوني</SelectItem>
-                                  <SelectItem value="legitimate_interest">مصلحة مشروعة</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </Card>
-                  ))}
-
-                  {dataFields.length === 0 && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        يجب إضافة فئة بيانات واحدة على الأقل
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="collectionMethod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>طريقة جمع البيانات</FormLabel>
-                      <FormControl>
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-wrap gap-4">
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="direct" id="direct" />
-                            <Label htmlFor="direct">مباشرة من صاحب البيانات</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="indirect" id="indirect" />
-                            <Label htmlFor="indirect">غير مباشرة</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="both" id="both" />
-                            <Label htmlFor="both">كلاهما</Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-between">
-                  <Button type="button" variant="outline" onClick={() => setCurrentSection(1)}>
-                    السابق
-                  </Button>
-                  <Button type="button" onClick={() => setCurrentSection(3)} data-testid="button-privacy-next-2">
-                    التالي
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {currentSection === 3 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>المعالجة والأمان</CardTitle>
-                <CardDescription>
-                  معلومات عن معالجة البيانات وإجراءات الحماية
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="sharesWithThirdParties"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>هل تشارك البيانات مع أطراف ثالثة؟</FormLabel>
-                      <FormControl>
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="yes" id="share-yes" />
-                            <Label htmlFor="share-yes">نعم</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="no" id="share-no" />
-                            <Label htmlFor="share-no">لا</Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="transfersDataAbroad"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>هل تنقل البيانات خارج المملكة؟</FormLabel>
-                      <FormControl>
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="yes" id="abroad-yes" />
-                            <Label htmlFor="abroad-yes">نعم</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="no" id="abroad-no" />
-                            <Label htmlFor="abroad-no">لا</Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="retentionPeriod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>فترة الاحتفاظ بالبيانات</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="مثال: 5 سنوات" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="usesCookies"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>هل تستخدم الكوكيز؟</FormLabel>
-                      <FormControl>
-                        <RadioGroup onValueChange={field.onChange} value={field.value} className="flex gap-4">
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="yes" id="cookie-yes" />
-                            <Label htmlFor="cookie-yes">نعم</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 space-x-reverse">
-                            <RadioGroupItem value="no" id="cookie-no" />
-                            <Label htmlFor="cookie-no">لا</Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-between">
-                  <Button type="button" variant="outline" onClick={() => setCurrentSection(2)}>
-                    السابق
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={createPolicyRequestMutation.isPending || !isLoggedIn} 
-                    data-testid="button-generate-privacy"
-                  >
-                    {createPolicyRequestMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                        جاري الحفظ...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="h-4 w-4 ml-2" />
-                        متابعة للدفع ({POLICY_PRICE_SAR} ر.س)
-                      </>
+                      </FormItem>
                     )}
-                  </Button>
+                  />
+
+                  {watchHasDpo && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                      <FormField
+                        control={form.control}
+                        name="dpo_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>اسم المسؤول</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="الاسم الكامل" data-testid="input-dpo-name" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="dpo_email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>البريد الإلكتروني</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="email" dir="ltr" placeholder="dpo@example.com" data-testid="input-dpo-email" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="dpo_phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>رقم الهاتف</FormLabel>
+                            <FormControl>
+                              <Input {...field} dir="ltr" placeholder="+966" data-testid="input-dpo-phone" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {currentSection === 4 && (
+          {currentStep === 2 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  الدفع وتوليد السياسة
+                  <Database className="w-5 h-5" />
+                  الخطوة ٢: خريطة البيانات
                 </CardTitle>
                 <CardDescription>
-                  أكمل الدفع لتوليد سياسة الخصوصية الخاصة بك
+                  حدد أنواع البيانات التي تجمعها وطرق جمعها
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {isPaymentComplete ? (
-                  <div className="text-center py-8">
-                    <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold mb-2">تم الدفع بنجاح!</h3>
-                    <p className="text-muted-foreground mb-4">
-                      جاري توليد سياسة الخصوصية الخاصة بك...
-                    </p>
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>جاري التوليد...</span>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="bg-muted/50 rounded-lg p-4 mb-4">
-                      <h4 className="font-semibold mb-2">ملخص الطلب</h4>
-                      <div className="flex justify-between text-sm">
-                        <span>سياسة خصوصية احترافية</span>
-                        <span className="font-bold">{POLICY_PRICE_SAR} ر.س</span>
+                <FormField
+                  control={form.control}
+                  name="data_collected"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel className="text-base">أنواع البيانات المجمعة *</FormLabel>
+                      <FormDescription>
+                        اختر جميع أنواع البيانات الشخصية التي تجمعها
+                      </FormDescription>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                        {DATA_TYPES.map((type) => (
+                          <FormField
+                            key={type.id}
+                            control={form.control}
+                            name="data_collected"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(type.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, type.id])
+                                        : field.onChange(field.value?.filter((value) => value !== type.id));
+                                    }}
+                                    data-testid={`checkbox-data-${type.id}`}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="font-normal cursor-pointer">
+                                    {type.label}
+                                  </FormLabel>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
                       </div>
-                      {pendingFormData && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          لـ: {pendingFormData.companyName}
-                        </p>
-                      )}
-                    </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                    <MoyasarPayment
-                      amount={POLICY_PRICE_HALALAS}
-                      description={`سياسة خصوصية - ${pendingFormData?.companyName || "طلب جديد"}`}
-                      callbackUrl={`${window.location.origin}/workspace?payment=success`}
-                      onCompleted={handlePaymentComplete}
-                      onError={(error) => {
-                        console.error("Payment error:", error);
-                        toast({
-                          title: "فشل الدفع",
-                          description: "حدث خطأ أثناء معالجة الدفع",
-                          variant: "destructive",
-                        });
-                      }}
-                    />
-
-                    <div className="flex justify-start pt-4">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => {
-                          setCurrentSection(3);
-                          setPendingFormData(null);
-                          setPaymentRequestId(null);
-                        }}
-                      >
-                        العودة للتعديل
-                      </Button>
-                    </div>
-                  </>
-                )}
+                <FormField
+                  control={form.control}
+                  name="collection_methods"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel className="text-base">طرق جمع البيانات *</FormLabel>
+                      <FormDescription>
+                        اختر جميع الطرق المستخدمة لجمع البيانات
+                      </FormDescription>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                        {COLLECTION_METHODS.map((method) => (
+                          <FormField
+                            key={method.id}
+                            control={form.control}
+                            name="collection_methods"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(method.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, method.id])
+                                        : field.onChange(field.value?.filter((value) => value !== method.id));
+                                    }}
+                                    data-testid={`checkbox-method-${method.id}`}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="font-normal cursor-pointer">
+                                    {method.label}
+                                  </FormLabel>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
           )}
+
+          {currentStep === 3 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <HardDrive className="w-5 h-5" />
+                  الخطوة ٣: التخزين والمشاركة
+                </CardTitle>
+                <CardDescription>
+                  حدد موقع تخزين البيانات ومدة الاحتفاظ وسياسة المشاركة
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="storage_location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">موقع تخزين البيانات *</FormLabel>
+                      <FormControl>
+                        <RadioGroup 
+                          onValueChange={field.onChange} 
+                          value={field.value} 
+                          className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
+                        >
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "inside_ksa" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="inside_ksa" id="inside_ksa" data-testid="radio-storage-inside" />
+                            <Label htmlFor="inside_ksa" className="cursor-pointer flex-1">
+                              داخل المملكة العربية السعودية
+                            </Label>
+                          </div>
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "outside_ksa" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="outside_ksa" id="outside_ksa" data-testid="radio-storage-outside" />
+                            <Label htmlFor="outside_ksa" className="cursor-pointer flex-1">
+                              خارج المملكة العربية السعودية
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="retention_period"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">مدة الاحتفاظ بالبيانات *</FormLabel>
+                      <FormControl>
+                        <RadioGroup 
+                          onValueChange={field.onChange} 
+                          value={field.value} 
+                          className="space-y-3 mt-2"
+                        >
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "delete_immediately" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="delete_immediately" id="delete_immediately" data-testid="radio-retention-immediate" />
+                            <Label htmlFor="delete_immediately" className="cursor-pointer flex-1">
+                              حذف فوري بعد انتهاء الغرض
+                            </Label>
+                          </div>
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "specific_period" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="specific_period" id="specific_period" data-testid="radio-retention-specific" />
+                            <Label htmlFor="specific_period" className="cursor-pointer flex-1">
+                              مدة محددة
+                            </Label>
+                          </div>
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "statutory_period" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="statutory_period" id="statutory_period" data-testid="radio-retention-statutory" />
+                            <Label htmlFor="statutory_period" className="cursor-pointer flex-1">
+                              المدة النظامية المطلوبة قانوناً
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {watchRetentionPeriod === "specific_period" && (
+                  <FormField
+                    control={form.control}
+                    name="retention_period_value"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>حدد المدة (بالسنوات)</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" min="1" max="100" placeholder="مثال: 5" data-testid="input-retention-value" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="data_sharing"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">مشاركة البيانات مع أطراف ثالثة *</FormLabel>
+                      <FormControl>
+                        <RadioGroup 
+                          onValueChange={field.onChange} 
+                          value={field.value} 
+                          className="space-y-3 mt-2"
+                        >
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "no_sharing" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="no_sharing" id="no_sharing" data-testid="radio-sharing-none" />
+                            <Label htmlFor="no_sharing" className="cursor-pointer flex-1">
+                              لا نشارك البيانات مع أي طرف
+                            </Label>
+                          </div>
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "service_providers" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="service_providers" id="service_providers" data-testid="radio-sharing-providers" />
+                            <Label htmlFor="service_providers" className="cursor-pointer flex-1">
+                              مزودي الخدمات (الدفع، الشحن، التحليلات)
+                            </Label>
+                          </div>
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "government_entities" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="government_entities" id="government_entities" data-testid="radio-sharing-government" />
+                            <Label htmlFor="government_entities" className="cursor-pointer flex-1">
+                              الجهات الحكومية (عند الطلب النظامي)
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {currentStep === 4 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  الخطوة ٤: آلية الشكاوى
+                </CardTitle>
+                <CardDescription>
+                  حدد الجهة المسؤولة عن استقبال شكاوى حماية البيانات
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="complaint_dept"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">الجهة المسؤولة عن استقبال الشكاوى *</FormLabel>
+                      <FormControl>
+                        <RadioGroup 
+                          onValueChange={field.onChange} 
+                          value={field.value} 
+                          className="space-y-3 mt-2"
+                        >
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "customer_service" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="customer_service" id="customer_service" data-testid="radio-complaint-customer" />
+                            <Label htmlFor="customer_service" className="cursor-pointer flex-1">
+                              خدمة العملاء
+                            </Label>
+                          </div>
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "legal_dept" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="legal_dept" id="legal_dept" data-testid="radio-complaint-legal" />
+                            <Label htmlFor="legal_dept" className="cursor-pointer flex-1">
+                              الإدارة القانونية
+                            </Label>
+                          </div>
+                          <div className={cn(
+                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
+                            field.value === "compliance_dept" && "border-primary bg-primary/5"
+                          )}>
+                            <RadioGroupItem value="compliance_dept" id="compliance_dept" data-testid="radio-complaint-compliance" />
+                            <Label htmlFor="compliance_dept" className="cursor-pointer flex-1">
+                              إدارة الامتثال
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800 dark:text-green-200">
+                    سيتم تضمين معلومات الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا) تلقائياً كجهة تنظيمية للشكاوى.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex justify-between gap-4">
+            {currentStep > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={prevStep}
+                data-testid="button-prev-step"
+              >
+                <ChevronRight className="ml-2 h-4 w-4" />
+                السابق
+              </Button>
+            )}
+            
+            <div className="flex-1" />
+            
+            {currentStep < 4 ? (
+              <Button
+                type="button"
+                onClick={nextStep}
+                data-testid="button-next-step"
+              >
+                التالي
+                <ChevronLeft className="mr-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                disabled={createPolicyRequestMutation.isPending || isGenerating || !isLoggedIn}
+                data-testid="button-generate-policy"
+              >
+                {(createPolicyRequestMutation.isPending || isGenerating) ? (
+                  <>
+                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                    جاري التوليد...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="ml-2 h-4 w-4" />
+                    توليد سياسة الخصوصية
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </form>
       </Form>
 
-      {policies && policies.length > 0 && (
-        <Card className="border-primary/20 shadow-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <FileText className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">السياسات المُنشأة</CardTitle>
-                <CardDescription>
-                  {policies.length} سياسة خصوصية
-                </CardDescription>
-              </div>
-            </div>
+      {isLoggedIn && policies && policies.length > 0 && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              سياساتي السابقة
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {policies.map((policy) => (
-                <Card 
-                  key={policy.id} 
-                  className={`p-4 transition-all ${
-                    policy.status === "completed" 
-                      ? "bg-gradient-to-l from-green-50/50 to-transparent dark:from-green-950/20 border-green-200/50 dark:border-green-800/30" 
-                      : "bg-muted/30"
-                  }`}
+                <div 
+                  key={policy.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <div className={`p-2 rounded-lg flex-shrink-0 ${
-                        policy.status === "completed" 
-                          ? "bg-green-100 dark:bg-green-900/30" 
-                          : "bg-muted"
-                      }`}>
-                        <FileText className={`h-5 w-5 ${
-                          policy.status === "completed" 
-                            ? "text-green-600 dark:text-green-400" 
-                            : "text-muted-foreground"
-                        }`} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold truncate">{policy.companyName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(policy.createdAt!).toLocaleDateString('ar-SA', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </p>
-                        {policy.status === "completed" && (
-                          <Badge variant="outline" className="mt-2 border-green-300 text-green-700 dark:border-green-700 dark:text-green-400">
-                            <CheckCircle2 className="h-3 w-3 ml-1" />
-                            جاهزة للتحميل
-                          </Badge>
-                        )}
-                        {policy.status === "generating" && (
-                          <Badge variant="secondary" className="mt-2">
-                            <Loader2 className="h-3 w-3 ml-1 animate-spin" />
-                            جاري التوليد...
-                          </Badge>
-                        )}
-                        {policy.status === "pending" && (
-                          <Badge variant="outline" className="mt-2">
-                            قيد الانتظار
-                          </Badge>
-                        )}
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-8 h-8 text-primary" />
+                    <div>
+                      <h4 className="font-medium">{policy.companyName}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(policy.createdAt!).toLocaleDateString('ar-SA')}
+                      </p>
                     </div>
-                    
-                    {policy.status === "completed" && (
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={policy.status === "completed" ? "default" : "secondary"}>
+                      {policy.status === "completed" ? "مكتمل" : 
+                       policy.status === "generating" ? "جاري التوليد" : "قيد الانتظار"}
+                    </Badge>
+                    {policy.status === "completed" && policy.generatedContent && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="default" 
-                            size="sm"
-                            className="flex-shrink-0"
-                            data-testid={`button-download-${policy.id}`}
-                          >
-                            <Download className="h-4 w-4 ml-2" />
+                          <Button variant="outline" size="sm" data-testid={`button-download-${policy.id}`}>
+                            <Download className="ml-2 h-4 w-4" />
                             تحميل
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem 
-                            onClick={() => handleDownload(policy, 'pdf')}
-                            className="cursor-pointer gap-2"
-                            data-testid={`button-download-pdf-${policy.id}`}
-                          >
-                            <FileType className="h-4 w-4 text-red-500" />
-                            <span>تحميل PDF</span>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => handleDownload(policy, 'html')}>
+                            HTML
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDownload(policy, 'word')}
-                            className="cursor-pointer gap-2"
-                            data-testid={`button-download-word-${policy.id}`}
-                          >
-                            <File className="h-4 w-4 text-blue-500" />
-                            <span>تحميل Word</span>
+                          <DropdownMenuItem onClick={() => handleDownload(policy, 'pdf')}>
+                            PDF (طباعة)
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDownload(policy, 'html')}
-                            className="cursor-pointer gap-2"
-                            data-testid={`button-download-html-${policy.id}`}
-                          >
-                            <Globe className="h-4 w-4 text-orange-500" />
-                            <span>تحميل HTML</span>
+                          <DropdownMenuItem onClick={() => handleDownload(policy, 'word')}>
+                            Word
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           </CardContent>
