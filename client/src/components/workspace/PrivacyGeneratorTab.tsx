@@ -236,11 +236,7 @@ export default function PrivacyGeneratorTab() {
 
   const onSubmit = (values: FormValues) => {
     if (!isLoggedIn) {
-      toast({
-        title: "يجب تسجيل الدخول",
-        description: "سجّل دخولك لتوليد سياسة الخصوصية",
-        variant: "destructive",
-      });
+      setShowOTPModal(true);
       return;
     }
     
@@ -1024,7 +1020,7 @@ ${policy.generatedContent}
             ) : (
               <Button
                 type="submit"
-                disabled={createPolicyRequestMutation.isPending || isGenerating || !isLoggedIn}
+                disabled={createPolicyRequestMutation.isPending || isGenerating}
                 data-testid="button-generate-policy"
               >
                 {(createPolicyRequestMutation.isPending || isGenerating) ? (
