@@ -1379,7 +1379,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error generating policy from request:", error);
-      res.status(500).json({ error: "فشل في توليد السياسة" });
+      // Rollback workflow status to allow retry
+      try {
+        await storage.updatePolicyGenerationRequest(req.params.id, {
+          workflowStatus: "pending",
+        });
+      } catch (rollbackError) {
+        console.error("Error rolling back workflow status:", rollbackError);
+      }
+      res.status(500).json({ error: "فشل في توليد السياسة. يمكنك المحاولة مرة أخرى." });
     }
   });
 
