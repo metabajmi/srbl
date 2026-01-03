@@ -24,7 +24,9 @@ import {
   generatePrivacyPolicy, 
   generateTermsAndConditions,
   generateEmbedding, 
-  generateChatResponse, 
+  generateChatResponse,
+  generateWizardPrivacyPolicy,
+  type WizardPolicyData,
   type RetrievedContext 
 } from "./openai";
 import { analyzeSite, convertToLegacyFormat } from "./services/complianceAnalyzer";
@@ -1239,6 +1241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Trigger policy generation after payment verification
+  // Updated to support new 4-step wizard format
   app.post("/api/policy-requests/:id/generate", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId;
@@ -1262,44 +1265,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const intakeData = request.intakeData as Record<string, any> | null;
       
-      if (!intakeData?.companyName || !intakeData?.businessType) {
+      // Support both old format (companyName) and new wizard format (company_name)
+      const companyName = intakeData?.company_name || intakeData?.companyName;
+      const activityType = intakeData?.activity_type || intakeData?.businessType;
+      
+      if (!companyName || !activityType) {
         return res.status(400).json({ error: "بيانات النموذج غير مكتملة" });
       }
       
+      // Check if this is the new 4-step wizard format
+      const isWizardFormat = !!intakeData?.company_name;
+      
+      // Update workflow status
+      await storage.updatePolicyGenerationRequest(req.params.id, {
+        workflowStatus: "generating",
+      });
+      
+      let generatedContent: string;
+      
+      if (isWizardFormat) {
+        // New 4-step wizard format - use template-based generation
+        const wizardData: WizardPolicyData = {
+          company_name: intakeData.company_name,
+          activity_type: intakeData.activity_type,
+          service_description: intakeData.service_description || "",
+          cr_number: intakeData.cr_number || "",
+          contact_address: intakeData.contact_address || "",
+          contact_email: intakeData.contact_email || "",
+          contact_phone: intakeData.contact_phone || "",
+          has_dpo: intakeData.has_dpo || false,
+          dpo_name: intakeData.dpo_name,
+          dpo_email: intakeData.dpo_email,
+          dpo_phone: intakeData.dpo_phone,
+          data_collected: intakeData.data_collected || [],
+          collection_methods: intakeData.collection_methods || [],
+          storage_location: intakeData.storage_location || "inside_ksa",
+          retention_period: intakeData.retention_period || "statutory_period",
+          retention_period_value: intakeData.retention_period_value,
+          data_sharing: intakeData.data_sharing || "no_sharing",
+          complaint_dept: intakeData.complaint_dept || "customer_service",
+        };
+        
+        generatedContent = await generateWizardPrivacyPolicy(wizardData);
+      } else {
+        // Legacy format - use AI-based generation
+        const policyDoc = await storage.createPolicyDocument({
+          companyName: intakeData.companyName,
+          businessType: intakeData.businessType,
+          entityType: intakeData.entityType || "private",
+          contactEmail: intakeData.contactEmail || "",
+          contactPhone: intakeData.contactPhone,
+          contactAddress: intakeData.contactAddress,
+          dataCategories: intakeData.dataCategories || [],
+          collectionMethod: intakeData.collectionMethod,
+          processingMethods: intakeData.processingMethods,
+          sharesWithThirdParties: intakeData.sharesWithThirdParties || "no",
+          thirdPartyDetails: intakeData.thirdPartyDetails,
+          transfersDataAbroad: intakeData.transfersDataAbroad || "no",
+          transferDestinations: intakeData.transferCountries || intakeData.transferDestinations,
+          retentionPeriod: intakeData.retentionPeriod,
+          usesCookies: intakeData.usesCookies || "no",
+          processesSensitiveData: intakeData.processesSensitiveData || "no",
+          dpoName: intakeData.dpoName,
+          dpoEmail: intakeData.dpoEmail,
+          dpoPhone: intakeData.dpoPhone,
+          dpoAddress: intakeData.dpoAddress,
+        });
+        
+        await storage.updatePolicyGenerationRequest(req.params.id, {
+          policyDocumentId: policyDoc.id,
+        });
+        
+        processPrivacyPolicyGeneration(policyDoc.id);
+        
+        return res.json({ 
+          success: true, 
+          policyId: policyDoc.id,
+          message: "تم بدء توليد سياسة الخصوصية",
+        });
+      }
+      
+      // For wizard format - create policy document first, then update with content
       const policyDoc = await storage.createPolicyDocument({
-        companyName: intakeData.companyName,
-        businessType: intakeData.businessType,
-        entityType: intakeData.entityType || "private",
-        contactEmail: intakeData.contactEmail || "",
-        contactPhone: intakeData.contactPhone,
-        contactAddress: intakeData.contactAddress,
-        dataCategories: intakeData.dataCategories || [],
-        collectionMethod: intakeData.collectionMethod,
-        processingMethods: intakeData.processingMethods,
-        sharesWithThirdParties: intakeData.sharesWithThirdParties || "no",
-        thirdPartyDetails: intakeData.thirdPartyDetails,
-        transfersDataAbroad: intakeData.transfersDataAbroad || "no",
-        transferDestinations: intakeData.transferCountries || intakeData.transferDestinations,
-        retentionPeriod: intakeData.retentionPeriod,
-        usesCookies: intakeData.usesCookies || "no",
-        processesSensitiveData: intakeData.processesSensitiveData || "no",
-        dpoName: intakeData.dpoName,
-        dpoEmail: intakeData.dpoEmail,
-        dpoPhone: intakeData.dpoPhone,
-        dpoAddress: intakeData.dpoAddress,
+        companyName: companyName,
+        businessType: activityType,
+        entityType: "private",
+        contactEmail: intakeData.contact_email || "",
+        contactPhone: intakeData.contact_phone,
+        contactAddress: intakeData.contact_address,
+        dataCategories: [],
+        retentionPeriod: intakeData.retention_period,
+        usesCookies: intakeData.collection_methods?.includes("automated") ? "yes" : "no",
+        dpoName: intakeData.dpo_name,
+        dpoEmail: intakeData.dpo_email,
+        dpoPhone: intakeData.dpo_phone,
+      });
+      
+      // Update with generated content
+      await storage.updatePolicyDocument(policyDoc.id, {
+        generatedContent: generatedContent,
+        status: "completed",
       });
       
       await storage.updatePolicyGenerationRequest(req.params.id, {
-        workflowStatus: "generating",
+        workflowStatus: "delivered",
         policyDocumentId: policyDoc.id,
       });
-      
-      processPrivacyPolicyGeneration(policyDoc.id);
       
       res.json({ 
         success: true, 
         policyId: policyDoc.id,
-        message: "تم بدء توليد سياسة الخصوصية",
+        message: "تم توليد سياسة الخصوصية بنجاح",
       });
     } catch (error) {
       console.error("Error generating policy from request:", error);

@@ -2331,3 +2331,243 @@ ${contextText}
     throw new Error("فشل في توليد الرد. يرجى المحاولة مرة أخرى.");
   }
 }
+
+// ========== 4-Step Wizard Privacy Policy Generator ==========
+
+export interface WizardPolicyData {
+  company_name: string;
+  activity_type: string;
+  service_description: string;
+  cr_number: string;
+  contact_address: string;
+  contact_email: string;
+  contact_phone: string;
+  has_dpo: boolean;
+  dpo_name?: string;
+  dpo_email?: string;
+  dpo_phone?: string;
+  data_collected: string[];
+  collection_methods: string[];
+  storage_location: string;
+  retention_period: string;
+  retention_period_value?: string;
+  data_sharing: string;
+  complaint_dept: string;
+}
+
+const DATA_TYPE_LABELS: Record<string, string> = {
+  identity: "بيانات الهوية (الاسم، رقم الهوية/الإقامة)",
+  contact: "بيانات التواصل (البريد الإلكتروني، رقم الهاتف، العنوان)",
+  financial: "بيانات مالية (معلومات البطاقة، الحسابات البنكية)",
+  location: "بيانات الموقع الجغرافي",
+  technical: "بيانات تقنية (عنوان IP، ملفات تعريف الارتباط، معرّف الجهاز)",
+  sensitive: "بيانات حساسة/صحية",
+};
+
+const COLLECTION_METHOD_LABELS: Record<string, string> = {
+  direct: "بشكل مباشر من خلال النماذج والتسجيل",
+  automated: "بشكل آلي من خلال ملفات تعريف الارتباط (الكوكيز)",
+  third_party: "من أطراف ثالثة موثوقة",
+};
+
+const ACTIVITY_TYPE_LABELS: Record<string, string> = {
+  ecommerce: "تجارة إلكترونية",
+  fintech: "تقنية مالية",
+  health: "خدمات صحية",
+  education: "خدمات تعليمية",
+  other: "خدمات أخرى",
+};
+
+const COMPLAINT_DEPT_LABELS: Record<string, string> = {
+  customer_service: "خدمة العملاء",
+  legal_dept: "الإدارة القانونية",
+  compliance_dept: "إدارة الامتثال",
+};
+
+export async function generateWizardPrivacyPolicy(data: WizardPolicyData): Promise<string> {
+  const formattedDate = new Date().toLocaleDateString('ar-SA', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+
+  // Build data collected list
+  const dataCollectedList = data.data_collected
+    .map(id => DATA_TYPE_LABELS[id] || id)
+    .map(label => `<li>${label}</li>`)
+    .join('\n');
+
+  // Build collection methods list
+  const collectionMethodsList = data.collection_methods
+    .map(id => COLLECTION_METHOD_LABELS[id] || id)
+    .map(label => `<li>${label}</li>`)
+    .join('\n');
+
+  // Build legal basis list
+  const legalBases: string[] = ["الالتزام بالنظام (المادة ٥ من نظام حماية البيانات الشخصية)"];
+  if (data.data_collected.includes("financial")) {
+    legalBases.push("تنفيذ عقد مع صاحب البيانات (المادة ٦ من نظام حماية البيانات الشخصية)");
+  }
+  if (data.collection_methods.includes("automated")) {
+    legalBases.push("الموافقة الصريحة على استخدام ملفات تعريف الارتباط (المادة ١٢ من نظام حماية البيانات الشخصية)");
+  }
+  const legalBasisList = legalBases.map(b => `<li>${b}</li>`).join('\n');
+
+  // Storage location text
+  const storageLocationText = data.storage_location === "inside_ksa" 
+    ? "داخل المملكة العربية السعودية"
+    : "خارج المملكة العربية السعودية";
+
+  // Cross-border transfer clause
+  const crossBorderClause = data.storage_location === "outside_ksa" ? `
+<h2>سادساً: نقل البيانات خارج المملكة</h2>
+<p>قد يتم نقل بياناتك الشخصية إلى خوادم خارج المملكة العربية السعودية. نلتزم في هذه الحالة بما يلي وفقاً للمادة ٢٩ من نظام حماية البيانات الشخصية:</p>
+<ul>
+<li>التأكد من توفر مستوى حماية مناسب للبيانات في الدولة المستقبلة</li>
+<li>الحصول على الموافقة المسبقة من الهيئة السعودية للبيانات والذكاء الاصطناعي عند الحاجة</li>
+<li>تطبيق الضمانات المناسبة لحماية البيانات أثناء النقل</li>
+</ul>
+` : "";
+
+  // Retention period text
+  let retentionText = "";
+  switch (data.retention_period) {
+    case "delete_immediately":
+      retentionText = "يتم حذف البيانات فوراً بعد انتهاء الغرض من جمعها";
+      break;
+    case "specific_period":
+      retentionText = `نحتفظ بالبيانات لمدة ${data.retention_period_value || "محددة"} سنوات، ثم يتم حذفها بشكل آمن`;
+      break;
+    case "statutory_period":
+      retentionText = "نحتفظ بالبيانات للمدة النظامية المطلوبة قانوناً، وفقاً للأنظمة المعمول بها في المملكة العربية السعودية";
+      break;
+  }
+
+  // Data sharing text
+  let dataSharingText = "";
+  switch (data.data_sharing) {
+    case "no_sharing":
+      dataSharingText = "لا نشارك بياناتك الشخصية مع أي طرف ثالث، إلا في الحالات التي يتطلبها النظام أو بموجب أمر قضائي.";
+      break;
+    case "service_providers":
+      dataSharingText = `قد نشارك بياناتك مع مزودي الخدمات الموثوقين (مثل: معالجي الدفع، شركات الشحن، مزودي خدمات التحليلات) لتقديم خدماتنا لك. نلتزم بإبرام اتفاقيات معالجة بيانات مع هؤلاء المزودين لضمان حماية بياناتك.`;
+      break;
+    case "government_entities":
+      dataSharingText = "قد نفصح عن بياناتك للجهات الحكومية المختصة عند الطلب النظامي أو لتنفيذ التزاماتنا القانونية.";
+      break;
+  }
+
+  // Complaint dept text
+  const complaintDeptText = COMPLAINT_DEPT_LABELS[data.complaint_dept] || "خدمة العملاء";
+
+  // DPO section
+  const dpoSection = data.has_dpo && data.dpo_name ? `
+<h2>مسؤول حماية البيانات الشخصية</h2>
+<p>عيّنا مسؤولاً لحماية البيانات الشخصية يمكنك التواصل معه لأي استفسارات:</p>
+<ul>
+<li>الاسم: ${data.dpo_name}</li>
+${data.dpo_email ? `<li>البريد الإلكتروني: ${data.dpo_email}</li>` : ''}
+${data.dpo_phone ? `<li>الهاتف: ${data.dpo_phone}</li>` : ''}
+</ul>
+` : "";
+
+  // Generate the complete policy
+  const policyContent = `
+<h2>أولاً: المقدمة والالتزام بالخصوصية</h2>
+<p>نحن في <strong>${data.company_name}</strong> نلتزم بحماية خصوصيتك وبياناتك الشخصية وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL) ولائحته التنفيذية.</p>
+<p>${data.service_description}</p>
+
+<h2>ثانياً: معلومات جهة التحكم</h2>
+<ul>
+<li><strong>اسم الجهة:</strong> ${data.company_name}</li>
+<li><strong>نوع النشاط:</strong> ${ACTIVITY_TYPE_LABELS[data.activity_type] || data.activity_type}</li>
+<li><strong>رقم السجل التجاري:</strong> ${data.cr_number}</li>
+<li><strong>العنوان:</strong> ${data.contact_address}</li>
+<li><strong>البريد الإلكتروني:</strong> ${data.contact_email}</li>
+<li><strong>الهاتف:</strong> ${data.contact_phone}</li>
+</ul>
+${dpoSection}
+
+<h2>ثالثاً: البيانات الشخصية التي نجمعها</h2>
+<p>نقوم بجمع الأنواع التالية من البيانات الشخصية:</p>
+<ul>
+${dataCollectedList}
+</ul>
+
+<h2>رابعاً: طرق جمع البيانات</h2>
+<p>نقوم بجمع بياناتك الشخصية من خلال:</p>
+<ul>
+${collectionMethodsList}
+</ul>
+
+<h2>خامساً: أغراض استخدام البيانات</h2>
+<p>نستخدم بياناتك الشخصية للأغراض التالية:</p>
+<ul>
+<li>تقديم الخدمات والمنتجات المطلوبة</li>
+<li>التواصل معك بشأن طلباتك واستفساراتك</li>
+<li>تحسين خدماتنا وتجربة المستخدم</li>
+<li>الامتثال للمتطلبات النظامية والقانونية</li>
+${data.data_collected.includes("financial") ? '<li>معالجة المدفوعات وتنفيذ العقود</li>' : ''}
+${data.collection_methods.includes("automated") ? '<li>تحليل استخدام الموقع وتحسين الأداء (بموافقتك)</li>' : ''}
+</ul>
+
+${crossBorderClause}
+
+<h2>${data.storage_location === "outside_ksa" ? 'سابعاً' : 'سادساً'}: التخزين والاحتفاظ بالبيانات</h2>
+<p><strong>موقع التخزين:</strong> ${storageLocationText}</p>
+<p><strong>مدة الاحتفاظ:</strong> ${retentionText}</p>
+
+<h2>${data.storage_location === "outside_ksa" ? 'ثامناً' : 'سابعاً'}: مشاركة البيانات مع أطراف ثالثة</h2>
+<p>${dataSharingText}</p>
+
+<h2>${data.storage_location === "outside_ksa" ? 'تاسعاً' : 'ثامناً'}: المسوغات النظامية للمعالجة</h2>
+<p>نعالج بياناتك الشخصية بناءً على المسوغات النظامية التالية:</p>
+<ul>
+${legalBasisList}
+</ul>
+
+<h2>${data.storage_location === "outside_ksa" ? 'عاشراً' : 'تاسعاً'}: حقوق أصحاب البيانات</h2>
+<p>بموجب نظام حماية البيانات الشخصية السعودي، لديك الحقوق التالية:</p>
+<ul>
+<li><strong>الحق في العلم:</strong> معرفة طرق جمع بياناتك ومعالجتها وحفظها والإفصاح عنها (المادة ٤)</li>
+<li><strong>الحق في الوصول:</strong> طلب الاطلاع على بياناتك الشخصية المحفوظة لدينا</li>
+<li><strong>الحق في الحصول على نسخة:</strong> طلب نسخة من بياناتك الشخصية بصيغة مقروءة</li>
+<li><strong>الحق في التصحيح:</strong> طلب تصحيح البيانات غير الدقيقة أو إكمال الناقصة</li>
+<li><strong>الحق في الإتلاف:</strong> طلب حذف بياناتك في الظروف المحددة نظاماً</li>
+<li><strong>الحق في الرجوع عن الموافقة:</strong> سحب موافقتك على المعالجة في أي وقت</li>
+</ul>
+<p>لممارسة أي من هذه الحقوق، يرجى التواصل معنا عبر البريد الإلكتروني: ${data.contact_email}</p>
+<p>سنرد على طلبك خلال مدة لا تتجاوز ٣٠ يوماً من تاريخ استلامه.</p>
+
+<h2>${data.storage_location === "outside_ksa" ? 'الحادي عشر' : 'عاشراً'}: الشكاوى والاعتراضات</h2>
+<p>لتقديم شكوى أو اعتراض يتعلق بمعالجة بياناتك الشخصية:</p>
+<ol>
+<li>تواصل مع ${complaintDeptText} عبر البريد الإلكتروني: ${data.contact_email}</li>
+<li>سنقوم بمراجعة شكواك والرد عليك خلال ٣٠ يوماً</li>
+</ol>
+<p>في حال عدم رضاك عن الحل المقدم، يمكنك التواصل مع:</p>
+
+<h2>${data.storage_location === "outside_ksa" ? 'الثاني عشر' : 'الحادي عشر'}: الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا)</h2>
+<p>يحق لك التقدم بشكوى إلى الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا) إذا كنت تعتقد أن حقوقك بموجب نظام حماية البيانات الشخصية قد انتُهكت:</p>
+<ul>
+<li><strong>الموقع الإلكتروني:</strong> <a href="https://sdaia.gov.sa" target="_blank">sdaia.gov.sa</a></li>
+<li><strong>منصة حوكمة البيانات الوطنية:</strong> <a href="https://dgp.sdaia.gov.sa" target="_blank">dgp.sdaia.gov.sa</a></li>
+<li><strong>العنوان:</strong> المملكة العربية السعودية، الرياض</li>
+</ul>
+
+<h2>${data.storage_location === "outside_ksa" ? 'الثالث عشر' : 'الثاني عشر'}: تحديث السياسة</h2>
+<p>قد نقوم بتحديث هذه السياسة من وقت لآخر. سنُعلمك بأي تغييرات جوهرية عبر البريد الإلكتروني أو من خلال إشعار بارز على موقعنا.</p>
+<p><strong>تاريخ آخر تحديث:</strong> ${formattedDate}</p>
+
+<h2>${data.storage_location === "outside_ksa" ? 'الرابع عشر' : 'الثالث عشر'}: معلومات الاتصال</h2>
+<p>لأي استفسارات حول سياسة الخصوصية هذه، يرجى التواصل معنا:</p>
+<ul>
+<li><strong>الجهة:</strong> ${data.company_name}</li>
+<li><strong>البريد الإلكتروني:</strong> ${data.contact_email}</li>
+<li><strong>الهاتف:</strong> ${data.contact_phone}</li>
+<li><strong>العنوان:</strong> ${data.contact_address}</li>
+</ul>
+`;
+
+  return policyContent;
+}
