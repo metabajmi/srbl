@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FileText, Loader2, Download, Plus, Trash2, AlertCircle } from "lucide-react";
-import { insertPolicyDocumentSchema, type PolicyDocument } from "@shared/schema";
+import { insertPolicyDocumentSchema, type PolicyDocument, type PolicyGenerationRequest } from "@shared/schema";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -20,6 +20,19 @@ import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { BackButton } from "@/components/BackButton";
+import { OTPModal } from "@/components/OTPModal";
+import { useEffect } from "react";
+
+const isAuthenticated = (): boolean => {
+  try {
+    const userStr = localStorage.getItem("user");
+    if (!userStr) return false;
+    const user = JSON.parse(userStr);
+    return !!(user && user.id);
+  } catch {
+    return false;
+  }
+};
 
 const formSchema = z.object({
   // القسم الأول: هوية الجهة والمسؤولية
@@ -120,6 +133,31 @@ type FormValues = z.infer<typeof formSchema>;
 export default function PrivacyGeneratorPage() {
   const { toast } = useToast();
   const [currentSection, setCurrentSection] = useState(1);
+  const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated());
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => setIsLoggedIn(isAuthenticated());
+    window.addEventListener('storage', checkAuth);
+    const interval = setInterval(checkAuth, 1000);
+    return () => {
+      window.removeEventListener('storage', checkAuth);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleOTPSuccess = () => {
+    setIsLoggedIn(true);
+    toast({
+      title: "مرحباً بك!",
+      description: "جاري توليد سياسة الخصوصية...",
+    });
+    
+    // Directly submit the form with current values after OTP success
+    const currentValues = form.getValues();
+    createPolicyRequestMutation.mutate(currentValues);
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -206,7 +244,8 @@ export default function PrivacyGeneratorPage() {
   });
 
   const { data: policies } = useQuery<PolicyDocument[]>({
-    queryKey: ["/api/policies"],
+    queryKey: ["/api/user/policies"],
+    enabled: isLoggedIn,
     refetchInterval: (query) => {
       const data = query.state.data as PolicyDocument[] | undefined;
       if (!data || !Array.isArray(data)) return false;
@@ -215,19 +254,49 @@ export default function PrivacyGeneratorPage() {
     },
   });
 
-  const generateMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof insertPolicyDocumentSchema>) => {
-      const response = await apiRequest("POST", "/api/policies", data);
+  const createPolicyRequestMutation = useMutation({
+    mutationFn: async (data: FormValues) => {
+      const response = await apiRequest("POST", "/api/policy-requests", {
+        scanId: null,
+        intakeData: data,
+      });
       return await response.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "تم بدء توليد سياسة الخصوصية",
-        description: "سيتم إشعارك عند اكتمال التوليد",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/policies"] });
-      form.reset();
-      setCurrentSection(1);
+    onSuccess: async (result) => {
+      // ========== BYPASS MODE FOR TESTING ==========
+      // Skip payment and generate directly
+      setIsGenerating(true);
+      try {
+        const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
+          paymentId: "BYPASS_TEST",
+          requestId: result.id,
+        });
+        
+        if (verifyResponse.ok) {
+          const generateResponse = await apiRequest("POST", `/api/policy-requests/${result.id}/generate`, {});
+          
+          if (generateResponse.ok) {
+            toast({
+              title: "جاري توليد السياسة",
+              description: "سيتم توليد سياسة الخصوصية خلال لحظات...",
+            });
+            queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
+            form.reset();
+            setCurrentSection(1);
+          } else {
+            throw new Error("فشل في بدء توليد السياسة");
+          }
+        }
+      } catch (error: any) {
+        toast({
+          title: "خطأ",
+          description: error.message || "حدث خطأ أثناء معالجة الطلب",
+          variant: "destructive",
+        });
+      } finally {
+        setIsGenerating(false);
+      }
+      // ========== END BYPASS MODE ==========
     },
     onError: (error: any) => {
       toast({
@@ -265,70 +334,12 @@ export default function PrivacyGeneratorPage() {
   };
 
   const onSubmit = (values: FormValues) => {
-    console.log("onSubmit called with values:", values);
-    const submitData: z.infer<typeof insertPolicyDocumentSchema> = {
-      companyName: values.companyName,
-      businessType: values.businessType,
-      entityType: values.entityType,
-      contactEmail: values.contactEmail,
-      contactPhone: values.contactPhone || null,
-      contactAddress: values.contactAddress || null,
-      processesSensitiveData: values.processesSensitiveData || null,
-      requiresDPO: values.processesSensitiveData === "yes" ? "yes" : "no",
-      dpoName: values.dpoName || null,
-      dpoEmail: values.dpoEmail || null,
-      dpoPhone: values.dpoPhone || null,
-      dpoAddress: values.dpoAddress || null,
-      dataCategories: values.dataCategories,
-      collectionMethod: values.collectionMethod || null,
-      directCollectionDetails: values.directCollectionDetails || null,
-      indirectCollectionDetails: values.indirectCollectionDetails || null,
-      indirectDataSources: values.indirectDataSources || null,
-      processingMethods: values.processingMethods || null,
-      sharesWithThirdParties: values.sharesWithThirdParties || null,
-      thirdPartyDetails: values.thirdPartyDetails || null,
-      transfersDataAbroad: values.transfersDataAbroad || null,
-      transferDestinations: values.transferDestinations || null,
-      transferSafeguards: values.transferSafeguards || null,
-      transferMechanism: values.transferMechanism || null,
-      rightsExerciseMethod: values.rightsExerciseMethod || null,
-      rightsResponseTime: values.rightsResponseTime || null,
-      rightsContactChannel: values.rightsContactChannel || null,
-      accessRightDetails: values.accessRightDetails || null,
-      obtainCopyDetails: values.obtainCopyDetails || null,
-      obtainCopyFormat: values.obtainCopyFormat || null,
-      obtainCopyLimitations: values.obtainCopyLimitations || null,
-      correctionRightDetails: values.correctionRightDetails || null,
-      correctionResponseTime: values.correctionResponseTime || null,
-      correctionNotificationMethod: values.correctionNotificationMethod || null,
-      deletionRightConditions: values.deletionRightConditions || null,
-      deletionExceptions: values.deletionExceptions || null,
-      objectionRightDetails: values.objectionRightDetails || null,
-      objectionEvaluationTime: values.objectionEvaluationTime || null,
-      withdrawalConsentDetails: values.withdrawalConsentDetails || null,
-      withdrawalConsentMethod: values.withdrawalConsentMethod || null,
-      withdrawalConsentImpact: values.withdrawalConsentImpact || null,
-      storageLocation: values.storageLocation || null,
-      storageLocationDetails: values.storageLocationDetails || null,
-      retentionPeriod: values.retentionPeriod || null,
-      retentionCriteria: values.retentionCriteria || null,
-      deletionMethod: values.deletionMethod || null,
-      securityMeasures: values.securityMeasures || null,
-      technicalMeasures: values.technicalMeasures || null,
-      organizationalMeasures: values.organizationalMeasures || null,
-      breachNotificationProcess: values.breachNotificationProcess || null,
-      breachNotificationTime: values.breachNotificationTime || null,
-      usesCookies: values.usesCookies || null,
-      cookieTypes: values.cookieTypes || null,
-      cookieManagementMethod: values.cookieManagementMethod || null,
-      updateNotificationMethod: values.updateNotificationMethod || null,
-      lastUpdatedDate: null,
-      complaintProcedure: values.complaintProcedure || null,
-      complaintResponseTime: values.complaintResponseTime || null,
-      sdaiaContactInfo: values.sdaiaContactInfo || null,
-    };
-    console.log("About to call generateMutation.mutate with:", submitData);
-    generateMutation.mutate(submitData);
+    if (!isLoggedIn) {
+      setShowOTPModal(true);
+      return;
+    }
+    
+    createPolicyRequestMutation.mutate(values);
   };
 
   const handleDownload = (policy: PolicyDocument) => {
@@ -2376,10 +2387,10 @@ export default function PrivacyGeneratorPage() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={generateMutation.isPending}
+                      disabled={createPolicyRequestMutation.isPending || isGenerating}
                       data-testid="button-submit-form"
                     >
-                      {generateMutation.isPending ? (
+                      {(createPolicyRequestMutation.isPending || isGenerating) ? (
                         <>
                           <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                           جاري التوليد...
@@ -2452,6 +2463,12 @@ export default function PrivacyGeneratorPage() {
           </Card>
         )}
       </div>
+
+      <OTPModal
+        open={showOTPModal}
+        onOpenChange={setShowOTPModal}
+        onSuccess={handleOTPSuccess}
+      />
     </div>
   );
 }
