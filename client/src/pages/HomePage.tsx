@@ -8,7 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertComplianceScanSchema } from "@shared/schema";
 import { useLocation, Link } from "wouter";
-import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers, Lock, Users } from "lucide-react";
+import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers, Lock, Users, Clock } from "lucide-react";
 import { z } from "zod";
 
 export default function HomePage() {
@@ -52,45 +52,38 @@ export default function HomePage() {
     }
   };
 
-  const additionalServices = [
+  // Coming Soon services - disabled for MVP launch
+  const comingSoonServices = [
     {
       icon: <FileText className="w-10 h-10" />,
-      title: "مُولّد سياسة الخصوصية",
+      title: "مُولّد سياسة الخصوصية المتقدم",
       description: "أنشئ سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية السعودي بدقائق",
-      href: "/privacy-generator",
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-500/10",
-      badge: "متوافق مع PDPL",
+      color: "text-purple-600/50 dark:text-purple-400/50",
+      bgColor: "bg-purple-500/5",
       testId: "card-service-privacy"
     },
     {
       icon: <ScrollText className="w-10 h-10" />,
       title: "مُولّد الشروط والأحكام",
       description: "أنشئ شروطاً وأحكاماً واضحة ومتوافقة مع الأنظمة السعودية لموقعك أو تطبيقك",
-      href: "/terms-generator",
-      color: "text-green-600 dark:text-green-400",
-      bgColor: "bg-green-500/10",
-      badge: "احترافي",
+      color: "text-green-600/50 dark:text-green-400/50",
+      bgColor: "bg-green-500/5",
       testId: "card-service-terms"
     },
     {
       icon: <CheckCircle className="w-10 h-10" />,
       title: "منصة إدارة الموافقة",
       description: "إدارة وتتبع موافقات المستخدمين والكوكيز بشكل متوافق مع اللوائح السعودية",
-      href: "/consent-management",
-      color: "text-orange-600 dark:text-orange-400",
-      bgColor: "bg-orange-500/10",
-      badge: "CMP",
+      color: "text-orange-600/50 dark:text-orange-400/50",
+      bgColor: "bg-orange-500/5",
       testId: "card-service-consent"
     },
     {
       icon: <Sparkles className="w-10 h-10" />,
       title: "المساعد الذكي",
       description: "اسأل أي سؤال عن نظام حماية البيانات الشخصية واحصل على إجابات فورية ودقيقة",
-      href: "/smart-assistant",
-      color: "text-pink-600 dark:text-pink-400",
-      bgColor: "bg-pink-500/10",
-      badge: "RAG مدعوم بتقنية",
+      color: "text-pink-600/50 dark:text-pink-400/50",
+      bgColor: "bg-pink-500/5",
       testId: "card-service-assistant"
     }
   ];
@@ -232,139 +225,153 @@ export default function HomePage() {
           {/* Section Divider */}
           <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent my-8 md:my-12"></div>
 
-          {/* Unified Compliance Workspace - Prominent CTA */}
+          {/* ========== COMING SOON SECTIONS - Disabled for MVP ========== */}
+          
+          {/* Unified Compliance Workspace - DISABLED */}
           <div className="max-w-3xl mx-auto mb-10 md:mb-14 animate-stagger-3">
-            <Link href="/workspace">
-              <Card 
-                className="hover-elevate active-elevate-2 cursor-pointer border-2 border-primary/25 shadow-xl bg-gradient-to-br from-primary/8 via-transparent to-primary/4 transition-smooth duration-300"
-                data-testid="card-workspace"
-              >
-                <CardHeader className="text-center pb-4 sm:pb-6 pt-6 sm:pt-8 px-4 sm:px-6">
-                  <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-primary/15 shadow-md">
-                    <Layers className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
-                  </div>
-                  <Badge variant="default" className="mx-auto mb-3 sm:mb-4">
-                    موحّد في مكان واحد
+            <Card 
+              className="relative border-2 border-muted/50 shadow-md bg-gradient-to-br from-muted/20 via-transparent to-muted/10 opacity-60 cursor-not-allowed"
+              data-testid="card-workspace"
+            >
+              {/* Coming Soon Badge - Positioned at top */}
+              <div className="absolute top-4 left-4 z-10">
+                <Badge variant="secondary" className="bg-amber-500/90 text-white border-0 shadow-md">
+                  <Clock className="w-3 h-3 ml-1" />
+                  قريباً
+                </Badge>
+              </div>
+              <CardHeader className="text-center pb-4 sm:pb-6 pt-6 sm:pt-8 px-4 sm:px-6">
+                <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-muted/30 shadow-md">
+                  <Layers className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/50" />
+                </div>
+                <Badge variant="outline" className="mx-auto mb-3 sm:mb-4 opacity-50">
+                  موحّد في مكان واحد
+                </Badge>
+                <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 text-muted-foreground">
+                  مساحة العمل الموحدة للامتثال
+                </CardTitle>
+                <CardDescription className="text-sm sm:text-base mt-2 max-w-lg mx-auto leading-relaxed">
+                  أنشئ سياسة الخصوصية والشروط والأحكام وإدارة الموافقات وإعدادات الخصوصية - كلها في مكان واحد
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 pb-6 sm:pb-8 text-center px-4 sm:px-6">
+                <div className="flex flex-wrap justify-center gap-2 mb-6 sm:mb-8 opacity-50">
+                  <Badge variant="outline" className="text-xs px-2.5 py-1">
+                    <FileText className="w-3 h-3 ml-1" />
+                    سياسة الخصوصية
                   </Badge>
-                  <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold mb-3">
-                    مساحة العمل الموحدة للامتثال
-                  </CardTitle>
-                  <CardDescription className="text-sm sm:text-base mt-2 max-w-lg mx-auto leading-relaxed">
-                    أنشئ سياسة الخصوصية والشروط والأحكام وإدارة الموافقات وإعدادات الخصوصية - كلها في مكان واحد
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0 pb-6 sm:pb-8 text-center px-4 sm:px-6">
-                  <div className="flex flex-wrap justify-center gap-2 mb-6 sm:mb-8">
-                    <Badge variant="outline" className="text-xs px-2.5 py-1">
-                      <FileText className="w-3 h-3 ml-1" />
-                      سياسة الخصوصية
-                    </Badge>
-                    <Badge variant="outline" className="text-xs px-2.5 py-1">
-                      <ScrollText className="w-3 h-3 ml-1" />
-                      الشروط والأحكام
-                    </Badge>
-                    <Badge variant="outline" className="text-xs px-2.5 py-1">
-                      <CheckCircle className="w-3 h-3 ml-1" />
-                      إدارة الموافقة
-                    </Badge>
-                    <Badge variant="outline" className="text-xs px-2.5 py-1">
-                      <Shield className="w-3 h-3 ml-1" />
-                      إعدادات الخصوصية
-                    </Badge>
-                  </div>
-                  <Button size="lg" className="px-8 h-10 sm:h-11 text-sm sm:text-base font-semibold">
-                    <Layers className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    ابدأ الآن
-                  </Button>
-                </CardContent>
-              </Card>
-            </Link>
+                  <Badge variant="outline" className="text-xs px-2.5 py-1">
+                    <ScrollText className="w-3 h-3 ml-1" />
+                    الشروط والأحكام
+                  </Badge>
+                  <Badge variant="outline" className="text-xs px-2.5 py-1">
+                    <CheckCircle className="w-3 h-3 ml-1" />
+                    إدارة الموافقة
+                  </Badge>
+                  <Badge variant="outline" className="text-xs px-2.5 py-1">
+                    <Shield className="w-3 h-3 ml-1" />
+                    إعدادات الخصوصية
+                  </Badge>
+                </div>
+                <Button size="lg" className="px-8 h-10 sm:h-11 text-sm sm:text-base font-semibold opacity-50" disabled>
+                  <Layers className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  قريباً
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Internal Compliance Workspace - Prominent CTA */}
+          {/* Internal Compliance Workspace - DISABLED */}
           <div className="max-w-3xl mx-auto mb-10 md:mb-14 animate-stagger-4">
-            <Link href="/internal-compliance">
-              <Card 
-                className="hover-elevate active-elevate-2 cursor-pointer border-2 border-accent/25 shadow-xl bg-gradient-to-br from-accent/8 via-transparent to-accent/4 transition-smooth duration-300"
-                data-testid="card-internal-compliance"
-              >
-                <CardHeader className="text-center pb-4 sm:pb-6 pt-6 sm:pt-8 px-4 sm:px-6">
-                  <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 shadow-lg ring-2 ring-green-500/30">
-                    <Lock className="h-8 w-8 sm:h-10 sm:w-10 text-green-600 dark:text-green-400" />
-                  </div>
-                  <Badge variant="secondary" className="mx-auto mb-3 sm:mb-4">
-                    إدارة شاملة
+            <Card 
+              className="relative border-2 border-muted/50 shadow-md bg-gradient-to-br from-muted/20 via-transparent to-muted/10 opacity-60 cursor-not-allowed"
+              data-testid="card-internal-compliance"
+            >
+              {/* Coming Soon Badge - Positioned at top */}
+              <div className="absolute top-4 left-4 z-10">
+                <Badge variant="secondary" className="bg-amber-500/90 text-white border-0 shadow-md">
+                  <Clock className="w-3 h-3 ml-1" />
+                  قريباً
+                </Badge>
+              </div>
+              <CardHeader className="text-center pb-4 sm:pb-6 pt-6 sm:pt-8 px-4 sm:px-6">
+                <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-muted/30 shadow-md">
+                  <Lock className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/50" />
+                </div>
+                <Badge variant="outline" className="mx-auto mb-3 sm:mb-4 opacity-50">
+                  إدارة شاملة
+                </Badge>
+                <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 text-muted-foreground">
+                  مساحة العمل الموحدة للامتثال الداخلي
+                </CardTitle>
+                <CardDescription className="text-sm sm:text-base mt-2 max-w-lg mx-auto leading-relaxed">
+                  إدارة سجل المعالجة (ROPA) وطلبات الوصول (DSAR) وتقييمات التأثير (DPIA) - كلها في مكان واحد
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0 pb-6 sm:pb-8 text-center px-4 sm:px-6">
+                <div className="flex flex-wrap justify-center gap-2 mb-6 sm:mb-8 opacity-50">
+                  <Badge variant="outline" className="text-xs px-2.5 py-1">
+                    <FileText className="w-3 h-3 ml-1" />
+                    ROPA
                   </Badge>
-                  <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold mb-3">
-                    مساحة العمل الموحدة للامتثال الداخلي
-                  </CardTitle>
-                  <CardDescription className="text-sm sm:text-base mt-2 max-w-lg mx-auto leading-relaxed">
-                    إدارة سجل المعالجة (ROPA) وطلبات الوصول (DSAR) وتقييمات التأثير (DPIA) - كلها في مكان واحد
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0 pb-6 sm:pb-8 text-center px-4 sm:px-6">
-                  <div className="flex flex-wrap justify-center gap-2 mb-6 sm:mb-8">
-                    <Badge variant="outline" className="text-xs px-2.5 py-1">
-                      <FileText className="w-3 h-3 ml-1" />
-                      ROPA
-                    </Badge>
-                    <Badge variant="outline" className="text-xs px-2.5 py-1">
-                      <Users className="w-3 h-3 ml-1" />
-                      DSAR
-                    </Badge>
-                    <Badge variant="outline" className="text-xs px-2.5 py-1">
-                      <Lock className="w-3 h-3 ml-1 text-green-600 dark:text-green-400" />
-                      DPIA
-                    </Badge>
-                  </div>
-                  <Button size="lg" className="px-8 h-10 sm:h-11 text-sm sm:text-base font-semibold bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white">
-                    <Lock className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    ابدأ الآن
-                  </Button>
-                </CardContent>
-              </Card>
-            </Link>
+                  <Badge variant="outline" className="text-xs px-2.5 py-1">
+                    <Users className="w-3 h-3 ml-1" />
+                    DSAR
+                  </Badge>
+                  <Badge variant="outline" className="text-xs px-2.5 py-1">
+                    <Lock className="w-3 h-3 ml-1" />
+                    DPIA
+                  </Badge>
+                </div>
+                <Button size="lg" className="px-8 h-10 sm:h-11 text-sm sm:text-base font-semibold opacity-50" disabled>
+                  <Lock className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  قريباً
+                </Button>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Section Divider */}
           <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent my-8 md:my-12"></div>
 
-          {/* Additional Services */}
+          {/* Additional Services - DISABLED for MVP */}
           <div className="max-w-4xl mx-auto mb-10 md:mb-14">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-center mb-6 sm:mb-8 animate-slide-up">أدوات إضافية</h2>
             <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2">
-              {additionalServices.map((service, index) => (
-                <Link key={service.testId} href={service.href}>
-                  <Card 
-                    className={`hover-elevate active-elevate-2 cursor-pointer h-full transition-smooth duration-300 shadow-md hover:shadow-lg border-r-4 animate-stagger-${(index % 4) + 1}`}
-                    style={{ borderRightColor: 'hsl(142 76% 36%)' }}
-                    data-testid={service.testId}
-                  >
-                    <CardHeader className="space-y-3 sm:space-y-4 p-4 sm:p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-lg ${service.bgColor} ${service.color} shadow-sm`}>
-                          <div className="scale-75 sm:scale-100">
-                            {service.icon}
-                          </div>
+              {comingSoonServices.map((service, index) => (
+                <Card 
+                  key={service.testId}
+                  className={`relative h-full transition-smooth duration-300 shadow-sm border border-muted/50 opacity-60 cursor-not-allowed animate-stagger-${(index % 4) + 1}`}
+                  data-testid={service.testId}
+                >
+                  {/* Coming Soon Badge */}
+                  <div className="absolute top-3 left-3 z-10">
+                    <Badge variant="secondary" className="bg-amber-500/90 text-white border-0 shadow-sm text-xs">
+                      <Clock className="w-2.5 h-2.5 ml-1" />
+                      قريباً
+                    </Badge>
+                  </div>
+                  <CardHeader className="space-y-3 sm:space-y-4 p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-lg ${service.bgColor} ${service.color} shadow-sm`}>
+                        <div className="scale-75 sm:scale-100">
+                          {service.icon}
                         </div>
-                        <Badge variant="secondary" className="text-xs px-2 py-0.5 shrink-0">
-                          {service.badge}
-                        </Badge>
                       </div>
-                      <div>
-                        <CardTitle className="text-lg sm:text-xl font-bold mb-2">{service.title}</CardTitle>
-                        <CardDescription className="text-xs sm:text-sm leading-relaxed text-muted-foreground">
-                          {service.description}
-                        </CardDescription>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0 px-4 sm:px-5 pb-4 sm:pb-5">
-                      <Button variant="ghost" className="w-full justify-center text-primary font-semibold hover:bg-primary/5" size="sm">
-                        ابدأ الآن
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Link>
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg sm:text-xl font-bold mb-2 text-muted-foreground">{service.title}</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm leading-relaxed text-muted-foreground/70">
+                        {service.description}
+                      </CardDescription>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0 px-4 sm:px-5 pb-4 sm:pb-5">
+                    <Button variant="ghost" className="w-full justify-center text-muted-foreground font-semibold" size="sm" disabled>
+                      قريباً
+                    </Button>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </div>
