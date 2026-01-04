@@ -56,22 +56,20 @@ const formatDeficiencies = (count: number): string => {
 
 // SHARED: Calculate compliance percentage from Privacy Policy 12 elements ONLY
 // This is the SINGLE source of truth for percentage - same before and after login
-// Scoring: present = 1, partial = 0.5, missing = 0
+// Scoring: found/present = 1, partial = 0.5, missing = 0
 // percentage = round((total_score / 12) * 100)
 const calculateCompliancePercentage = (ppAudit: any): number => {
-  if (!ppAudit || !ppAudit.elements || ppAudit.elements.length === 0) {
+  if (!ppAudit) {
     return 0; // No Privacy Policy = 0%
   }
   
-  let totalScore = 0;
-  for (const element of ppAudit.elements) {
-    if (element.status === 'present') {
-      totalScore += 1;
-    } else if (element.status === 'partial') {
-      totalScore += 0.5;
-    }
-    // missing = 0, no addition needed
-  }
+  // Use aggregate counts from ppAudit (elementsFound, elementsPartial)
+  // These are pre-calculated by the backend scanner
+  const found = ppAudit.elementsFound || 0;
+  const partial = ppAudit.elementsPartial || 0;
+  
+  // Scoring: found = 1 point, partial = 0.5 point
+  const totalScore = found + (partial * 0.5);
   
   return Math.round((totalScore / 12) * 100);
 };
