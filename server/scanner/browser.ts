@@ -49,6 +49,24 @@ export interface NetworkRequest {
   headers: Record<string, string>;
 }
 
+// Randomize user agent to avoid fingerprinting
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15',
+];
+
+function getRandomUserAgent(): string {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+function randomDelay(min: number, max: number): Promise<void> {
+  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+  return new Promise(resolve => setTimeout(resolve, delay));
+}
+
 const BROWSER_OPTIONS = {
   headless: true,
   executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
@@ -61,12 +79,16 @@ const BROWSER_OPTIONS = {
     '--window-size=1920,1080',
     '--disable-blink-features=AutomationControlled',
     '--disable-features=IsolateOrigins,site-per-process',
+    '--disable-web-security',
+    '--disable-features=VizDisplayCompositor',
+    '--ignore-certificate-errors',
+    '--lang=ar-SA,ar,en-US,en',
   ],
 };
 
 const PAGE_OPTIONS = {
-  timeout: 30000,
-  waitUntil: 'networkidle2' as const,
+  timeout: 45000,
+  waitUntil: 'domcontentloaded' as const,
 };
 
 export async function getBrowser(): Promise<Browser> {
@@ -102,9 +124,9 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
   try {
     await page.setViewport({ width: 1920, height: 1080 });
     
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-    );
+    const userAgent = getRandomUserAgent();
+    await page.setUserAgent(userAgent);
+    console.log(`[Scanner] Using User-Agent: ${userAgent.substring(0, 50)}...`);
     
     await page.setExtraHTTPHeaders({
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
@@ -168,27 +190,46 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       request.continue();
     });
     
+    // Add random delay before navigation to appear more human-like
+    await randomDelay(500, 1500);
+    
     console.log(`[Scanner] Navigating to ${url}...`);
     let response;
-    try {
-      response = await page.goto(url, PAGE_OPTIONS);
-    } catch (navError) {
-      console.log(`[Scanner] Initial navigation failed, trying with shorter wait...`);
+    
+    // Try multiple navigation strategies
+    const navigationStrategies = [
+      { name: 'domcontentloaded', timeout: 45000, waitUntil: 'domcontentloaded' as const },
+      { name: 'load', timeout: 30000, waitUntil: 'load' as const },
+      { name: 'networkidle0', timeout: 25000, waitUntil: 'networkidle0' as const },
+      { name: 'networkidle2', timeout: 20000, waitUntil: 'networkidle2' as const },
+    ];
+    
+    let navigationSuccess = false;
+    for (const strategy of navigationStrategies) {
       try {
-        response = await page.goto(url, { timeout: 10000, waitUntil: 'networkidle2' });
-      } catch (retryError) {
-        console.log(`[Scanner] Retry also failed, returning empty result...`);
-        return {
-          html: '',
-          cookies: [],
-          networkRequests,
-          consoleMessages,
-          errors: ['Navigation timeout - site may be blocking automated access'],
-          finalUrl: url,
-          responseHeaders,
-          loadTime: Date.now() - startTime,
-        };
+        console.log(`[Scanner] Trying navigation strategy: ${strategy.name} (timeout: ${strategy.timeout}ms)`);
+        response = await page.goto(url, { timeout: strategy.timeout, waitUntil: strategy.waitUntil });
+        navigationSuccess = true;
+        console.log(`[Scanner] ✓ Navigation successful with strategy: ${strategy.name}`);
+        break;
+      } catch (navError) {
+        console.log(`[Scanner] Strategy ${strategy.name} failed, trying next...`);
+        await randomDelay(500, 1000);
       }
+    }
+    
+    if (!navigationSuccess) {
+      console.log(`[Scanner] All navigation strategies failed, returning empty result...`);
+      return {
+        html: '',
+        cookies: [],
+        networkRequests,
+        consoleMessages,
+        errors: ['Navigation timeout - site may be blocking automated access or loading slowly'],
+        finalUrl: url,
+        responseHeaders,
+        loadTime: Date.now() - startTime,
+      };
     }
     
     if (response) {
@@ -269,7 +310,41 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     }
     
     // Brief settle time after page load
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await randomDelay(500, 1000);
+    
+    // Simulate human-like behavior: random mouse movements and scrolling
+    try {
+      // Random mouse movements
+      for (let i = 0; i < 3; i++) {
+        await page.mouse.move(
+          Math.floor(Math.random() * 800) + 100,
+          Math.floor(Math.random() * 400) + 100
+        );
+        await randomDelay(100, 300);
+      }
+      
+      // Scroll down to trigger lazy-loaded content
+      await page.evaluate(() => {
+        window.scrollTo(0, Math.floor(document.body.scrollHeight * 0.3));
+      });
+      await randomDelay(300, 600);
+      
+      // Scroll to bottom
+      await page.evaluate(() => {
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+      await randomDelay(500, 1000);
+      
+      // Scroll back to top
+      await page.evaluate(() => {
+        window.scrollTo(0, 0);
+      });
+      await randomDelay(200, 400);
+      
+      console.log(`[Scanner] Human-like behavior simulation completed`);
+    } catch (e) {
+      console.log(`[Scanner] Human-like behavior simulation skipped`);
+    }
     
     const finalUrl = page.url();
     console.log(`[Scanner] Final URL after redirects: ${finalUrl}`);
