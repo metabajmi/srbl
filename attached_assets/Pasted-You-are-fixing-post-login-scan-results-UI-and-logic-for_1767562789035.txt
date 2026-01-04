@@ -1,0 +1,83 @@
+You are fixing post-login scan results UI and logic for the Sarbal platform.
+Apply the following corrections strictly. All user-facing text MUST be in Arabic.
+
+1) Correct Arabic Grammar for Missing Items
+- If the number of missing items is more than one:
+  - Use the correct plural form:
+    ❌ 3 عنصر مفقود
+    ✅ 3 عناصر مفقودة
+- Apply proper Arabic grammar for all counts (singular / dual / plural).
+
+2) Language Consistency
+- All text shown to the user MUST be in Arabic.
+- Remove any English text from the UI, including:
+  - Identity verification section
+  - Buttons
+  - Descriptions
+- Replace English text with Arabic equivalents.
+
+Correct Arabic text to use:
+
+العنوان:
+تحقّق من هويتك للاطّلاع على التفاصيل
+
+الوصف:
+تم رصد بعض أوجه النقص  
+أدخل بريدك الإلكتروني فقط — دون كلمة مرور
+
+زر الإجراء:
+عرض التفاصيل
+
+3) Terms & Conditions Card (Post-Login)
+- Restore the "عرض" (View) button for الشروط والأحكام.
+- The card should behave exactly like:
+  - Privacy Policy card
+- Status text remains:
+  → غير مكتملة
+- Do NOT remove the view functionality.
+
+4) Post-Login Scan Results – Remove Cookie / Tracking Items
+- Completely remove the following from post-login results:
+  - Any section titled:
+    ❌ المخالفات
+    ❌ تقنيات تتبع من طرف ثالث
+- These items must NOT appear:
+  - As violations
+  - As missing items
+  - As informational notes
+- The scan system must NOT evaluate or display:
+  - Cookies
+  - Tracking technologies
+  - Third-party tracking
+
+5) Violation Logic Reminder (Post-Login)
+- Violations apply ONLY to:
+  - Missing Privacy Policy elements
+- Partial or unclear elements:
+  - Must be labeled as:
+    → نقص
+  - Must NOT be labeled as مخالفة
+
+6) Final UI Validation
+Ensure that after applying these changes:
+- Arabic language is grammatically correct.
+- No English text remains.
+- Terms & Conditions card includes the View button.
+- Cookie / tracking-related content is fully removed.
+- Counts and labels are accurate and consistent.
+
+7) Post-Login – Remove Warnings Completely
+- After user registration and login:
+  - Completely remove the concept of "تحذير" from the UI.
+  - Do NOT display:
+    - تحذير
+    - عدد التحذيرات
+    - أي شارة أو وسم يحمل معنى التحذير
+- The post-login results must show ONLY:
+  - حالات النقص (نقص)
+  - العناصر غير الموجودة (مخالفة عند غياب العنصر فقط)
+- Do NOT show any warning label even if the compliance score is medium or low.
+
+Final rule:
+- "تحذير" is allowed ONLY before registration (if already implemented).
+- After login, the term "تحذير" must NOT appear anywhere in the results, counters, badges, or UI text.

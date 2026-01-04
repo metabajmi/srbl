@@ -27,6 +27,33 @@ const isAuthenticated = (): boolean => {
   return false;
 };
 
+// Arabic number grammar helper for proper singular/dual/plural forms
+const formatArabicCount = (count: number, singular: string, dual: string, plural: string): string => {
+  if (count === 0) return `لا يوجد ${plural}`;
+  if (count === 1) return `${singular} واحد`;
+  if (count === 2) return `${dual}`;
+  if (count >= 3 && count <= 10) return `${count} ${plural}`;
+  // For 11+ use singular form per Arabic grammar
+  return `${count} ${singular}`;
+};
+
+// Specific formatters for common terms
+const formatMissingItems = (count: number): string => {
+  if (count === 0) return 'لا توجد عناصر مفقودة';
+  if (count === 1) return 'عنصر مفقود واحد';
+  if (count === 2) return 'عنصران مفقودان';
+  if (count >= 3 && count <= 10) return `${count} عناصر مفقودة`;
+  return `${count} عنصر مفقود`;
+};
+
+const formatDeficiencies = (count: number): string => {
+  if (count === 0) return 'لا يوجد نقص';
+  if (count === 1) return 'نقص واحد';
+  if (count === 2) return 'نقصان';
+  if (count >= 3 && count <= 10) return `${count} حالات نقص`;
+  return `${count} حالة نقص`;
+};
+
 export default function ScanResultsPage() {
   const [, params] = useRoute("/scan/:id");
   const scanId = params?.id;
@@ -316,7 +343,7 @@ export default function ScanResultsPage() {
                         <p className="text-muted-foreground text-sm mb-2" dir="ltr">{scan.url}</p>
                         <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
                           {preLoginMissingItemsCount > 0 && (
-                            <Badge variant="destructive">{preLoginMissingItemsCount} عنصر مفقود</Badge>
+                            <Badge variant="destructive">{formatMissingItems(preLoginMissingItemsCount)}</Badge>
                           )}
                           {preLoginMissingItemsCount === 0 && (
                             <Badge variant="outline" className="border-green-500 text-green-600">جميع العناصر موجودة</Badge>
@@ -331,11 +358,19 @@ export default function ScanResultsPage() {
                         </h2>
                         <p className="text-muted-foreground text-sm mb-2" dir="ltr">{scan.url}</p>
                         <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                          {/* Post-login: Only show مخالفة (MISSING) and نقص (PARTIAL), NO تحذير */}
                           {criticalIssues.length > 0 && (
-                            <Badge variant="destructive">{criticalIssues.length} مخالفة</Badge>
+                            <Badge variant="destructive">
+                              {criticalIssues.length === 1 ? 'مخالفة واحدة' :
+                               criticalIssues.length === 2 ? 'مخالفتان' :
+                               criticalIssues.length >= 3 && criticalIssues.length <= 10 ? `${criticalIssues.length} مخالفات` :
+                               `${criticalIssues.length} مخالفة`}
+                            </Badge>
                           )}
                           {warningIssues.length > 0 && (
-                            <Badge variant="outline" className="border-orange-500 text-orange-600">{warningIssues.length} تحذير</Badge>
+                            <Badge variant="outline" className="border-orange-500 text-orange-600">
+                              {formatDeficiencies(warningIssues.length)}
+                            </Badge>
                           )}
                           {realIssues.length === 0 && (
                             <Badge variant="outline" className="border-green-500 text-green-600">لا توجد مخالفات</Badge>
@@ -425,17 +460,17 @@ export default function ScanResultsPage() {
                     </div>
                   </div>
                   
-                  {/* Overlay CTA - Exact text per specifications */}
+                  {/* Overlay CTA - Arabic text per specifications */}
                   <div className="relative z-10 text-center py-8 bg-gradient-to-b from-background/80 via-background to-background/80 rounded-lg">
                     <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                       <Lock className="w-8 h-8 text-primary" />
                     </div>
-                    <h3 className="text-xl font-bold mb-2">Verify your identity to view details</h3>
+                    <h3 className="text-xl font-bold mb-2">تحقّق من هويتك للاطّلاع على التفاصيل</h3>
                     <p className="text-muted-foreground mb-1">
-                      Some missing items were identified
+                      تم رصد بعض أوجه النقص
                     </p>
                     <p className="text-sm text-muted-foreground mb-6">
-                      Enter your email address only — no password required
+                      أدخل بريدك الإلكتروني فقط — دون كلمة مرور
                     </p>
                     <Button 
                       onClick={() => setShowOTPModal(true)} 
@@ -444,19 +479,20 @@ export default function ScanResultsPage() {
                       data-testid="button-unlock-violations"
                     >
                       <Unlock className="h-5 w-5 ml-2" />
-                      View details
+                      عرض التفاصيل
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             ) : (
               /* Issues List - Full details for authenticated users */
+              /* Post-login: Show only مخالفة (MISSING) and نقص (PARTIAL), NO تحذير */
               realIssues.length > 0 && (
                 <Card className="mb-6">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <AlertCircle className="w-5 h-5 text-destructive" />
-                      المخالفات ({realIssues.length})
+                      حالات النقص والمخالفات ({realIssues.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -593,6 +629,9 @@ function StatusCard({ title, found, url, required, issueCount = 0, testId }: {
 // Simple Issue Item Component
 function IssueItem({ issue }: { issue: ComplianceIssue }) {
   const isCritical = issue.severity === "critical";
+  // Post-login: Use مخالفة for critical (MISSING), نقص for warning (PARTIAL)
+  // NO تحذير label should appear
+  const severityLabel = isCritical ? 'مخالفة' : 'نقص';
   
   return (
     <div className={`p-3 rounded-lg border ${isCritical ? 'border-red-200 bg-red-50/50 dark:bg-red-950/20' : 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'}`}>
@@ -603,7 +642,15 @@ function IssueItem({ issue }: { issue: ComplianceIssue }) {
           <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
         )}
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm">{issue.title}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-medium text-sm">{issue.title}</p>
+            <Badge 
+              variant={isCritical ? "destructive" : "outline"} 
+              className={`text-xs ${!isCritical ? 'border-orange-500 text-orange-600' : ''}`}
+            >
+              {severityLabel}
+            </Badge>
+          </div>
           {issue.remediation && (
             <p className="text-xs text-muted-foreground mt-1">
               <span className="font-medium text-primary">الحل:</span> {issue.remediation}
