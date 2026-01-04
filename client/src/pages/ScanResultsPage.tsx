@@ -358,54 +358,7 @@ export default function ScanResultsPage() {
                       {/* Info - Compliance level label is the SAME before and after login */}
                       <div className="flex-1 text-center sm:text-right">
                         <h2 className="text-2xl font-bold mb-1">{complianceLabel}</h2>
-                        <p className="text-muted-foreground text-sm mb-2" dir="ltr">{scan.url}</p>
-                        <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                          {/* Pre-login: Show missing items count or "no policy" if ppAudit is missing */}
-                          {!isLoggedIn ? (
-                            <>
-                              {!ppAudit || !ppAudit.elements || ppAudit.elements.length === 0 ? (
-                                <Badge variant="destructive">سياسة الخصوصية غير موجودة</Badge>
-                              ) : (
-                                <>
-                                  {preLoginMissingItemsCount > 0 && (
-                                    <Badge variant="destructive">{formatMissingItems(preLoginMissingItemsCount)}</Badge>
-                                  )}
-                                  {preLoginMissingItemsCount === 0 && (
-                                    <Badge variant="outline" className="border-green-500 text-green-600">جميع العناصر موجودة</Badge>
-                                  )}
-                                </>
-                              )}
-                            </>
-                          ) : (
-                            /* Post-login: Show مخالفة (MISSING) and نقص (PARTIAL) counts from PP audit */
-                            /* If no Privacy Policy exists (ppAudit is undefined), treat as all 12 elements missing */
-                            <>
-                              {!ppAudit || !ppAudit.elements || ppAudit.elements.length === 0 ? (
-                                /* No Privacy Policy = All 12 elements missing = 12 مخالفة */
-                                <Badge variant="destructive">سياسة الخصوصية غير موجودة</Badge>
-                              ) : (
-                                <>
-                                  {ppAudit.elementsMissing > 0 && (
-                                    <Badge variant="destructive">
-                                      {ppAudit.elementsMissing === 1 ? 'مخالفة واحدة' :
-                                       ppAudit.elementsMissing === 2 ? 'مخالفتان' :
-                                       ppAudit.elementsMissing >= 3 && ppAudit.elementsMissing <= 10 ? `${ppAudit.elementsMissing} مخالفات` :
-                                       `${ppAudit.elementsMissing} مخالفة`}
-                                    </Badge>
-                                  )}
-                                  {ppAudit.elementsPartial > 0 && (
-                                    <Badge variant="outline" className="border-orange-500 text-orange-600">
-                                      {formatDeficiencies(ppAudit.elementsPartial)}
-                                    </Badge>
-                                  )}
-                                  {ppAudit.elementsMissing === 0 && ppAudit.elementsPartial === 0 && (
-                                    <Badge variant="outline" className="border-green-500 text-green-600">جميع العناصر موجودة</Badge>
-                                  )}
-                                </>
-                              )}
-                            </>
-                          )}
-                        </div>
+                        <p className="text-muted-foreground text-sm" dir="ltr">{scan.url}</p>
                       </div>
                     </div>
                   </CardContent>
