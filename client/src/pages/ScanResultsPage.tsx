@@ -931,7 +931,7 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
           ) : (
             <>
               <ChevronDown className="w-4 h-4 ml-2" />
-              عرض تفاصيل العناصر الـ 12
+              عرض التفاصيل
             </>
           )}
         </Button>
