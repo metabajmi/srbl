@@ -1076,7 +1076,7 @@ function TermsConditionsAuditCard({ audit }: TermsConditionsAuditProps) {
           ) : (
             <>
               <ChevronDown className="w-4 h-4 ml-2" />
-              عرض تفاصيل المواد الـ 12
+              عرض التفاصيل
             </>
           )}
         </Button>
