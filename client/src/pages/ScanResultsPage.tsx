@@ -150,8 +150,12 @@ export default function ScanResultsPage() {
     setLocation(routes[tool]);
   };
 
-  // Filter out analysis-type suggestions (partial analysis messages)
-  const realIssues = issues.filter(i => i.category !== "analysis");
+  // Filter out analysis-type suggestions (partial analysis messages) and cookie-related issues
+  const realIssues = issues.filter(i => 
+    i.category !== "analysis" && 
+    !i.category?.toLowerCase().includes('cookie') &&
+    !i.title?.toLowerCase().includes('cookie')
+  );
   const criticalIssues = realIssues.filter(i => i.severity === "critical");
   const warningIssues = realIssues.filter(i => i.severity === "warning");
   
@@ -162,6 +166,29 @@ export default function ScanResultsPage() {
   const termsIssues = realIssues.filter(i => 
     i.category === "terms_and_conditions" || i.category === "terms" || i.category === "terms_content"
   ).length;
+
+  // PRE-LOGIN: Calculate violations based on Privacy Policy 12 elements ONLY
+  // Per requirements: Violations = MISSING elements only
+  // PARTIAL elements are classified as "Missing" for pre-login display (not counted as violations)
+  const getPreLoginViolationCount = (): number => {
+    const ppAudit = (scan as any)?.analysisResult?.privacy_policy_audit || 
+                    (scan as any)?.analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
+    if (!ppAudit) return 0;
+    // Violations = MISSING elements only (PARTIAL classified as "Missing" in display, not violations)
+    return ppAudit.elementsMissing || 0;
+  };
+
+  // For pre-login display: count of items shown as "Missing" (includes both MISSING and PARTIAL)
+  const getPreLoginMissingItemsCount = (): number => {
+    const ppAudit = (scan as any)?.analysisResult?.privacy_policy_audit || 
+                    (scan as any)?.analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
+    if (!ppAudit) return 0;
+    // For pre-login: PARTIAL elements are also shown as "Missing" 
+    return (ppAudit.elementsMissing || 0) + (ppAudit.elementsPartial || 0);
+  };
+
+  const preLoginViolationCount = getPreLoginViolationCount();
+  const preLoginMissingItemsCount = getPreLoginMissingItemsCount();
 
   if (scanLoading) {
     return (
@@ -243,45 +270,79 @@ export default function ScanResultsPage() {
         {/* Results */}
         {scan.status === "completed" && (
           <>
-            {/* Score Card - Simple */}
+            {/* Score Card - Pre-login shows Privacy Policy based score only */}
             <Card className="mb-6">
               <CardContent className="pt-6">
                 <div className="flex flex-col sm:flex-row items-center gap-6">
-                  {/* Score Circle */}
-                  <div className={`w-28 h-28 rounded-full border-8 flex items-center justify-center flex-shrink-0 ${
-                    scan.complianceLevel === 'high' ? 'border-green-500 bg-green-50 dark:bg-green-950' :
-                    scan.complianceLevel === 'medium' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' :
-                    'border-red-500 bg-red-50 dark:bg-red-950'
-                  }`}>
-                    <div className="text-center">
-                      <div className={`text-3xl font-bold ${
-                        scan.complianceLevel === 'high' ? 'text-green-600' :
-                        scan.complianceLevel === 'medium' ? 'text-yellow-600' :
-                        'text-red-600'
+                  {/* Score Circle - For pre-login, calculate from PP audit only */}
+                  {(() => {
+                    // For pre-login: score based on Privacy Policy 12 elements only
+                    const ppAudit = (scan as any)?.analysisResult?.privacy_policy_audit || 
+                                    (scan as any)?.analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
+                    const displayScore = !isLoggedIn && ppAudit 
+                      ? ppAudit.compliancePercentage || 0 
+                      : (scan.overallScore || 0);
+                    const displayLevel = displayScore >= 85 ? 'high' : displayScore >= 50 ? 'medium' : 'low';
+                    
+                    return (
+                      <div className={`w-28 h-28 rounded-full border-8 flex items-center justify-center flex-shrink-0 ${
+                        displayLevel === 'high' ? 'border-green-500 bg-green-50 dark:bg-green-950' :
+                        displayLevel === 'medium' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' :
+                        'border-red-500 bg-red-50 dark:bg-red-950'
                       }`}>
-                        {scan.overallScore || 0}%
+                        <div className="text-center">
+                          <div className={`text-3xl font-bold ${
+                            displayLevel === 'high' ? 'text-green-600' :
+                            displayLevel === 'medium' ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
+                            {displayScore}%
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
                   
                   {/* Info */}
                   <div className="flex-1 text-center sm:text-right">
-                    <h2 className="text-2xl font-bold mb-1">
-                      {scan.complianceLevel === 'high' ? 'امتثال عالٍ' :
-                       scan.complianceLevel === 'medium' ? 'امتثال متوسط' : 'امتثال منخفض'}
-                    </h2>
-                    <p className="text-muted-foreground text-sm mb-2" dir="ltr">{scan.url}</p>
-                    <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                      {criticalIssues.length > 0 && (
-                        <Badge variant="destructive">{criticalIssues.length} مخالفة</Badge>
-                      )}
-                      {warningIssues.length > 0 && (
-                        <Badge variant="outline" className="border-orange-500 text-orange-600">{warningIssues.length} تحذير</Badge>
-                      )}
-                      {realIssues.length === 0 && (
-                        <Badge variant="outline" className="border-green-500 text-green-600">لا توجد مخالفات</Badge>
-                      )}
-                    </div>
+                    {/* Pre-login: Simple violation message without regulatory language */}
+                    {/* Per spec: "Violations found" only if MISSING elements exist */}
+                    {/* PARTIAL elements classified as "Missing" but don't trigger "Violations found" */}
+                    {!isLoggedIn ? (
+                      <>
+                        <h2 className="text-2xl font-bold mb-1">
+                          {preLoginViolationCount === 0 ? 'لا توجد مخالفات' : 'تم العثور على مخالفات'}
+                        </h2>
+                        <p className="text-muted-foreground text-sm mb-2" dir="ltr">{scan.url}</p>
+                        <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                          {preLoginMissingItemsCount > 0 && (
+                            <Badge variant="destructive">{preLoginMissingItemsCount} عنصر مفقود</Badge>
+                          )}
+                          {preLoginMissingItemsCount === 0 && (
+                            <Badge variant="outline" className="border-green-500 text-green-600">جميع العناصر موجودة</Badge>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <h2 className="text-2xl font-bold mb-1">
+                          {scan.complianceLevel === 'high' ? 'امتثال عالٍ' :
+                           scan.complianceLevel === 'medium' ? 'امتثال متوسط' : 'امتثال منخفض'}
+                        </h2>
+                        <p className="text-muted-foreground text-sm mb-2" dir="ltr">{scan.url}</p>
+                        <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                          {criticalIssues.length > 0 && (
+                            <Badge variant="destructive">{criticalIssues.length} مخالفة</Badge>
+                          )}
+                          {warningIssues.length > 0 && (
+                            <Badge variant="outline" className="border-orange-500 text-orange-600">{warningIssues.length} تحذير</Badge>
+                          )}
+                          {realIssues.length === 0 && (
+                            <Badge variant="outline" className="border-green-500 text-green-600">لا توجد مخالفات</Badge>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -295,18 +356,32 @@ export default function ScanResultsPage() {
                 url={scan.privacyPolicyUrl}
                 audit={(scan as any).analysisResult?.privacy_policy_audit || (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit}
                 testId="card-status-privacy"
+                isPreLogin={!isLoggedIn}
               />
-              <TermsConditionsStatusCard 
-                title="الشروط والأحكام" 
-                found={!!scan.hasTermsAndConditions} 
-                url={scan.termsAndConditionsUrl}
-                audit={(() => {
-                  const tcAudit = (scan as any).analysisResult?.terms_conditions_audit || 
-                                  (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'terms')?.termsConditionsAudit;
-                  return tcAudit;
-                })()}
-                testId="card-status-terms"
-              />
+              {/* Pre-login: Show Terms as just "Incomplete" - no numbers */}
+              {!isLoggedIn ? (
+                <Card className="p-3 border-orange-300 bg-orange-50/50 dark:bg-orange-950/20" data-testid="card-status-terms">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">الشروط والأحكام</p>
+                      <p className="text-xs mt-0.5 text-orange-600">غير مكتملة</p>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <TermsConditionsStatusCard 
+                  title="الشروط والأحكام" 
+                  found={!!scan.hasTermsAndConditions} 
+                  url={scan.termsAndConditionsUrl}
+                  audit={(() => {
+                    const tcAudit = (scan as any).analysisResult?.terms_conditions_audit || 
+                                    (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'terms')?.termsConditionsAudit;
+                    return tcAudit;
+                  })()}
+                  testId="card-status-terms"
+                />
+              )}
             </div>
 
             {/* Privacy Policy 12-Element Audit - Only for authenticated users */}
@@ -350,18 +425,17 @@ export default function ScanResultsPage() {
                     </div>
                   </div>
                   
-                  {/* Overlay CTA */}
+                  {/* Overlay CTA - Exact text per specifications */}
                   <div className="relative z-10 text-center py-8 bg-gradient-to-b from-background/80 via-background to-background/80 rounded-lg">
                     <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                       <Lock className="w-8 h-8 text-primary" />
                     </div>
-                    <h3 className="text-xl font-bold mb-2">تحقق من هويتك لمشاهدة التفاصيل</h3>
+                    <h3 className="text-xl font-bold mb-2">Verify your identity to view details</h3>
                     <p className="text-muted-foreground mb-1">
-                      عثرنا على <span className="font-bold text-destructive">{scan.criticalCount || 0}</span> مخالفة
-                      و <span className="font-bold text-orange-500">{scan.warningCount || 0}</span> تحذير
+                      Some missing items were identified
                     </p>
                     <p className="text-sm text-muted-foreground mb-6">
-                      أدخل بريدك الإلكتروني فقط - بدون كلمة مرور
+                      Enter your email address only — no password required
                     </p>
                     <Button 
                       onClick={() => setShowOTPModal(true)} 
@@ -370,7 +444,7 @@ export default function ScanResultsPage() {
                       data-testid="button-unlock-violations"
                     >
                       <Unlock className="h-5 w-5 ml-2" />
-                      فتح التفاصيل
+                      View details
                     </Button>
                   </div>
                 </CardContent>
@@ -564,7 +638,7 @@ function ActionButton({ title, description, icon, needed, onClick, testId }: {
 }
 
 // Privacy Policy Status Card with 12-Element Audit Status
-function PrivacyPolicyStatusCard({ title, found, url, audit, testId }: { 
+function PrivacyPolicyStatusCard({ title, found, url, audit, testId, isPreLogin = false }: { 
   title: string; 
   found: boolean; 
   url?: string | null; 
@@ -575,14 +649,22 @@ function PrivacyPolicyStatusCard({ title, found, url, audit, testId }: {
     elementsMissing: number;
   };
   testId?: string;
+  isPreLogin?: boolean;
 }) {
   // Determine status based on audit results
-  // Red: Policy not found OR missing elements
-  // Orange: All found but some need improvement (partial)
+  // For pre-login: PARTIAL elements are classified as "Missing" (shown in red/incomplete)
+  // Red: Policy not found OR missing/partial elements
+  // Orange: All found but some need improvement (partial) - post-login only
   // Green: All 12 elements complete
   const getStatus = () => {
     if (!found) return 'missing';
     if (!audit) return 'unknown';
+    // Pre-login: PARTIAL and MISSING both treated as incomplete
+    if (isPreLogin) {
+      if (audit.elementsMissing > 0 || audit.elementsPartial > 0) return 'incomplete'; // Red
+      return 'complete'; // Green only if all 12 are FOUND
+    }
+    // Post-login: normal status logic
     if (audit.elementsMissing > 0) return 'incomplete'; // Red
     if (audit.elementsPartial > 0) return 'needs_improvement'; // Orange
     if (audit.isComplete) return 'complete'; // Green

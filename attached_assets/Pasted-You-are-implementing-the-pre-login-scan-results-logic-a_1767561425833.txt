@@ -1,0 +1,65 @@
+You are implementing the pre-login scan results logic and UI for the Sarbal platform.
+Apply the following rules strictly. This applies ONLY to the scan results shown BEFORE user registration.
+
+1) Scope of Pre-Login Results
+- This page represents an initial assessment only.
+- Do NOT show legal details or actionable controls.
+- The purpose is to provide a high-level overview and encourage sign-up.
+
+2) Scan Logic (Privacy Policy ONLY)
+- The scan score and results are based ONLY on the Privacy Policy.
+- The Privacy Policy consists of exactly 12 fixed core elements.
+- During the scan:
+  - Count elements that are fully present.
+  - Count elements that are missing.
+- Violations count = number of missing elements ONLY.
+- Partially correct or incomplete elements:
+  - Must NOT be counted as violations.
+  - Must be classified as “Missing” only.
+
+3) Top Result Message (Pre-Login)
+- Do NOT use the word “Warning”.
+- Do NOT use any enforcement or regulatory language.
+
+Use the following logic:
+- If all 12 elements are present:
+  → Display: **No violations found**
+- If one or more elements are missing:
+  → Display: **Violations found**
+- If elements are partially present only:
+  → Do NOT add violations
+  → Classify them as **Missing** only
+
+4) Terms & Conditions (Pre-Login)
+- Do NOT include Terms & Conditions in:
+  - The scan score
+  - Violation count
+  - Any numerical calculations
+- Display only one status:
+  → **Incomplete**
+- Do NOT show numbers or counts for Terms & Conditions.
+
+5) Cookies
+- Completely remove Cookie Banner checks from:
+  - Pre-login scan results
+  - Post-login scan results
+  - Scores
+  - Text labels
+- Cookies must not appear anywhere in the scan logic or UI.
+
+6) Identity Check Section (Pre-Login)
+Replace the existing text with the following exactly:
+
+Title:
+**Verify your identity to view details**
+
+Description:
+**Some missing items were identified**
+Enter your email address only — no password required
+
+Primary button:
+**View details**
+
+7) Post-Login Behavior
+- Do NOT change any existing post-login logic or UI.
+- Only ensure that cookies-related checks are fully removed.
