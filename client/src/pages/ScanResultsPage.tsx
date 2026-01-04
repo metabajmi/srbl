@@ -54,6 +54,47 @@ const formatDeficiencies = (count: number): string => {
   return `${count} حالة نقص`;
 };
 
+// SHARED: Calculate compliance percentage from Privacy Policy 12 elements ONLY
+// This is the SINGLE source of truth for percentage - same before and after login
+// Scoring: present = 1, partial = 0.5, missing = 0
+// percentage = round((total_score / 12) * 100)
+const calculateCompliancePercentage = (ppAudit: any): number => {
+  if (!ppAudit || !ppAudit.elements || ppAudit.elements.length === 0) {
+    return 0; // No Privacy Policy = 0%
+  }
+  
+  let totalScore = 0;
+  for (const element of ppAudit.elements) {
+    if (element.status === 'present') {
+      totalScore += 1;
+    } else if (element.status === 'partial') {
+      totalScore += 0.5;
+    }
+    // missing = 0, no addition needed
+  }
+  
+  return Math.round((totalScore / 12) * 100);
+};
+
+// SHARED: Get compliance level label based on percentage ranges
+// < 25: امتثال ضعيف جدًا
+// 25-49: امتثال ضعيف
+// 50-74: امتثال متوسط
+// >= 75: امتثال عالي
+const getComplianceLevelLabel = (percentage: number): string => {
+  if (percentage < 25) return 'امتثال ضعيف جدًا';
+  if (percentage < 50) return 'امتثال ضعيف';
+  if (percentage < 75) return 'امتثال متوسط';
+  return 'امتثال عالي';
+};
+
+// Get compliance level for styling (low/medium/high)
+const getComplianceLevelStyle = (percentage: number): 'low' | 'medium' | 'high' => {
+  if (percentage < 50) return 'low';
+  if (percentage < 75) return 'medium';
+  return 'high';
+};
+
 export default function ScanResultsPage() {
   const [, params] = useRoute("/scan/:id");
   const scanId = params?.id;
@@ -177,22 +218,8 @@ export default function ScanResultsPage() {
     setLocation(routes[tool]);
   };
 
-  // Filter out analysis-type suggestions (partial analysis messages) and cookie-related issues
-  const realIssues = issues.filter(i => 
-    i.category !== "analysis" && 
-    !i.category?.toLowerCase().includes('cookie') &&
-    !i.title?.toLowerCase().includes('cookie')
-  );
-  const criticalIssues = realIssues.filter(i => i.severity === "critical");
-  const warningIssues = realIssues.filter(i => i.severity === "warning");
-  
-  // Count issues per element category (including all backend variants)
-  const privacyIssues = realIssues.filter(i => 
-    i.category === "privacy_policy" || i.category === "privacy_policy_content" || i.category === "privacy"
-  ).length;
-  const termsIssues = realIssues.filter(i => 
-    i.category === "terms_and_conditions" || i.category === "terms" || i.category === "terms_content"
-  ).length;
+  // Note: Individual issues list is NOT displayed after login per requirements
+  // The issues data is only used for the API/data layer, not for UI rendering
 
   // PRE-LOGIN: Calculate violations based on Privacy Policy 12 elements ONLY
   // Per requirements: Violations = MISSING elements only
@@ -297,21 +324,23 @@ export default function ScanResultsPage() {
         {/* Results */}
         {scan.status === "completed" && (
           <>
-            {/* Score Card - Pre-login shows Privacy Policy based score only */}
-            <Card className="mb-6">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row items-center gap-6">
-                  {/* Score Circle - For pre-login, calculate from PP audit only */}
-                  {(() => {
-                    // For pre-login: score based on Privacy Policy 12 elements only
-                    const ppAudit = (scan as any)?.analysisResult?.privacy_policy_audit || 
-                                    (scan as any)?.analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
-                    const displayScore = !isLoggedIn && ppAudit 
-                      ? ppAudit.compliancePercentage || 0 
-                      : (scan.overallScore || 0);
-                    const displayLevel = displayScore >= 85 ? 'high' : displayScore >= 50 ? 'medium' : 'low';
-                    
-                    return (
+            {/* Score Card - SAME percentage before AND after login (Privacy Policy 12 elements only) */}
+            {(() => {
+              // SHARED: Get Privacy Policy audit from scan data
+              const ppAudit = (scan as any)?.analysisResult?.privacy_policy_audit || 
+                              (scan as any)?.analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
+              
+              // SHARED: Calculate percentage using Privacy Policy 12 elements ONLY
+              // Same calculation for pre-login AND post-login
+              const displayScore = calculateCompliancePercentage(ppAudit);
+              const displayLevel = getComplianceLevelStyle(displayScore);
+              const complianceLabel = getComplianceLevelLabel(displayScore);
+              
+              return (
+                <Card className="mb-6">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                      {/* Score Circle - Same percentage before and after login */}
                       <div className={`w-28 h-28 rounded-full border-8 flex items-center justify-center flex-shrink-0 ${
                         displayLevel === 'high' ? 'border-green-500 bg-green-50 dark:bg-green-950' :
                         displayLevel === 'medium' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' :
@@ -327,61 +356,64 @@ export default function ScanResultsPage() {
                           </div>
                         </div>
                       </div>
-                    );
-                  })()}
-                  
-                  {/* Info */}
-                  <div className="flex-1 text-center sm:text-right">
-                    {/* Pre-login: Simple violation message without regulatory language */}
-                    {/* Per spec: "Violations found" only if MISSING elements exist */}
-                    {/* PARTIAL elements classified as "Missing" but don't trigger "Violations found" */}
-                    {!isLoggedIn ? (
-                      <>
-                        <h2 className="text-2xl font-bold mb-1">
-                          {preLoginViolationCount === 0 ? 'لا توجد مخالفات' : 'تم العثور على مخالفات'}
-                        </h2>
+                      
+                      {/* Info - Compliance level label is the SAME before and after login */}
+                      <div className="flex-1 text-center sm:text-right">
+                        <h2 className="text-2xl font-bold mb-1">{complianceLabel}</h2>
                         <p className="text-muted-foreground text-sm mb-2" dir="ltr">{scan.url}</p>
                         <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                          {preLoginMissingItemsCount > 0 && (
-                            <Badge variant="destructive">{formatMissingItems(preLoginMissingItemsCount)}</Badge>
-                          )}
-                          {preLoginMissingItemsCount === 0 && (
-                            <Badge variant="outline" className="border-green-500 text-green-600">جميع العناصر موجودة</Badge>
+                          {/* Pre-login: Show missing items count or "no policy" if ppAudit is missing */}
+                          {!isLoggedIn ? (
+                            <>
+                              {!ppAudit || !ppAudit.elements || ppAudit.elements.length === 0 ? (
+                                <Badge variant="destructive">سياسة الخصوصية غير موجودة</Badge>
+                              ) : (
+                                <>
+                                  {preLoginMissingItemsCount > 0 && (
+                                    <Badge variant="destructive">{formatMissingItems(preLoginMissingItemsCount)}</Badge>
+                                  )}
+                                  {preLoginMissingItemsCount === 0 && (
+                                    <Badge variant="outline" className="border-green-500 text-green-600">جميع العناصر موجودة</Badge>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            /* Post-login: Show مخالفة (MISSING) and نقص (PARTIAL) counts from PP audit */
+                            /* If no Privacy Policy exists (ppAudit is undefined), treat as all 12 elements missing */
+                            <>
+                              {!ppAudit || !ppAudit.elements || ppAudit.elements.length === 0 ? (
+                                /* No Privacy Policy = All 12 elements missing = 12 مخالفة */
+                                <Badge variant="destructive">سياسة الخصوصية غير موجودة</Badge>
+                              ) : (
+                                <>
+                                  {ppAudit.elementsMissing > 0 && (
+                                    <Badge variant="destructive">
+                                      {ppAudit.elementsMissing === 1 ? 'مخالفة واحدة' :
+                                       ppAudit.elementsMissing === 2 ? 'مخالفتان' :
+                                       ppAudit.elementsMissing >= 3 && ppAudit.elementsMissing <= 10 ? `${ppAudit.elementsMissing} مخالفات` :
+                                       `${ppAudit.elementsMissing} مخالفة`}
+                                    </Badge>
+                                  )}
+                                  {ppAudit.elementsPartial > 0 && (
+                                    <Badge variant="outline" className="border-orange-500 text-orange-600">
+                                      {formatDeficiencies(ppAudit.elementsPartial)}
+                                    </Badge>
+                                  )}
+                                  {ppAudit.elementsMissing === 0 && ppAudit.elementsPartial === 0 && (
+                                    <Badge variant="outline" className="border-green-500 text-green-600">جميع العناصر موجودة</Badge>
+                                  )}
+                                </>
+                              )}
+                            </>
                           )}
                         </div>
-                      </>
-                    ) : (
-                      <>
-                        <h2 className="text-2xl font-bold mb-1">
-                          {scan.complianceLevel === 'high' ? 'امتثال عالٍ' :
-                           scan.complianceLevel === 'medium' ? 'امتثال متوسط' : 'امتثال منخفض'}
-                        </h2>
-                        <p className="text-muted-foreground text-sm mb-2" dir="ltr">{scan.url}</p>
-                        <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                          {/* Post-login: Only show مخالفة (MISSING) and نقص (PARTIAL), NO تحذير */}
-                          {criticalIssues.length > 0 && (
-                            <Badge variant="destructive">
-                              {criticalIssues.length === 1 ? 'مخالفة واحدة' :
-                               criticalIssues.length === 2 ? 'مخالفتان' :
-                               criticalIssues.length >= 3 && criticalIssues.length <= 10 ? `${criticalIssues.length} مخالفات` :
-                               `${criticalIssues.length} مخالفة`}
-                            </Badge>
-                          )}
-                          {warningIssues.length > 0 && (
-                            <Badge variant="outline" className="border-orange-500 text-orange-600">
-                              {formatDeficiencies(warningIssues.length)}
-                            </Badge>
-                          )}
-                          {realIssues.length === 0 && (
-                            <Badge variant="outline" className="border-green-500 text-green-600">لا توجد مخالفات</Badge>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Quick Status - 2 Elements (Privacy Policy + Terms & Conditions) */}
             <div className="grid grid-cols-2 gap-3 mb-6">
@@ -437,8 +469,9 @@ export default function ScanResultsPage() {
               ) : null;
             })()}
 
-            {/* Issues Section - Gated for non-authenticated users */}
-            {!isLoggedIn ? (
+            {/* Identity Check CTA - Only for non-authenticated users */}
+            {/* Post-login: Issues list section is COMPLETELY REMOVED per requirements */}
+            {!isLoggedIn && (
               <Card className="mb-6 border-primary/30 relative overflow-hidden">
                 <CardContent className="pt-6">
                   {/* Blurred preview of issues (decorative) */}
@@ -484,26 +517,6 @@ export default function ScanResultsPage() {
                   </div>
                 </CardContent>
               </Card>
-            ) : (
-              /* Issues List - Full details for authenticated users */
-              /* Post-login: Show only مخالفة (MISSING) and نقص (PARTIAL), NO تحذير */
-              realIssues.length > 0 && (
-                <Card className="mb-6">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <AlertCircle className="w-5 h-5 text-destructive" />
-                      حالات النقص والمخالفات ({realIssues.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {realIssues.map((issue, idx) => (
-                        <IssueItem key={idx} issue={issue} />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
             )}
 
             {/* Actions - Only visible to authenticated users */}

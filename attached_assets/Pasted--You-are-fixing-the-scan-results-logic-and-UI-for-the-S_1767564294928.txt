@@ -1,0 +1,112 @@
+
+You are fixing the scan results logic and UI for the Sarbal platform.
+Assume you have NOT seen any images. Follow the instructions below exactly.
+All user-facing text MUST be in Arabic.
+
+==============================
+1) REMOVE A SPECIFIC SECTION COMPLETELY (EXPLAINED TEXTUALLY)
+==============================
+- After login, there is a section that lists detailed missing items and issues
+  (e.g. individual issues such as third-party tracking, consent notices, etc.).
+- This section must be COMPLETELY REMOVED from:
+  - UI
+  - Logic
+  - Data rendering
+- It must NOT be hidden, collapsed, or conditionally shown.
+- It must NOT exist at all after login.
+
+==============================
+2) SCAN PERCENTAGE — MUST BE ACCURATE AND CONSISTENT
+==============================
+- The compliance percentage MUST be calculated accurately.
+- It MUST NOT be hard-coded.
+- The same scan MUST show the SAME percentage:
+  - Before login
+  - After login
+- It is NOT allowed for pre-login and post-login to show different percentages.
+
+Use ONE shared calculation function and ONE stored scan result.
+
+==============================
+3) WHAT AFFECTS THE PERCENTAGE
+==============================
+- The percentage is calculated ONLY based on:
+  → Privacy Policy
+- The Privacy Policy consists of exactly 12 elements.
+
+The following MUST NOT affect the percentage:
+- Terms & Conditions
+- Cookies
+- Tracking technologies
+- Third-party services
+
+==============================
+4) SPECIAL CASE — NO PRIVACY POLICY
+==============================
+- If NO Privacy Policy page exists:
+  → Percentage = 0%
+  → Compliance level = امتثال ضعيف جدًا
+
+==============================
+5) SCORING MODEL (EXACT)
+==============================
+For each of the 12 Privacy Policy elements:
+- Fully present        → score = 1
+- Partially present    → score = 0.5
+- Missing              → score = 0
+
+Calculation:
+- total_score = sum of all element scores
+- percentage = round((total_score / 12) * 100)
+
+==============================
+6) COMPLIANCE LEVEL LABELS (BASED ON PERCENTAGE)
+==============================
+Display ONE compliance label using the following exact ranges:
+
+- If percentage < 25:
+  → امتثال ضعيف جدًا
+
+- If percentage ≥ 25 and < 50:
+  → امتثال ضعيف
+
+- If percentage ≥ 50 and < 75:
+  → امتثال متوسط
+
+- If percentage ≥ 75:
+  → امتثال عالي
+
+These labels MUST be derived dynamically from the calculated percentage.
+
+==============================
+7) VIOLATION / MISSING TERMINOLOGY
+==============================
+- مخالفة applies ONLY when an element is completely missing.
+- Partial or unclear elements:
+  → Must be labeled as نقص
+  → Must NOT be labeled as مخالفة
+- Do NOT use or display:
+  - تحذير
+  - warning
+  anywhere after login.
+
+==============================
+8) LANGUAGE & CONSISTENCY
+==============================
+- All UI text must be Arabic.
+- No English text is allowed.
+- Ensure correct Arabic grammar for numbers:
+  ✅ 3 عناصر مفقودة
+  ✅ عنصران مفقودان
+  ✅ عنصر واحد مفقود
+
+==============================
+9) FINAL ACCEPTANCE CRITERIA
+==============================
+After implementation:
+- The removed section does not exist anywhere.
+- Pre-login and post-login percentages are ALWAYS identical.
+- Percentage is accurate and calculated from the same scan data.
+- Compliance level matches the defined ranges exactly.
+- No cookies or tracking logic exists.
+- Clean, neutral, non-regulatory language.
