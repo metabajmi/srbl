@@ -114,8 +114,6 @@ export const STORAGE_LOCATIONS = [
   { id: 'inside_ksa', label: 'داخل المملكة العربية السعودية', description: 'خوادم موجودة في المملكة' },
   { id: 'outside_ksa', label: 'خارج المملكة العربية السعودية', description: 'خوادم في دول أخرى' },
   { id: 'both', label: 'داخل وخارج المملكة', description: 'خوادم في المملكة وخارجها' },
-  { id: 'cloud_ksa', label: 'حوسبة سحابية (داخل المملكة)', description: 'مزودو خدمات سحابية محلية' },
-  { id: 'cloud_international', label: 'حوسبة سحابية (دولية)', description: 'AWS، Azure، Google Cloud' },
 ] as const;
 
 export const RETENTION_PERIODS = [
