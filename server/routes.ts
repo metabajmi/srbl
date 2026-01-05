@@ -1336,7 +1336,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           policyDocumentId: policyDoc.id,
         });
         
-        processPrivacyPolicyGeneration(policyDoc.id);
+        // Get user's registered email for sending policy
+        const user = await storage.getUser(userId!);
+        processPrivacyPolicyGeneration(policyDoc.id, user?.email);
         
         return res.json({ 
           success: true, 
@@ -1372,11 +1374,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         policyDocumentId: policyDoc.id,
       });
       
-      // Send policy email to client
-      const contactEmail = intakeData.contact_email;
-      if (contactEmail && generatedContent) {
+      // Send policy email to user's registered email (OTP email)
+      const user = await storage.getUser(userId!);
+      if (user?.email && generatedContent) {
         sendPolicyEmail({
-          to: contactEmail,
+          to: user.email,
           companyName: companyName,
           policyContent: generatedContent,
           policyId: policyDoc.id,
@@ -2847,7 +2849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
-async function processPrivacyPolicyGeneration(policyId: string) {
+async function processPrivacyPolicyGeneration(policyId: string, userEmail?: string) {
   try {
     await storage.updatePolicyDocument(policyId, { status: "generating" });
     
@@ -2861,9 +2863,11 @@ async function processPrivacyPolicyGeneration(policyId: string) {
       generatedContent,
     });
     
-    if (policy.contactEmail && generatedContent) {
+    // Send email to user's registered email (OTP email)
+    const emailTo = userEmail || policy.contactEmail;
+    if (emailTo && generatedContent) {
       sendPolicyEmail({
-        to: policy.contactEmail,
+        to: emailTo,
         companyName: policy.companyName,
         policyContent: generatedContent,
         policyId: policyId,
