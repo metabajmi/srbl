@@ -118,13 +118,6 @@ export const STORAGE_LOCATIONS = [
 
 export const RETENTION_PERIODS = [
   { id: 'until_purpose', label: 'حتى انتهاء الغرض', years: null, description: 'نحتفظ بالبيانات حتى انتهاء الغرض من جمعها' },
-  { id: '1_year', label: 'سنة واحدة', years: 1, description: '' },
-  { id: '2_years', label: 'سنتين', years: 2, description: '' },
-  { id: '3_years', label: '3 سنوات', years: 3, description: '' },
-  { id: '5_years', label: '5 سنوات', years: 5, description: '' },
-  { id: '7_years', label: '7 سنوات', years: 7, description: 'للمتطلبات المالية والضريبية' },
-  { id: '10_years', label: '10 سنوات', years: 10, description: 'للسجلات القانونية' },
-  { id: 'statutory', label: 'وفقاً للمتطلبات النظامية', years: null, description: 'حسب ما تنص عليه الأنظمة واللوائح' },
   { id: 'custom', label: 'مدة مخصصة', years: null, description: '' },
 ] as const;
 

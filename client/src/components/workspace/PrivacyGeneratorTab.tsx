@@ -86,7 +86,9 @@ const formSchema = z.object({
   disclosure_parties: z.array(z.string()).min(1, "يجب تحديد جهات الإفصاح"),
   storage_location: z.string().min(1, "يجب تحديد موقع التخزين"),
   retention_period: z.string().min(1, "يجب تحديد مدة الاحتفاظ"),
+  retention_purpose: z.string().optional(),
   retention_years: z.number().optional(),
+  retention_custom_text: z.string().optional(),
   destruction_method: z.string().min(1, "يجب تحديد طريقة الإتلاف"),
   destruction_custom: z.string().optional(),
   rights_exercise_method: z.string().min(1, "يجب تحديد وسيلة ممارسة الحقوق"),
@@ -181,7 +183,9 @@ export default function PrivacyGeneratorTab() {
       disclosure_parties: [],
       storage_location: "",
       retention_period: "",
+      retention_purpose: "",
       retention_years: undefined,
+      retention_custom_text: "",
       destruction_method: "",
       destruction_custom: "",
       rights_exercise_method: "",
@@ -1318,27 +1322,54 @@ ${policy.generatedContent}
                   )}
                 />
 
-                {watchRetentionPeriod === "custom" && (
+                {watchRetentionPeriod === "until_purpose" && (
                   <FormField
                     control={form.control}
-                    name="retention_years"
+                    name="retention_purpose"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>حدد المدة (بالسنوات)</FormLabel>
+                        <FormLabel>ما هو الغرض من الاحتفاظ؟</FormLabel>
                         <FormControl>
                           <Input 
-                            type="number" 
-                            min="1" 
-                            max="100" 
-                            placeholder="مثال: 5"
-                            value={field.value || ''}
-                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                            data-testid="input-retention-years" 
+                            {...field}
+                            placeholder="مثال: تقديم الخدمة، تنفيذ العقد، الامتثال للمتطلبات النظامية"
+                            data-testid="input-retention-purpose" 
                           />
                         </FormControl>
+                        <FormDescription>
+                          سيتم الاحتفاظ بالبيانات حتى انتهاء هذا الغرض
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
+                )}
+
+                {watchRetentionPeriod === "custom" && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="retention_years"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>حدد المدة (بالسنوات)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              max="100" 
+                              placeholder="مثال: 5"
+                              value={field.value || ''}
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                              data-testid="input-retention-years" 
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <div className="p-3 bg-muted/50 rounded-lg border text-sm text-muted-foreground">
+                      <strong>ملاحظة:</strong> ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها.
+                    </div>
+                  </>
                 )}
 
                 <FormField

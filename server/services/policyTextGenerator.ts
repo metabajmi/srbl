@@ -18,7 +18,9 @@ export interface PolicyFormData {
   disclosure_parties: string[];
   storage_location: string;
   retention_period: string;
+  retention_purpose?: string;
   retention_years?: number;
+  retention_custom_text?: string;
   destruction_method: string;
   destruction_custom?: string;
   rights_exercise_method: string;
@@ -125,24 +127,12 @@ const RIGHTS_METHOD_LABELS: Record<string, string> = {
   written_request: 'طلب خطي',
 };
 
-function formatRetentionPeriod(period: string, years?: number): string {
+function formatRetentionPeriod(period: string, years?: number, purpose?: string): string {
   switch (period) {
     case 'until_purpose':
-      return 'حتى انتهاء الغرض من جمعها';
-    case '1_year':
-      return 'سنة واحدة';
-    case '2_years':
-      return 'سنتين';
-    case '3_years':
-      return '3 سنوات';
-    case '5_years':
-      return '5 سنوات';
-    case '7_years':
-      return '7 سنوات (للمتطلبات المالية والضريبية)';
-    case '10_years':
-      return '10 سنوات (للسجلات القانونية)';
-    case 'statutory':
-      return 'وفقاً للمتطلبات النظامية';
+      return purpose 
+        ? `حتى انتهاء الغرض من جمعها (${purpose})`
+        : 'حتى انتهاء الغرض من جمعها';
     case 'custom':
       return years ? `${years} ${years === 1 ? 'سنة' : years === 2 ? 'سنتين' : 'سنوات'}` : 'مدة محددة';
     default:
@@ -239,7 +229,7 @@ export function generatePolicyHtml(data: PolicyFormData): string {
   }
 
   const storageLocationText = STORAGE_LABELS[data.storage_location] || data.storage_location;
-  const retentionText = formatRetentionPeriod(data.retention_period, data.retention_years);
+  const retentionText = formatRetentionPeriod(data.retention_period, data.retention_years, data.retention_purpose);
 
   const crossBorderSection = (data.storage_location === 'outside_ksa' || data.storage_location === 'both') ? `
 <h2>نقل البيانات خارج المملكة</h2>
@@ -322,7 +312,7 @@ ${generateLegalBasesHtml(data.legal_bases, data.legal_bases_explanations, dpoCon
 
 <h2>كيف نقوم بتخزين بياناتك الشخصية؟</h2>
 <p>يتم تخزين بياناتك الشخصية بشكل آمن وذلك ${storageLocationText}.</p>
-<p>كما نحتفظ بالبيانات الشخصية لمدة ${retentionText}، وسنقوم بعد ذلك بالتخلص من هذه البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو استعادتها مرة أخرى، وذلك عن طريق ${destructionMethod}.</p>
+<p>كما نحتفظ بالبيانات الشخصية لمدة ${retentionText}${data.retention_period === 'custom' ? '، ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها' : ''}، وسنقوم بعد ذلك بالتخلص من هذه البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو استعادتها مرة أخرى، وذلك عن طريق ${destructionMethod}.</p>
 
 ${crossBorderSection}
 
@@ -412,7 +402,7 @@ export function generatePolicyText(data: PolicyFormData): string {
   }
 
   const storageLocationText = STORAGE_LABELS[data.storage_location] || data.storage_location;
-  const retentionText = formatRetentionPeriod(data.retention_period, data.retention_years);
+  const retentionText = formatRetentionPeriod(data.retention_period, data.retention_years, data.retention_purpose);
 
   const legalBasesList = data.legal_bases.map(basis => {
     switch (basis) {
@@ -497,7 +487,7 @@ ${legalBasesList}
 كيف نقوم بتخزين بياناتك الشخصية؟
 
 يتم تخزين بياناتك الشخصية بشكل آمن وذلك ${storageLocationText}.
-كما نحتفظ بالبيانات الشخصية لمدة ${retentionText}، وسنقوم بعد ذلك بالتخلص من هذه البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو استعادتها مرة أخرى، وذلك عن طريق ${destructionMethod}.
+كما نحتفظ بالبيانات الشخصية لمدة ${retentionText}${data.retention_period === 'custom' ? '، ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها' : ''}، وسنقوم بعد ذلك بالتخلص من هذه البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو استعادتها مرة أخرى، وذلك عن طريق ${destructionMethod}.
 
 حقوقك فيما يتعلق بمعالجة بياناتك الشخصية
 
