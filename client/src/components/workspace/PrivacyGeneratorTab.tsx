@@ -92,6 +92,7 @@ const formSchema = z.object({
   destruction_method: z.string().min(1, "يجب تحديد طريقة الإتلاف"),
   destruction_custom: z.string().optional(),
   rights_exercise_method: z.string().min(1, "يجب تحديد وسيلة ممارسة الحقوق"),
+  rights_contact_details: z.string().optional(),
   response_days: z.number().min(1, "يجب تحديد مدة الرد"),
   has_dpo: z.boolean().default(false),
   dpo_name: z.string().optional(),
@@ -189,6 +190,7 @@ export default function PrivacyGeneratorTab() {
       destruction_method: "",
       destruction_custom: "",
       rights_exercise_method: "",
+      rights_contact_details: "",
       response_days: 10,
       has_dpo: false,
       dpo_name: "",
@@ -485,6 +487,7 @@ ${policy.generatedContent}
   const watchRetentionPeriod = form.watch("retention_period");
   const watchDestructionMethod = form.watch("destruction_method");
   const watchLegalBases = form.watch("legal_bases");
+  const watchRightsMethod = form.watch("rights_exercise_method");
 
   const clearAutoFill = (fieldName: string) => {
     setAutoFilledFields(prev => {
@@ -1477,6 +1480,33 @@ ${policy.generatedContent}
                       </FormItem>
                     )}
                   />
+
+                  {(watchRightsMethod === "email" || watchRightsMethod === "customer_service") && (
+                    <FormField
+                      control={form.control}
+                      name="rights_contact_details"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {watchRightsMethod === "email" ? "البريد الإلكتروني المخصص" : "بيانات التواصل مع خدمة العملاء"}
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field}
+                              placeholder={watchRightsMethod === "email" ? "privacy@example.com" : "رقم الهاتف أو وسيلة التواصل"}
+                              data-testid="input-rights-contact-details" 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            {watchRightsMethod === "email" 
+                              ? "البريد الإلكتروني المخصص لاستقبال طلبات ممارسة الحقوق"
+                              : "رقم الهاتف أو وسيلة التواصل مع خدمة العملاء"
+                            }
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   <FormField
                     control={form.control}
