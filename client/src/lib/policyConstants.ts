@@ -138,11 +138,11 @@ export const RIGHTS_EXERCISE_METHODS = [
 ] as const;
 
 export const RESPONSE_TIMEFRAMES = [
-  { id: '3_days', label: '3 أيام عمل', days: 3 },
-  { id: '5_days', label: '5 أيام عمل', days: 5 },
-  { id: '7_days', label: '7 أيام عمل', days: 7 },
-  { id: '10_days', label: '10 أيام عمل', days: 10 },
-  { id: '15_days', label: '15 يوم عمل', days: 15 },
+  { id: '3_days', label: '3 أيام', days: 3 },
+  { id: '5_days', label: '5 أيام', days: 5 },
+  { id: '7_days', label: '7 أيام', days: 7 },
+  { id: '10_days', label: '10 أيام', days: 10 },
+  { id: '15_days', label: '15 يوم', days: 15 },
   { id: '30_days', label: '30 يوم', days: 30 },
 ] as const;
 
