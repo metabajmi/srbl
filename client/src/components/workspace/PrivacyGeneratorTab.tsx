@@ -218,11 +218,6 @@ export default function PrivacyGeneratorTab() {
         newAutoFilled.phone = true;
       }
       
-      if (insights?.serviceDescription && !form.getValues("service_description")) {
-        form.setValue("service_description", insights.serviceDescription);
-        newAutoFilled.service_description = true;
-      }
-      
       if (insights?.detectedDataTypes && insights.detectedDataTypes.length > 0 && form.getValues("data_collected").length === 0) {
         const mappedTypes = insights.detectedDataTypes.map(type => {
           const mapping: Record<string, string> = {
@@ -702,17 +697,13 @@ ${policy.generatedContent}
                       }
                       const suggestedText = `نحن في ${companyName} نقدّر خصوصية عملائنا ونلتزم بحماية بياناتهم الشخصية وفقًا لنظام حماية البيانات الشخصية في المملكة العربية السعودية (PDPL) واللوائح الأخرى ذات الصلة بحماية البيانات. يوضح هذا البيان ممارساتنا المتعلقة بجمع البيانات الشخصية واستخدامها وحمايتها`;
                       field.onChange(suggestedText);
-                      if (autoFilledFields.service_description) clearAutoFill("service_description");
                     };
                     
                     return (
                       <FormItem>
                         <div className="flex items-center justify-between">
-                          <FormLabel className="flex items-center gap-2">
+                          <FormLabel>
                             مقدمة سياسة الخصوصية *
-                            {autoFilledFields.service_description && (
-                              <AutoDetectedBadge onClear={() => clearAutoFill("service_description")} />
-                            )}
                           </FormLabel>
                           <Button
                             type="button"
@@ -730,10 +721,7 @@ ${policy.generatedContent}
                           <Textarea 
                             {...field} 
                             placeholder="نبذة مختصرة عن مهام واختصاصات الجهة والخدمات المقدمة والفئة المستهدفة"
-                            className={cn(
-                              "min-h-[100px]",
-                              autoFilledFields.service_description ? "border-primary/50 bg-primary/5" : ""
-                            )}
+                            className="min-h-[100px]"
                             data-testid="input-service-description" 
                           />
                         </FormControl>
