@@ -160,8 +160,8 @@ function extractCleanServiceDescription(evidence: string): string {
   
   const hasArabic = /[\u0600-\u06FF]/.test(cleaned);
   const sentenceEndings = hasArabic ? 
-    [...cleaned.matchAll(arabicSentenceEnd)].map(m => m.index || 0) :
-    [...cleaned.matchAll(englishSentenceEnd)].map(m => m.index || 0);
+    Array.from(cleaned.matchAll(arabicSentenceEnd)).map(m => m.index || 0) :
+    Array.from(cleaned.matchAll(englishSentenceEnd)).map(m => m.index || 0);
   
   let endIndex = cleaned.length;
   for (const idx of sentenceEndings) {
