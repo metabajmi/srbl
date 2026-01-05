@@ -100,6 +100,7 @@ const formSchema = z.object({
   dpo_phone: z.string().optional(),
   dpo_email: z.string().email("يجب إدخال بريد إلكتروني صحيح").optional().or(z.literal("")),
   complaint_contact: z.string().min(2, "يجب تحديد جهة استقبال الشكاوى"),
+  complaint_contact_details: z.string().optional(),
   complaint_response_days: z.number().min(1, "يجب تحديد مدة الرد على الشكوى"),
 });
 
@@ -198,6 +199,7 @@ export default function PrivacyGeneratorTab() {
       dpo_phone: "",
       dpo_email: "",
       complaint_contact: "",
+      complaint_contact_details: "",
       complaint_response_days: 15,
     },
   });
@@ -1648,6 +1650,26 @@ ${policy.generatedContent}
                           />
                         </FormControl>
                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="complaint_contact_details"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>بيانات التواصل</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="البريد الإلكتروني أو رقم الهاتف للتواصل"
+                            data-testid="input-complaint-contact-details"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          البريد الإلكتروني أو رقم الهاتف المخصص لاستقبال الشكاوى
+                        </FormDescription>
                       </FormItem>
                     )}
                   />
