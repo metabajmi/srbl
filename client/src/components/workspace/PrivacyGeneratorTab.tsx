@@ -1662,7 +1662,11 @@ ${policy.generatedContent}
                         <FormLabel>بيانات التواصل</FormLabel>
                         <FormControl>
                           <Input 
-                            {...field} 
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                             placeholder="البريد الإلكتروني أو رقم الهاتف للتواصل"
                             data-testid="input-complaint-contact-details"
                           />
