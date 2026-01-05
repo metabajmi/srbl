@@ -165,7 +165,6 @@ function wrapWithPDFTemplate(content: string, companyName: string): string {
     <div class="header">
         <h1>سياسة الخصوصية</h1>
         <div class="company">${companyName}</div>
-        <div class="badge">متوافقة مع نظام حماية البيانات الشخصية السعودي</div>
     </div>
     
     <div class="content">
@@ -192,7 +191,6 @@ function wrapWithDocxTemplate(content: string, companyName: string): string {
 <body style="font-family: Cairo, Arial, sans-serif; direction: rtl; text-align: right; line-height: 1.8;">
     <h1 style="text-align: center; color: #059669;">سياسة الخصوصية</h1>
     <h2 style="text-align: center; color: #374151;">${companyName}</h2>
-    <p style="text-align: center; color: #166534; background: #dcfce7; padding: 8px; border-radius: 8px;">متوافقة مع نظام حماية البيانات الشخصية السعودي</p>
     <hr style="margin: 20px 0; border: 1px solid #e5e7eb;">
     
     ${content}
