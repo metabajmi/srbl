@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare } from "lucide-react";
+import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare, Sparkles, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { type PolicyDocument } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -89,6 +89,32 @@ const COLLECTION_METHODS = [
   { id: "third_party", label: "طرف ثالث", labelEn: "Third Party" },
 ];
 
+type AutoFilledFields = {
+  [key: string]: boolean;
+};
+
+function AutoDetectedBadge({ onClear }: { onClear?: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full mr-2">
+      <Sparkles className="w-3 h-3" />
+      <span>تم الكشف تلقائياً</span>
+      {onClear && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            onClear();
+          }}
+          className="hover:bg-primary/20 rounded-full p-0.5 mr-1"
+          data-testid="button-clear-autofill"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </span>
+  );
+}
+
 const ACTIVITY_TYPES = [
   { value: "ecommerce", label: "تجارة إلكترونية" },
   { value: "fintech", label: "تقنية مالية" },
@@ -108,6 +134,7 @@ export default function PrivacyGeneratorTab() {
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<AutoFilledFields>({});
 
   useEffect(() => {
     const checkAuth = () => setIsLoggedIn(isAuthenticated());
@@ -153,18 +180,78 @@ export default function PrivacyGeneratorTab() {
 
   useEffect(() => {
     if (hasScanData && scanData && scanData.scanId !== lastPreFilledScanId) {
-      const currentCompanyName = form.getValues("company_name");
+      const newAutoFilled: AutoFilledFields = {};
       
-      if (!currentCompanyName && scanData.companyName) {
+      // Pre-fill company name
+      if (scanData.companyName && !form.getValues("company_name")) {
         form.setValue("company_name", scanData.companyName);
+        newAutoFilled.company_name = true;
       }
       
+      // Pre-fill contact email
+      if (scanData.contactEmail && !form.getValues("contact_email")) {
+        form.setValue("contact_email", scanData.contactEmail);
+        newAutoFilled.contact_email = true;
+      }
+      
+      // Pre-fill contact phone
+      if (scanData.contactPhone && !form.getValues("contact_phone")) {
+        form.setValue("contact_phone", scanData.contactPhone);
+        newAutoFilled.contact_phone = true;
+      }
+      
+      // Pre-fill activity type based on businessType
+      if (scanData.businessType && !form.getValues("activity_type")) {
+        const businessTypeMap: { [key: string]: "ecommerce" | "fintech" | "health" | "education" | "other" } = {
+          "ecommerce_general": "ecommerce",
+          "financial_services": "fintech",
+          "healthcare": "health",
+          "education": "education",
+          "digital_services": "other",
+          "technology": "other",
+        };
+        const mappedType = businessTypeMap[scanData.businessType] || "other";
+        form.setValue("activity_type", mappedType);
+        newAutoFilled.activity_type = true;
+      }
+      
+      // Pre-fill collection methods based on scan findings
+      const detectedMethods: string[] = [];
+      if (scanData.hasCookieBanner) {
+        detectedMethods.push("automated");
+      }
+      if (scanData.hasContactInfo) {
+        detectedMethods.push("direct");
+      }
+      if (detectedMethods.length > 0 && form.getValues("collection_methods").length === 0) {
+        form.setValue("collection_methods", detectedMethods);
+        newAutoFilled.collection_methods = true;
+      }
+      
+      // Pre-fill data collected based on scan findings (cookies = technical data)
+      const detectedDataTypes: string[] = [];
+      if (scanData.hasCookieBanner) {
+        detectedDataTypes.push("technical");
+      }
+      if (scanData.hasContactInfo) {
+        detectedDataTypes.push("contact");
+        detectedDataTypes.push("identity");
+      }
+      if (detectedDataTypes.length > 0 && form.getValues("data_collected").length === 0) {
+        form.setValue("data_collected", detectedDataTypes);
+        newAutoFilled.data_collected = true;
+      }
+      
+      setAutoFilledFields(newAutoFilled);
       setLastPreFilledScanId(scanData.scanId);
       
-      toast({
-        title: "بيانات الفحص متاحة",
-        description: `تم تحميل بيانات من فحص ${scanData.websiteUrl}`,
-      });
+      const autoFilledCount = Object.keys(newAutoFilled).length;
+      if (autoFilledCount > 0) {
+        toast({
+          title: "✨ تم ملء البيانات تلقائياً",
+          description: `تم تعبئة ${autoFilledCount} حقول من بيانات فحص ${scanData.websiteUrl}`,
+        });
+      }
     }
   }, [hasScanData, scanData, lastPreFilledScanId, form, toast]);
 
@@ -383,6 +470,14 @@ ${policy.generatedContent}
   const watchHasDpo = form.watch("has_dpo");
   const watchRetentionPeriod = form.watch("retention_period");
 
+  const clearAutoFill = (fieldName: string) => {
+    setAutoFilledFields(prev => {
+      const updated = { ...prev };
+      delete updated[fieldName];
+      return updated;
+    });
+  };
+
   const steps = [
     { number: 1, title: "هوية الجهة", icon: Building2 },
     { number: 2, title: "خريطة البيانات", icon: Database },
@@ -490,9 +585,23 @@ ${policy.generatedContent}
                     name="company_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>اسم الجهة *</FormLabel>
+                        <FormLabel className="flex items-center gap-2">
+                          اسم الجهة *
+                          {autoFilledFields.company_name && (
+                            <AutoDetectedBadge onClear={() => clearAutoFill("company_name")} />
+                          )}
+                        </FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="الاسم الرسمي للجهة" data-testid="input-company-name" />
+                          <Input 
+                            {...field} 
+                            placeholder="الاسم الرسمي للجهة" 
+                            data-testid="input-company-name"
+                            className={autoFilledFields.company_name ? "border-primary/50 bg-primary/5" : ""}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              if (autoFilledFields.company_name) clearAutoFill("company_name");
+                            }}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -504,10 +613,25 @@ ${policy.generatedContent}
                     name="activity_type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>نوع النشاط *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel className="flex items-center gap-2">
+                          نوع النشاط *
+                          {autoFilledFields.activity_type && (
+                            <AutoDetectedBadge onClear={() => clearAutoFill("activity_type")} />
+                          )}
+                        </FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            if (autoFilledFields.activity_type) clearAutoFill("activity_type");
+                          }} 
+                          defaultValue={field.value}
+                          value={field.value}
+                        >
                           <FormControl>
-                            <SelectTrigger data-testid="select-activity-type">
+                            <SelectTrigger 
+                              data-testid="select-activity-type"
+                              className={autoFilledFields.activity_type ? "border-primary/50 bg-primary/5" : ""}
+                            >
                               <SelectValue placeholder="اختر نوع النشاط" />
                             </SelectTrigger>
                           </FormControl>
@@ -559,9 +683,24 @@ ${policy.generatedContent}
                     name="contact_phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>رقم الهاتف *</FormLabel>
+                        <FormLabel className="flex items-center gap-2">
+                          رقم الهاتف *
+                          {autoFilledFields.contact_phone && (
+                            <AutoDetectedBadge onClear={() => clearAutoFill("contact_phone")} />
+                          )}
+                        </FormLabel>
                         <FormControl>
-                          <Input {...field} dir="ltr" placeholder="+966 XX XXX XXXX" data-testid="input-phone" />
+                          <Input 
+                            {...field} 
+                            dir="ltr" 
+                            placeholder="+966 XX XXX XXXX" 
+                            data-testid="input-phone"
+                            className={autoFilledFields.contact_phone ? "border-primary/50 bg-primary/5" : ""}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              if (autoFilledFields.contact_phone) clearAutoFill("contact_phone");
+                            }}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -588,9 +727,25 @@ ${policy.generatedContent}
                   name="contact_email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>البريد الإلكتروني *</FormLabel>
+                      <FormLabel className="flex items-center gap-2">
+                        البريد الإلكتروني *
+                        {autoFilledFields.contact_email && (
+                          <AutoDetectedBadge onClear={() => clearAutoFill("contact_email")} />
+                        )}
+                      </FormLabel>
                       <FormControl>
-                        <Input {...field} type="email" dir="ltr" placeholder="email@example.com" data-testid="input-email" />
+                        <Input 
+                          {...field} 
+                          type="email" 
+                          dir="ltr" 
+                          placeholder="email@example.com" 
+                          data-testid="input-email"
+                          className={autoFilledFields.contact_email ? "border-primary/50 bg-primary/5" : ""}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            if (autoFilledFields.contact_email) clearAutoFill("contact_email");
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -682,38 +837,54 @@ ${policy.generatedContent}
                   name="data_collected"
                   render={() => (
                     <FormItem>
-                      <FormLabel className="text-base">أنواع البيانات المجمعة *</FormLabel>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        أنواع البيانات المجمعة *
+                        {autoFilledFields.data_collected && (
+                          <AutoDetectedBadge onClear={() => clearAutoFill("data_collected")} />
+                        )}
+                      </FormLabel>
                       <FormDescription>
                         اختر جميع أنواع البيانات الشخصية التي تجمعها
                       </FormDescription>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                        {DATA_TYPES.map((type) => (
-                          <FormField
-                            key={type.id}
-                            control={form.control}
-                            name="data_collected"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(type.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...field.value, type.id])
-                                        : field.onChange(field.value?.filter((value) => value !== type.id));
-                                    }}
-                                    data-testid={`checkbox-data-${type.id}`}
-                                  />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                  <FormLabel className="font-normal cursor-pointer">
-                                    {type.label}
-                                  </FormLabel>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
+                        {DATA_TYPES.map((type) => {
+                          const isAutoDetected = autoFilledFields.data_collected && 
+                            form.getValues("data_collected")?.includes(type.id);
+                          return (
+                            <FormField
+                              key={type.id}
+                              control={form.control}
+                              name="data_collected"
+                              render={({ field }) => (
+                                <FormItem className={cn(
+                                  "flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate",
+                                  isAutoDetected && "border-primary/50 bg-primary/5"
+                                )}>
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(type.id)}
+                                      onCheckedChange={(checked) => {
+                                        if (autoFilledFields.data_collected) clearAutoFill("data_collected");
+                                        return checked
+                                          ? field.onChange([...field.value, type.id])
+                                          : field.onChange(field.value?.filter((value) => value !== type.id));
+                                      }}
+                                      data-testid={`checkbox-data-${type.id}`}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none flex items-center gap-2">
+                                    <FormLabel className="font-normal cursor-pointer">
+                                      {type.label}
+                                    </FormLabel>
+                                    {isAutoDetected && (
+                                      <Sparkles className="w-3 h-3 text-primary" />
+                                    )}
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          );
+                        })}
                       </div>
                       <FormMessage />
                     </FormItem>
@@ -725,38 +896,54 @@ ${policy.generatedContent}
                   name="collection_methods"
                   render={() => (
                     <FormItem>
-                      <FormLabel className="text-base">طرق جمع البيانات *</FormLabel>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        طرق جمع البيانات *
+                        {autoFilledFields.collection_methods && (
+                          <AutoDetectedBadge onClear={() => clearAutoFill("collection_methods")} />
+                        )}
+                      </FormLabel>
                       <FormDescription>
                         اختر جميع الطرق المستخدمة لجمع البيانات
                       </FormDescription>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-                        {COLLECTION_METHODS.map((method) => (
-                          <FormField
-                            key={method.id}
-                            control={form.control}
-                            name="collection_methods"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(method.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...field.value, method.id])
-                                        : field.onChange(field.value?.filter((value) => value !== method.id));
-                                    }}
-                                    data-testid={`checkbox-method-${method.id}`}
-                                  />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                  <FormLabel className="font-normal cursor-pointer">
-                                    {method.label}
-                                  </FormLabel>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
+                        {COLLECTION_METHODS.map((method) => {
+                          const isAutoDetected = autoFilledFields.collection_methods && 
+                            form.getValues("collection_methods")?.includes(method.id);
+                          return (
+                            <FormField
+                              key={method.id}
+                              control={form.control}
+                              name="collection_methods"
+                              render={({ field }) => (
+                                <FormItem className={cn(
+                                  "flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate",
+                                  isAutoDetected && "border-primary/50 bg-primary/5"
+                                )}>
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(method.id)}
+                                      onCheckedChange={(checked) => {
+                                        if (autoFilledFields.collection_methods) clearAutoFill("collection_methods");
+                                        return checked
+                                          ? field.onChange([...field.value, method.id])
+                                          : field.onChange(field.value?.filter((value) => value !== method.id));
+                                      }}
+                                      data-testid={`checkbox-method-${method.id}`}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none flex items-center gap-2">
+                                    <FormLabel className="font-normal cursor-pointer">
+                                      {method.label}
+                                    </FormLabel>
+                                    {isAutoDetected && (
+                                      <Sparkles className="w-3 h-3 text-primary" />
+                                    )}
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          );
+                        })}
                       </div>
                       <FormMessage />
                     </FormItem>
