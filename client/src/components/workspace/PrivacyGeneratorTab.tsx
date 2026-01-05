@@ -181,6 +181,7 @@ export default function PrivacyGeneratorTab() {
   useEffect(() => {
     if (hasScanData && scanData && scanData.scanId !== lastPreFilledScanId) {
       const newAutoFilled: AutoFilledFields = {};
+      const insights = scanData.policyInsights;
       
       // Pre-fill company name
       if (scanData.companyName && !form.getValues("company_name")) {
@@ -188,15 +189,17 @@ export default function PrivacyGeneratorTab() {
         newAutoFilled.company_name = true;
       }
       
-      // Pre-fill contact email
-      if (scanData.contactEmail && !form.getValues("contact_email")) {
-        form.setValue("contact_email", scanData.contactEmail);
+      // Pre-fill contact email from policy insights first, then fallback to scanData
+      const detectedEmail = insights?.detectedEmails?.[0] || scanData.contactEmail;
+      if (detectedEmail && !form.getValues("contact_email")) {
+        form.setValue("contact_email", detectedEmail);
         newAutoFilled.contact_email = true;
       }
       
-      // Pre-fill contact phone
-      if (scanData.contactPhone && !form.getValues("contact_phone")) {
-        form.setValue("contact_phone", scanData.contactPhone);
+      // Pre-fill contact phone from policy insights first, then fallback to scanData
+      const detectedPhone = insights?.detectedPhones?.[0] || scanData.contactPhone;
+      if (detectedPhone && !form.getValues("contact_phone")) {
+        form.setValue("contact_phone", detectedPhone);
         newAutoFilled.contact_phone = true;
       }
       
@@ -215,31 +218,67 @@ export default function PrivacyGeneratorTab() {
         newAutoFilled.activity_type = true;
       }
       
-      // Pre-fill collection methods based on scan findings
-      const detectedMethods: string[] = [];
-      if (scanData.hasCookieBanner) {
-        detectedMethods.push("automated");
+      // Pre-fill service description from policy insights
+      if (insights?.serviceDescription && !form.getValues("service_description")) {
+        form.setValue("service_description", insights.serviceDescription);
+        newAutoFilled.service_description = true;
       }
-      if (scanData.hasContactInfo) {
-        detectedMethods.push("direct");
+      
+      // Pre-fill collection methods from policy insights first, then fallback to basic scan findings
+      let detectedMethods: string[] = [];
+      if (insights?.detectedCollectionMethods && insights.detectedCollectionMethods.length > 0) {
+        detectedMethods = [...insights.detectedCollectionMethods];
+      } else {
+        if (scanData.hasCookieBanner) detectedMethods.push("automated");
+        if (scanData.hasContactInfo) detectedMethods.push("direct");
       }
       if (detectedMethods.length > 0 && form.getValues("collection_methods").length === 0) {
         form.setValue("collection_methods", detectedMethods);
         newAutoFilled.collection_methods = true;
       }
       
-      // Pre-fill data collected based on scan findings (cookies = technical data)
-      const detectedDataTypes: string[] = [];
-      if (scanData.hasCookieBanner) {
-        detectedDataTypes.push("technical");
-      }
-      if (scanData.hasContactInfo) {
-        detectedDataTypes.push("contact");
-        detectedDataTypes.push("identity");
+      // Pre-fill data collected from policy insights first, then fallback to basic scan findings
+      let detectedDataTypes: string[] = [];
+      if (insights?.detectedDataTypes && insights.detectedDataTypes.length > 0) {
+        detectedDataTypes = [...insights.detectedDataTypes];
+      } else {
+        if (scanData.hasCookieBanner) detectedDataTypes.push("technical");
+        if (scanData.hasContactInfo) {
+          detectedDataTypes.push("contact");
+          detectedDataTypes.push("identity");
+        }
       }
       if (detectedDataTypes.length > 0 && form.getValues("data_collected").length === 0) {
         form.setValue("data_collected", detectedDataTypes);
         newAutoFilled.data_collected = true;
+      }
+      
+      // Pre-fill storage location from policy insights
+      if (insights?.storageLocation && !form.getValues("storage_location")) {
+        form.setValue("storage_location", insights.storageLocation);
+        newAutoFilled.storage_location = true;
+      }
+      
+      // Pre-fill retention period from policy insights
+      if (insights?.retentionPeriod && !form.getValues("retention_period")) {
+        form.setValue("retention_period", insights.retentionPeriod);
+        newAutoFilled.retention_period = true;
+      }
+      
+      // Pre-fill data sharing from policy insights
+      if (insights?.dataSharingType && !form.getValues("data_sharing")) {
+        form.setValue("data_sharing", insights.dataSharingType);
+        newAutoFilled.data_sharing = true;
+      }
+      
+      // Pre-fill DPO info from policy insights
+      if (insights?.hasDPO && !form.getValues("has_dpo")) {
+        form.setValue("has_dpo", true);
+        newAutoFilled.has_dpo = true;
+        if (insights.dpoEmail) {
+          form.setValue("dpo_email", insights.dpoEmail);
+          newAutoFilled.dpo_email = true;
+        }
       }
       
       setAutoFilledFields(newAutoFilled);
@@ -248,8 +287,8 @@ export default function PrivacyGeneratorTab() {
       const autoFilledCount = Object.keys(newAutoFilled).length;
       if (autoFilledCount > 0) {
         toast({
-          title: "✨ تم ملء البيانات تلقائياً",
-          description: `تم تعبئة ${autoFilledCount} حقول من بيانات فحص ${scanData.websiteUrl}`,
+          title: "تم ملء البيانات تلقائياً من سياسة الخصوصية",
+          description: `تم تعبئة ${autoFilledCount} حقول من بيانات سياسة الخصوصية لموقع ${scanData.websiteUrl}`,
         });
       }
     }
