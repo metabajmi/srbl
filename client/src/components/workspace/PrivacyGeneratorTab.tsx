@@ -723,13 +723,13 @@ ${policy.generatedContent}
                             className="text-xs"
                           >
                             <Sparkles className="w-3 h-3 ml-1" />
-                            توليد مقترح
+                            نص مقترح
                           </Button>
                         </div>
                         <FormControl>
                           <Textarea 
                             {...field} 
-                            placeholder="مقدمة سياسة الخصوصية التي تعرّف بالجهة والتزامها بحماية البيانات"
+                            placeholder="نبذة مختصرة عن مهام واختصاصات الجهة والخدمات المقدمة والفئة المستهدفة"
                             className={cn(
                               "min-h-[100px]",
                               autoFilledFields.service_description ? "border-primary/50 bg-primary/5" : ""
@@ -738,7 +738,7 @@ ${policy.generatedContent}
                           />
                         </FormControl>
                         <FormDescription>
-                          انقر على "توليد مقترح" لإنشاء نص تعريفي تلقائي باسم جهتك
+                          انقر على "نص مقترح" لإنشاء نص تعريفي تلقائي باسم جهتك
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
