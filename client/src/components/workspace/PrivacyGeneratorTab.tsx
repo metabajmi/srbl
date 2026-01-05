@@ -1366,11 +1366,11 @@ ${policy.generatedContent}
                         </FormItem>
                       )}
                     />
-                    <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg text-sm">
+                    <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg text-sm flex-row-reverse">
                       <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
                         <Check className="w-3 h-3 text-primary" />
                       </div>
-                      <span className="text-muted-foreground">
+                      <span className="text-muted-foreground text-right">
                         سيتم تضمين ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها.
                       </span>
                     </div>
