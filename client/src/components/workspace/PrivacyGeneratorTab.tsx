@@ -938,7 +938,7 @@ ${policy.generatedContent}
                 <div className="space-y-4">
                   <h4 className="font-semibold">طرق الجمع المباشرة</h4>
                   <FormDescription>
-                    البيانات التي يتم الحصول عليها منك مباشرة
+                    البيانات التي يتم جمعها بصورة مباشرة
                   </FormDescription>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {COLLECTION_METHODS.direct.map((method) => (
