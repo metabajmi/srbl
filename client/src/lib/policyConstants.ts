@@ -53,7 +53,7 @@ export const LEGAL_BASES = [
   { 
     id: 'explicit_consent', 
     label: 'الموافقة الصريحة',
-    description: 'موافقتك الصريحة على معالجة بياناتك الشخصية',
+    description: 'موافقة صاحب البيانات',
     requiresExplanation: false,
     explanationPlaceholder: '',
     templateText: 'موافقتك الصريحة، ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناءً على مسوغات نظامية أخرى، وللقيام بذلك يمكنك التواصل مع {contact}'
