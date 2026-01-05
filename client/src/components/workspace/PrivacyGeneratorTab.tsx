@@ -1193,7 +1193,7 @@ ${policy.generatedContent}
                     name="disclosure_parties"
                     render={() => (
                       <FormItem>
-                        <FormLabel className="text-base">كيف نفصح عن بياناتك الشخصية؟ *</FormLabel>
+                        <FormLabel className="text-base">كيفية الإفصاح عن البيانات الشخصية *</FormLabel>
                         <FormDescription>
                           حدد الجهات التي قد يتم الإفصاح عن البيانات لها
                         </FormDescription>
