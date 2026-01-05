@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare, Sparkles, X } from "lucide-react";
+import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare, Sparkles, X, Scale, ClipboardList, UserCheck } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { type PolicyDocument } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -24,6 +25,20 @@ import { useScanContext } from "@/contexts/ScanContext";
 import { useLocation } from "wouter";
 import MoyasarPayment from "@/components/MoyasarPayment";
 import { OTPModal } from "@/components/OTPModal";
+import {
+  DATA_TYPES,
+  COLLECTION_METHODS,
+  COLLECTION_PURPOSES,
+  DATA_USAGE_PURPOSES,
+  LEGAL_BASES,
+  DISCLOSURE_PARTIES,
+  STORAGE_LOCATIONS,
+  RETENTION_PERIODS,
+  DESTRUCTION_METHODS,
+  RIGHTS_EXERCISE_METHODS,
+  RESPONSE_TIMEFRAMES,
+  SDAIA_INFO,
+} from "@/lib/policyConstants";
 
 const isAuthenticated = (): boolean => {
   try {
@@ -41,53 +56,51 @@ const isAuthenticated = (): boolean => {
 const POLICY_PRICE_SAR = 99;
 const POLICY_PRICE_HALALAS = POLICY_PRICE_SAR * 100;
 
+const ACTIVITY_TYPES = [
+  { id: 'ecommerce', label: 'تجارة إلكترونية' },
+  { id: 'fintech', label: 'تقنية مالية' },
+  { id: 'health', label: 'خدمات صحية' },
+  { id: 'education', label: 'خدمات تعليمية' },
+  { id: 'technology', label: 'تقنية المعلومات' },
+  { id: 'retail', label: 'تجزئة' },
+  { id: 'other', label: 'أخرى' },
+] as const;
+
 const formSchema = z.object({
   company_name: z.string().min(2, "يجب إدخال اسم الجهة"),
-  activity_type: z.enum(["ecommerce", "fintech", "health", "education", "other"], {
-    required_error: "يجب تحديد نوع النشاط"
-  }),
+  activity_type: z.string().min(1, "يجب اختيار نوع النشاط"),
   service_description: z.string().min(10, "يجب وصف الخدمة بشكل مختصر"),
+  contact_team: z.string().min(2, "يجب إدخال القسم/الفريق المختص"),
+  address: z.string().min(5, "يجب إدخال العنوان"),
+  phone: z.string().min(9, "يجب إدخال رقم الهاتف"),
+  email: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
   cr_number: z.string().min(1, "يجب إدخال رقم السجل التجاري"),
-  contact_address: z.string().min(5, "يجب إدخال العنوان"),
-  contact_email: z.string().email("يجب إدخال بريد إلكتروني صحيح"),
-  contact_phone: z.string().min(9, "يجب إدخال رقم الهاتف"),
+  policy_last_update: z.string().min(1, "يجب تحديد تاريخ آخر تحديث"),
+  data_collected: z.array(z.string()).min(1, "يجب اختيار نوع واحد على الأقل"),
+  collection_methods_direct: z.array(z.string()).default([]),
+  collection_methods_indirect: z.array(z.string()).default([]),
+  collection_purposes: z.array(z.string()).min(1, "يجب اختيار غرض واحد على الأقل"),
+  data_usage_purposes: z.array(z.string()).min(1, "يجب اختيار استخدام واحد على الأقل"),
+  legal_bases: z.array(z.string()).min(1, "يجب اختيار مسوغ نظامي واحد على الأقل"),
+  legal_bases_explanations: z.record(z.string(), z.string()).default({}),
+  disclosure_parties: z.array(z.string()).min(1, "يجب تحديد جهات الإفصاح"),
+  storage_location: z.string().min(1, "يجب تحديد موقع التخزين"),
+  retention_period: z.string().min(1, "يجب تحديد مدة الاحتفاظ"),
+  retention_years: z.number().optional(),
+  destruction_method: z.string().min(1, "يجب تحديد طريقة الإتلاف"),
+  destruction_custom: z.string().optional(),
+  rights_exercise_method: z.string().min(1, "يجب تحديد وسيلة ممارسة الحقوق"),
+  response_days: z.number().min(1, "يجب تحديد مدة الرد"),
   has_dpo: z.boolean().default(false),
   dpo_name: z.string().optional(),
-  dpo_email: z.string().email("يجب إدخال بريد إلكتروني صحيح").optional().or(z.literal("")),
+  dpo_address: z.string().optional(),
   dpo_phone: z.string().optional(),
-  data_collected: z.array(z.string()).min(1, "يجب اختيار نوع واحد على الأقل"),
-  collection_methods: z.array(z.string()).min(1, "يجب اختيار طريقة واحدة على الأقل"),
-  storage_location: z.enum(["inside_ksa", "outside_ksa"], {
-    required_error: "يجب تحديد موقع التخزين"
-  }),
-  retention_period: z.enum(["delete_immediately", "specific_period", "statutory_period"], {
-    required_error: "يجب تحديد مدة الاحتفاظ"
-  }),
-  retention_period_value: z.string().optional(),
-  data_sharing: z.enum(["no_sharing", "service_providers", "government_entities"], {
-    required_error: "يجب تحديد سياسة المشاركة"
-  }),
-  complaint_dept: z.enum(["customer_service", "legal_dept", "compliance_dept"], {
-    required_error: "يجب تحديد قسم الشكاوى"
-  }),
+  dpo_email: z.string().email("يجب إدخال بريد إلكتروني صحيح").optional().or(z.literal("")),
+  complaint_contact: z.string().min(2, "يجب تحديد جهة استقبال الشكاوى"),
+  complaint_response_days: z.number().min(1, "يجب تحديد مدة الرد على الشكوى"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-const DATA_TYPES = [
-  { id: "identity", label: "بيانات الهوية", labelEn: "Identity Data" },
-  { id: "contact", label: "بيانات التواصل", labelEn: "Contact Data" },
-  { id: "financial", label: "بيانات مالية", labelEn: "Financial Data" },
-  { id: "location", label: "بيانات الموقع", labelEn: "Location Data" },
-  { id: "technical", label: "بيانات تقنية (ملفات الارتباط/IP)", labelEn: "Technical Data (Cookies/IP)" },
-  { id: "sensitive", label: "بيانات حساسة/صحية", labelEn: "Sensitive/Health Data" },
-];
-
-const COLLECTION_METHODS = [
-  { id: "direct", label: "مباشرة (النماذج)", labelEn: "Direct (Forms)" },
-  { id: "automated", label: "آلية (ملفات الارتباط)", labelEn: "Automated (Cookies)" },
-  { id: "third_party", label: "طرف ثالث", labelEn: "Third Party" },
-];
 
 type AutoFilledFields = {
   [key: string]: boolean;
@@ -114,14 +127,6 @@ function AutoDetectedBadge({ onClear }: { onClear?: () => void }) {
     </span>
   );
 }
-
-const ACTIVITY_TYPES = [
-  { value: "ecommerce", label: "تجارة إلكترونية" },
-  { value: "fintech", label: "تقنية مالية" },
-  { value: "health", label: "صحة" },
-  { value: "education", label: "تعليم" },
-  { value: "other", label: "أخرى" },
-];
 
 export default function PrivacyGeneratorTab() {
   const { toast } = useToast();
@@ -158,23 +163,36 @@ export default function PrivacyGeneratorTab() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       company_name: "",
-      activity_type: undefined,
+      activity_type: "",
       service_description: "",
+      contact_team: "",
+      address: "",
+      phone: "",
+      email: "",
       cr_number: "",
-      contact_address: "",
-      contact_email: "",
-      contact_phone: "",
+      policy_last_update: new Date().toISOString().split('T')[0],
+      data_collected: [],
+      collection_methods_direct: [],
+      collection_methods_indirect: [],
+      collection_purposes: [],
+      data_usage_purposes: [],
+      legal_bases: [],
+      legal_bases_explanations: {},
+      disclosure_parties: [],
+      storage_location: "",
+      retention_period: "",
+      retention_years: undefined,
+      destruction_method: "",
+      destruction_custom: "",
+      rights_exercise_method: "",
+      response_days: 10,
       has_dpo: false,
       dpo_name: "",
-      dpo_email: "",
+      dpo_address: "",
       dpo_phone: "",
-      data_collected: [],
-      collection_methods: [],
-      storage_location: undefined,
-      retention_period: undefined,
-      retention_period_value: "",
-      data_sharing: undefined,
-      complaint_dept: undefined,
+      dpo_email: "",
+      complaint_contact: "",
+      complaint_response_days: 15,
     },
   });
 
@@ -183,95 +201,49 @@ export default function PrivacyGeneratorTab() {
       const newAutoFilled: AutoFilledFields = {};
       const insights = scanData.policyInsights;
       
-      // Pre-fill company name
       if (scanData.companyName && !form.getValues("company_name")) {
         form.setValue("company_name", scanData.companyName);
         newAutoFilled.company_name = true;
       }
       
-      // Pre-fill contact email from policy insights first, then fallback to scanData
       const detectedEmail = insights?.detectedEmails?.[0] || scanData.contactEmail;
-      if (detectedEmail && !form.getValues("contact_email")) {
-        form.setValue("contact_email", detectedEmail);
-        newAutoFilled.contact_email = true;
+      if (detectedEmail && !form.getValues("email")) {
+        form.setValue("email", detectedEmail);
+        newAutoFilled.email = true;
       }
       
-      // Pre-fill contact phone from policy insights first, then fallback to scanData
       const detectedPhone = insights?.detectedPhones?.[0] || scanData.contactPhone;
-      if (detectedPhone && !form.getValues("contact_phone")) {
-        form.setValue("contact_phone", detectedPhone);
-        newAutoFilled.contact_phone = true;
+      if (detectedPhone && !form.getValues("phone")) {
+        form.setValue("phone", detectedPhone);
+        newAutoFilled.phone = true;
       }
       
-      // Pre-fill activity type based on businessType
-      if (scanData.businessType && !form.getValues("activity_type")) {
-        const businessTypeMap: { [key: string]: "ecommerce" | "fintech" | "health" | "education" | "other" } = {
-          "ecommerce_general": "ecommerce",
-          "financial_services": "fintech",
-          "healthcare": "health",
-          "education": "education",
-          "digital_services": "other",
-          "technology": "other",
-        };
-        const mappedType = businessTypeMap[scanData.businessType] || "other";
-        form.setValue("activity_type", mappedType);
-        newAutoFilled.activity_type = true;
-      }
-      
-      // Pre-fill service description from policy insights
       if (insights?.serviceDescription && !form.getValues("service_description")) {
         form.setValue("service_description", insights.serviceDescription);
         newAutoFilled.service_description = true;
       }
       
-      // Pre-fill collection methods from policy insights first, then fallback to basic scan findings
-      let detectedMethods: string[] = [];
-      if (insights?.detectedCollectionMethods && insights.detectedCollectionMethods.length > 0) {
-        detectedMethods = [...insights.detectedCollectionMethods];
-      } else {
-        if (scanData.hasCookieBanner) detectedMethods.push("automated");
-        if (scanData.hasContactInfo) detectedMethods.push("direct");
-      }
-      if (detectedMethods.length > 0 && form.getValues("collection_methods").length === 0) {
-        form.setValue("collection_methods", detectedMethods);
-        newAutoFilled.collection_methods = true;
-      }
-      
-      // Pre-fill data collected from policy insights first, then fallback to basic scan findings
-      let detectedDataTypes: string[] = [];
-      if (insights?.detectedDataTypes && insights.detectedDataTypes.length > 0) {
-        detectedDataTypes = [...insights.detectedDataTypes];
-      } else {
-        if (scanData.hasCookieBanner) detectedDataTypes.push("technical");
-        if (scanData.hasContactInfo) {
-          detectedDataTypes.push("contact");
-          detectedDataTypes.push("identity");
-        }
-      }
-      if (detectedDataTypes.length > 0 && form.getValues("data_collected").length === 0) {
-        form.setValue("data_collected", detectedDataTypes);
+      if (insights?.detectedDataTypes && insights.detectedDataTypes.length > 0 && form.getValues("data_collected").length === 0) {
+        const mappedTypes = insights.detectedDataTypes.map(type => {
+          const mapping: Record<string, string> = {
+            'identity': 'account_data',
+            'contact': 'contact_data',
+            'financial': 'financial_data',
+            'location': 'location_data',
+            'technical': 'cookie_data',
+            'sensitive': 'sensitive_data',
+          };
+          return mapping[type] || type;
+        });
+        form.setValue("data_collected", mappedTypes);
         newAutoFilled.data_collected = true;
       }
       
-      // Pre-fill storage location from policy insights
       if (insights?.storageLocation && !form.getValues("storage_location")) {
         form.setValue("storage_location", insights.storageLocation);
         newAutoFilled.storage_location = true;
       }
       
-      // Pre-fill retention period from policy insights
-      if (insights?.retentionPeriod && !form.getValues("retention_period")) {
-        form.setValue("retention_period", insights.retentionPeriod);
-        newAutoFilled.retention_period = true;
-      }
-      
-      // Pre-fill data sharing from policy insights
-      if (insights?.dataSharingType && !form.getValues("data_sharing")) {
-        form.setValue("data_sharing", insights.dataSharingType);
-        newAutoFilled.data_sharing = true;
-      }
-      
-      // Pre-fill DPO info from policy insights
       if (insights?.hasDPO && !form.getValues("has_dpo")) {
         form.setValue("has_dpo", true);
         newAutoFilled.has_dpo = true;
@@ -316,8 +288,6 @@ export default function PrivacyGeneratorTab() {
     onSuccess: async (result) => {
       setPaymentRequestId(result.id);
       
-      // ========== BYPASS MODE FOR TESTING ==========
-      // Skip payment and generate directly
       setIsGenerating(true);
       try {
         const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
@@ -349,7 +319,6 @@ export default function PrivacyGeneratorTab() {
       } finally {
         setIsGenerating(false);
       }
-      // ========== END BYPASS MODE ==========
     },
     onError: (error: any) => {
       toast({
@@ -375,13 +344,20 @@ export default function PrivacyGeneratorTab() {
     switch (step) {
       case 1:
         return !!(values.company_name && values.activity_type && values.service_description && 
-                  values.cr_number && values.contact_address && values.contact_email && values.contact_phone);
+                  values.contact_team && values.address && values.phone && values.email && 
+                  values.cr_number && values.policy_last_update);
       case 2:
-        return values.data_collected.length > 0 && values.collection_methods.length > 0;
+        return values.data_collected.length > 0;
       case 3:
-        return !!(values.storage_location && values.retention_period && values.data_sharing);
+        return (values.collection_methods_direct.length > 0 || values.collection_methods_indirect.length > 0) &&
+               values.collection_purposes.length > 0 && values.data_usage_purposes.length > 0;
       case 4:
-        return !!values.complaint_dept;
+        return values.legal_bases.length > 0 && values.disclosure_parties.length > 0;
+      case 5:
+        return !!(values.storage_location && values.retention_period && values.destruction_method);
+      case 6:
+        return !!(values.rights_exercise_method && values.response_days && 
+                  values.complaint_contact && values.complaint_response_days);
       default:
         return false;
     }
@@ -389,7 +365,7 @@ export default function PrivacyGeneratorTab() {
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
+      setCurrentStep(prev => Math.min(prev + 1, 6));
     } else {
       toast({
         title: "أكمل البيانات المطلوبة",
@@ -508,6 +484,8 @@ ${policy.generatedContent}
 
   const watchHasDpo = form.watch("has_dpo");
   const watchRetentionPeriod = form.watch("retention_period");
+  const watchDestructionMethod = form.watch("destruction_method");
+  const watchLegalBases = form.watch("legal_bases");
 
   const clearAutoFill = (fieldName: string) => {
     setAutoFilledFields(prev => {
@@ -518,10 +496,12 @@ ${policy.generatedContent}
   };
 
   const steps = [
-    { number: 1, title: "هوية الجهة", icon: Building2 },
-    { number: 2, title: "خريطة البيانات", icon: Database },
-    { number: 3, title: "التخزين والمشاركة", icon: HardDrive },
-    { number: 4, title: "الشكاوى", icon: MessageSquare },
+    { number: 1, title: "معلومات الجهة", icon: Building2 },
+    { number: 2, title: "البيانات المجمعة", icon: Database },
+    { number: 3, title: "طرق الجمع والأغراض", icon: ClipboardList },
+    { number: 4, title: "المسوغات والإفصاح", icon: Scale },
+    { number: 5, title: "التخزين والاحتفاظ", icon: HardDrive },
+    { number: 6, title: "الحقوق والشكاوى", icon: MessageSquare },
   ];
 
   return (
@@ -563,7 +543,7 @@ ${policy.generatedContent}
             <div key={step.number} className="flex items-center flex-1">
               <div 
                 className={cn(
-                  "flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all cursor-pointer",
+                  "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all cursor-pointer",
                   currentStep === step.number 
                     ? "bg-primary text-primary-foreground border-primary" 
                     : currentStep > step.number
@@ -574,15 +554,15 @@ ${policy.generatedContent}
                 data-testid={`step-indicator-${step.number}`}
               >
                 {currentStep > step.number ? (
-                  <CheckCircle2 className="w-6 h-6" />
+                  <CheckCircle2 className="w-5 h-5" />
                 ) : (
-                  <step.icon className="w-5 h-5" />
+                  <step.icon className="w-4 h-4" />
                 )}
               </div>
               {index < steps.length - 1 && (
                 <div 
                   className={cn(
-                    "flex-1 h-1 mx-2",
+                    "flex-1 h-1 mx-1",
                     currentStep > step.number ? "bg-green-500" : "bg-muted"
                   )}
                 />
@@ -594,7 +574,7 @@ ${policy.generatedContent}
           {steps.map((step) => (
             <div key={step.number} className="text-center flex-1">
               <span className={cn(
-                "text-sm font-medium",
+                "text-xs font-medium",
                 currentStep === step.number ? "text-primary" : "text-muted-foreground"
               )}>
                 {step.title}
@@ -611,42 +591,42 @@ ${policy.generatedContent}
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="w-5 h-5" />
-                  الخطوة ١: هوية الجهة
+                  الخطوة ١: معلومات الجهة
                 </CardTitle>
                 <CardDescription>
-                  معلومات أساسية عن جهتك ومسؤول حماية البيانات
+                  معلومات أساسية عن جهتك وبيانات التواصل
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="company_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          اسم الجهة *
-                          {autoFilledFields.company_name && (
-                            <AutoDetectedBadge onClear={() => clearAutoFill("company_name")} />
-                          )}
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            placeholder="الاسم الرسمي للجهة" 
-                            data-testid="input-company-name"
-                            className={autoFilledFields.company_name ? "border-primary/50 bg-primary/5" : ""}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              if (autoFilledFields.company_name) clearAutoFill("company_name");
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="company_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        اسم الجهة *
+                        {autoFilledFields.company_name && (
+                          <AutoDetectedBadge onClear={() => clearAutoFill("company_name")} />
+                        )}
+                      </FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="الاسم الرسمي للجهة" 
+                          data-testid="input-company-name"
+                          className={autoFilledFields.company_name ? "border-primary/50 bg-primary/5" : ""}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            if (autoFilledFields.company_name) clearAutoFill("company_name");
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="activity_type"
@@ -663,7 +643,6 @@ ${policy.generatedContent}
                             field.onChange(value);
                             if (autoFilledFields.activity_type) clearAutoFill("activity_type");
                           }} 
-                          defaultValue={field.value}
                           value={field.value}
                         >
                           <FormControl>
@@ -676,12 +655,31 @@ ${policy.generatedContent}
                           </FormControl>
                           <SelectContent>
                             {ACTIVITY_TYPES.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
+                              <SelectItem key={type.id} value={type.id}>
                                 {type.label}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="policy_last_update"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>تاريخ آخر تحديث للسياسة *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            type="date" 
+                            dir="ltr" 
+                            data-testid="input-policy-last-update" 
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -693,97 +691,18 @@ ${policy.generatedContent}
                   name="service_description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>وصف الخدمة *</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} placeholder="وصف مختصر للخدمات المقدمة" data-testid="input-service-description" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="cr_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>رقم السجل التجاري / الترخيص *</FormLabel>
-                        <FormControl>
-                          <Input {...field} dir="ltr" placeholder="1010XXXXXX" data-testid="input-cr-number" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="contact_phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          رقم الهاتف *
-                          {autoFilledFields.contact_phone && (
-                            <AutoDetectedBadge onClear={() => clearAutoFill("contact_phone")} />
-                          )}
-                        </FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            dir="ltr" 
-                            placeholder="+966 XX XXX XXXX" 
-                            data-testid="input-phone"
-                            className={autoFilledFields.contact_phone ? "border-primary/50 bg-primary/5" : ""}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              if (autoFilledFields.contact_phone) clearAutoFill("contact_phone");
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="contact_address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>العنوان *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="العنوان الكامل" data-testid="input-address" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="contact_email"
-                  render={({ field }) => (
-                    <FormItem>
                       <FormLabel className="flex items-center gap-2">
-                        البريد الإلكتروني *
-                        {autoFilledFields.contact_email && (
-                          <AutoDetectedBadge onClear={() => clearAutoFill("contact_email")} />
+                        وصف الخدمات المقدمة *
+                        {autoFilledFields.service_description && (
+                          <AutoDetectedBadge onClear={() => clearAutoFill("service_description")} />
                         )}
                       </FormLabel>
                       <FormControl>
-                        <Input 
+                        <Textarea 
                           {...field} 
-                          type="email" 
-                          dir="ltr" 
-                          placeholder="email@example.com" 
-                          data-testid="input-email"
-                          className={autoFilledFields.contact_email ? "border-primary/50 bg-primary/5" : ""}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            if (autoFilledFields.contact_email) clearAutoFill("contact_email");
-                          }}
+                          placeholder="نبذة مختصرة عن مهام واختصاصات الجهة والخدمات المقدمة والفئة المستهدفة"
+                          className={autoFilledFields.service_description ? "border-primary/50 bg-primary/5" : ""}
+                          data-testid="input-service-description" 
                         />
                       </FormControl>
                       <FormMessage />
@@ -792,69 +711,129 @@ ${policy.generatedContent}
                 />
 
                 <div className="border rounded-lg p-4 space-y-4">
+                  <h4 className="font-semibold text-sm">بيانات التواصل</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="contact_team"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>القسم / الفريق المختص *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="مثال: قسم حماية البيانات" data-testid="input-contact-team" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="cr_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>رقم السجل التجاري / الترخيص *</FormLabel>
+                          <FormControl>
+                            <Input {...field} dir="ltr" placeholder="1010XXXXXX" data-testid="input-cr-number" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
-                    name="has_dpo"
+                    name="address"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-x-reverse">
+                      <FormItem>
+                        <FormLabel>العنوان *</FormLabel>
                         <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            data-testid="checkbox-has-dpo"
-                          />
+                          <Input {...field} placeholder="العنوان الكامل" data-testid="input-address" />
                         </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>لدينا مسؤول حماية بيانات (DPO)</FormLabel>
-                          <FormDescription>
-                            إذا كان لديك مسؤول معين لحماية البيانات الشخصية
-                          </FormDescription>
-                        </div>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  {watchHasDpo && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                      <FormField
-                        control={form.control}
-                        name="dpo_name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>اسم المسؤول</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="الاسم الكامل" data-testid="input-dpo-name" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="dpo_email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>البريد الإلكتروني</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="email" dir="ltr" placeholder="dpo@example.com" data-testid="input-dpo-email" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="dpo_phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>رقم الهاتف</FormLabel>
-                            <FormControl>
-                              <Input {...field} dir="ltr" placeholder="+966" data-testid="input-dpo-phone" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            رقم الهاتف *
+                            {autoFilledFields.phone && (
+                              <AutoDetectedBadge onClear={() => clearAutoFill("phone")} />
+                            )}
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              dir="ltr" 
+                              placeholder="+966 XX XXX XXXX" 
+                              data-testid="input-phone"
+                              className={autoFilledFields.phone ? "border-primary/50 bg-primary/5" : ""}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                if (autoFilledFields.phone) clearAutoFill("phone");
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            البريد الإلكتروني *
+                            {autoFilledFields.email && (
+                              <AutoDetectedBadge onClear={() => clearAutoFill("email")} />
+                            )}
+                          </FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              type="email" 
+                              dir="ltr" 
+                              placeholder="email@example.com" 
+                              data-testid="input-email"
+                              className={autoFilledFields.email ? "border-primary/50 bg-primary/5" : ""}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                if (autoFilledFields.email) clearAutoFill("email");
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="policy_last_update"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>تاريخ آخر تحديث للسياسة</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" data-testid="input-policy-update-date" />
+                      </FormControl>
+                      <FormDescription>
+                        التاريخ الذي سيظهر في السياسة كتاريخ آخر تحديث
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
           )}
@@ -864,10 +843,10 @@ ${policy.generatedContent}
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Database className="w-5 h-5" />
-                  الخطوة ٢: خريطة البيانات
+                  الخطوة ٢: البيانات المجمعة
                 </CardTitle>
                 <CardDescription>
-                  حدد أنواع البيانات التي تجمعها وطرق جمعها
+                  ما هي البيانات الشخصية التي يتم جمعها؟
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -911,71 +890,15 @@ ${policy.generatedContent}
                                       data-testid={`checkbox-data-${type.id}`}
                                     />
                                   </FormControl>
-                                  <div className="space-y-1 leading-none flex items-center gap-2">
-                                    <FormLabel className="font-normal cursor-pointer">
+                                  <div className="space-y-1 leading-none flex-1">
+                                    <FormLabel className="font-medium cursor-pointer flex items-center gap-2">
                                       {type.label}
+                                      {isAutoDetected && (
+                                        <Sparkles className="w-3 h-3 text-primary" />
+                                      )}
                                     </FormLabel>
-                                    {isAutoDetected && (
-                                      <Sparkles className="w-3 h-3 text-primary" />
-                                    )}
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          );
-                        })}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="collection_methods"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel className="text-base flex items-center gap-2">
-                        طرق جمع البيانات *
-                        {autoFilledFields.collection_methods && (
-                          <AutoDetectedBadge onClear={() => clearAutoFill("collection_methods")} />
-                        )}
-                      </FormLabel>
-                      <FormDescription>
-                        اختر جميع الطرق المستخدمة لجمع البيانات
-                      </FormDescription>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-                        {COLLECTION_METHODS.map((method) => {
-                          const isAutoDetected = autoFilledFields.collection_methods && 
-                            form.getValues("collection_methods")?.includes(method.id);
-                          return (
-                            <FormField
-                              key={method.id}
-                              control={form.control}
-                              name="collection_methods"
-                              render={({ field }) => (
-                                <FormItem className={cn(
-                                  "flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate",
-                                  isAutoDetected && "border-primary/50 bg-primary/5"
-                                )}>
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(method.id)}
-                                      onCheckedChange={(checked) => {
-                                        if (autoFilledFields.collection_methods) clearAutoFill("collection_methods");
-                                        return checked
-                                          ? field.onChange([...field.value, method.id])
-                                          : field.onChange(field.value?.filter((value) => value !== method.id));
-                                      }}
-                                      data-testid={`checkbox-method-${method.id}`}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none flex items-center gap-2">
-                                    <FormLabel className="font-normal cursor-pointer">
-                                      {method.label}
-                                    </FormLabel>
-                                    {isAutoDetected && (
-                                      <Sparkles className="w-3 h-3 text-primary" />
+                                    {type.description && (
+                                      <p className="text-xs text-muted-foreground">{type.description}</p>
                                     )}
                                   </div>
                                 </FormItem>
@@ -996,11 +919,329 @@ ${policy.generatedContent}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <HardDrive className="w-5 h-5" />
-                  الخطوة ٣: التخزين والمشاركة
+                  <ClipboardList className="w-5 h-5" />
+                  الخطوة ٣: طرق الجمع والأغراض
                 </CardTitle>
                 <CardDescription>
-                  حدد موقع تخزين البيانات ومدة الاحتفاظ وسياسة المشاركة
+                  كيف يتم جمع بياناتك الشخصية وما هو الغرض من جمعها؟
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h4 className="font-semibold">طرق الجمع المباشرة</h4>
+                  <FormDescription>
+                    البيانات التي يتم الحصول عليها منك مباشرة
+                  </FormDescription>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {COLLECTION_METHODS.direct.map((method) => (
+                      <FormField
+                        key={method.id}
+                        control={form.control}
+                        name="collection_methods_direct"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(method.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...field.value, method.id])
+                                    : field.onChange(field.value?.filter((value) => value !== method.id));
+                                }}
+                                data-testid={`checkbox-method-direct-${method.id}`}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none flex-1">
+                              <FormLabel className="font-medium cursor-pointer">{method.label}</FormLabel>
+                              {method.description && (
+                                <p className="text-xs text-muted-foreground">{method.description}</p>
+                              )}
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-semibold">طرق الجمع غير المباشرة</h4>
+                  <FormDescription>
+                    البيانات التي يتم جمعها بصورة غير مباشرة
+                  </FormDescription>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {COLLECTION_METHODS.indirect.map((method) => (
+                      <FormField
+                        key={method.id}
+                        control={form.control}
+                        name="collection_methods_indirect"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(method.id)}
+                                onCheckedChange={(checked) => {
+                                  return checked
+                                    ? field.onChange([...field.value, method.id])
+                                    : field.onChange(field.value?.filter((value) => value !== method.id));
+                                }}
+                                data-testid={`checkbox-method-indirect-${method.id}`}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none flex-1">
+                              <FormLabel className="font-medium cursor-pointer">{method.label}</FormLabel>
+                              {method.description && (
+                                <p className="text-xs text-muted-foreground">{method.description}</p>
+                              )}
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="collection_purposes"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-base">أغراض الجمع *</FormLabel>
+                        <FormDescription>
+                          لماذا تجمع هذه البيانات؟
+                        </FormDescription>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                          {COLLECTION_PURPOSES.map((purpose) => (
+                            <FormField
+                              key={purpose.id}
+                              control={form.control}
+                              name="collection_purposes"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(purpose.id)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...field.value, purpose.id])
+                                          : field.onChange(field.value?.filter((value) => value !== purpose.id));
+                                      }}
+                                      data-testid={`checkbox-purpose-${purpose.id}`}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none flex-1">
+                                    <FormLabel className="font-medium cursor-pointer">{purpose.label}</FormLabel>
+                                    {purpose.description && (
+                                      <p className="text-xs text-muted-foreground">{purpose.description}</p>
+                                    )}
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="data_usage_purposes"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-base">كيف نستخدم بياناتك الشخصية؟ *</FormLabel>
+                        <FormDescription>
+                          كيفية استخدام البيانات المجموعة
+                        </FormDescription>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                          {DATA_USAGE_PURPOSES.map((usage) => (
+                            <FormField
+                              key={usage.id}
+                              control={form.control}
+                              name="data_usage_purposes"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(usage.id)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...field.value, usage.id])
+                                          : field.onChange(field.value?.filter((value) => value !== usage.id));
+                                      }}
+                                      data-testid={`checkbox-usage-${usage.id}`}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none flex-1">
+                                    <FormLabel className="font-medium cursor-pointer">{usage.label}</FormLabel>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {currentStep === 4 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Scale className="w-5 h-5" />
+                  الخطوة ٤: المسوغات والإفصاح
+                </CardTitle>
+                <CardDescription>
+                  المسوغات النظامية لجمع ومعالجة بياناتك الشخصية وجهات الإفصاح
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="legal_bases"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel className="text-base">المسوغات النظامية *</FormLabel>
+                      <FormDescription>
+                        وفقاً لنظام حماية البيانات الشخصية، حدد المسوغ النظامي لمعالجة البيانات
+                      </FormDescription>
+                      <div className="space-y-4 mt-4">
+                        {LEGAL_BASES.map((basis) => {
+                          const isSelected = watchLegalBases?.includes(basis.id);
+                          return (
+                            <div key={basis.id} className="space-y-2">
+                              <FormField
+                                control={form.control}
+                                name="legal_bases"
+                                render={({ field }) => (
+                                  <FormItem className={cn(
+                                    "flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-4 hover-elevate",
+                                    isSelected && "border-primary bg-primary/5"
+                                  )}>
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(basis.id)}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            field.onChange([...field.value, basis.id]);
+                                          } else {
+                                            field.onChange(field.value?.filter((value) => value !== basis.id));
+                                            const explanations = form.getValues("legal_bases_explanations");
+                                            const newExplanations = { ...explanations };
+                                            delete newExplanations[basis.id];
+                                            form.setValue("legal_bases_explanations", newExplanations);
+                                          }
+                                        }}
+                                        data-testid={`checkbox-legal-${basis.id}`}
+                                      />
+                                    </FormControl>
+                                    <div className="space-y-1 leading-none flex-1">
+                                      <FormLabel className="font-medium cursor-pointer">{basis.label}</FormLabel>
+                                      <p className="text-sm text-muted-foreground">{basis.description}</p>
+                                    </div>
+                                  </FormItem>
+                                )}
+                              />
+                              {isSelected && basis.requiresExplanation && (
+                                <FormField
+                                  control={form.control}
+                                  name={`legal_bases_explanations.${basis.id}`}
+                                  render={({ field }) => (
+                                    <FormItem className="mr-8 border-r-2 border-primary/30 pr-4">
+                                      <FormLabel className="text-sm">توضيح {basis.label}</FormLabel>
+                                      <FormControl>
+                                        <Textarea
+                                          {...field}
+                                          placeholder={basis.explanationPlaceholder}
+                                          className="min-h-[80px]"
+                                          data-testid={`textarea-legal-explanation-${basis.id}`}
+                                        />
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="border-t pt-6">
+                  <FormField
+                    control={form.control}
+                    name="disclosure_parties"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-base">كيف نفصح عن بياناتك الشخصية؟ *</FormLabel>
+                        <FormDescription>
+                          حدد الجهات التي قد يتم الإفصاح عن البيانات لها
+                        </FormDescription>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                          {DISCLOSURE_PARTIES.map((party) => (
+                            <FormField
+                              key={party.id}
+                              control={form.control}
+                              name="disclosure_parties"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(party.id)}
+                                      onCheckedChange={(checked) => {
+                                        if (party.id === 'no_disclosure' && checked) {
+                                          field.onChange(['no_disclosure']);
+                                        } else if (party.id !== 'no_disclosure' && checked) {
+                                          const newValues = field.value?.filter(v => v !== 'no_disclosure') || [];
+                                          field.onChange([...newValues, party.id]);
+                                        } else {
+                                          field.onChange(field.value?.filter((value) => value !== party.id));
+                                        }
+                                      }}
+                                      data-testid={`checkbox-disclosure-${party.id}`}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none flex-1">
+                                    <FormLabel className="font-medium cursor-pointer">{party.label}</FormLabel>
+                                    {party.description && (
+                                      <p className="text-xs text-muted-foreground">{party.description}</p>
+                                    )}
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {currentStep === 5 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <HardDrive className="w-5 h-5" />
+                  الخطوة ٥: التخزين والاحتفاظ
+                </CardTitle>
+                <CardDescription>
+                  كيف نقوم بتخزين بياناتك الشخصية والاحتفاظ بها؟
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -1009,33 +1250,35 @@ ${policy.generatedContent}
                   name="storage_location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base">موقع تخزين البيانات *</FormLabel>
-                      <FormControl>
-                        <RadioGroup 
-                          onValueChange={field.onChange} 
-                          value={field.value} 
-                          className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
-                        >
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "inside_ksa" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="inside_ksa" id="inside_ksa" data-testid="radio-storage-inside" />
-                            <Label htmlFor="inside_ksa" className="cursor-pointer flex-1">
-                              داخل المملكة العربية السعودية
-                            </Label>
-                          </div>
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "outside_ksa" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="outside_ksa" id="outside_ksa" data-testid="radio-storage-outside" />
-                            <Label htmlFor="outside_ksa" className="cursor-pointer flex-1">
-                              خارج المملكة العربية السعودية
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
+                      <FormLabel className="text-base flex items-center gap-2">
+                        موقع تخزين البيانات *
+                        {autoFilledFields.storage_location && (
+                          <AutoDetectedBadge onClear={() => clearAutoFill("storage_location")} />
+                        )}
+                      </FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          if (autoFilledFields.storage_location) clearAutoFill("storage_location");
+                        }} 
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger 
+                            data-testid="select-storage-location"
+                            className={autoFilledFields.storage_location ? "border-primary/50 bg-primary/5" : ""}
+                          >
+                            <SelectValue placeholder="اختر موقع التخزين" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {STORAGE_LOCATIONS.map((location) => (
+                            <SelectItem key={location.id} value={location.id}>
+                              {location.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1047,55 +1290,43 @@ ${policy.generatedContent}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-base">مدة الاحتفاظ بالبيانات *</FormLabel>
-                      <FormControl>
-                        <RadioGroup 
-                          onValueChange={field.onChange} 
-                          value={field.value} 
-                          className="space-y-3 mt-2"
-                        >
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "delete_immediately" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="delete_immediately" id="delete_immediately" data-testid="radio-retention-immediate" />
-                            <Label htmlFor="delete_immediately" className="cursor-pointer flex-1">
-                              حذف فوري بعد انتهاء الغرض
-                            </Label>
-                          </div>
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "specific_period" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="specific_period" id="specific_period" data-testid="radio-retention-specific" />
-                            <Label htmlFor="specific_period" className="cursor-pointer flex-1">
-                              مدة محددة
-                            </Label>
-                          </div>
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "statutory_period" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="statutory_period" id="statutory_period" data-testid="radio-retention-statutory" />
-                            <Label htmlFor="statutory_period" className="cursor-pointer flex-1">
-                              المدة النظامية المطلوبة قانوناً
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-retention-period">
+                            <SelectValue placeholder="اختر مدة الاحتفاظ" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {RETENTION_PERIODS.map((period) => (
+                            <SelectItem key={period.id} value={period.id}>
+                              {period.label}
+                              {period.description && ` - ${period.description}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {watchRetentionPeriod === "specific_period" && (
+                {watchRetentionPeriod === "custom" && (
                   <FormField
                     control={form.control}
-                    name="retention_period_value"
+                    name="retention_years"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>حدد المدة (بالسنوات)</FormLabel>
                         <FormControl>
-                          <Input {...field} type="number" min="1" max="100" placeholder="مثال: 5" data-testid="input-retention-value" />
+                          <Input 
+                            type="number" 
+                            min="1" 
+                            max="100" 
+                            placeholder="مثال: 5"
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            data-testid="input-retention-years" 
+                          />
                         </FormControl>
                       </FormItem>
                     )}
@@ -1104,117 +1335,284 @@ ${policy.generatedContent}
 
                 <FormField
                   control={form.control}
-                  name="data_sharing"
+                  name="destruction_method"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base">مشاركة البيانات مع أطراف ثالثة *</FormLabel>
-                      <FormControl>
-                        <RadioGroup 
-                          onValueChange={field.onChange} 
-                          value={field.value} 
-                          className="space-y-3 mt-2"
-                        >
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "no_sharing" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="no_sharing" id="no_sharing" data-testid="radio-sharing-none" />
-                            <Label htmlFor="no_sharing" className="cursor-pointer flex-1">
-                              لا نشارك البيانات مع أي طرف
-                            </Label>
-                          </div>
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "service_providers" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="service_providers" id="service_providers" data-testid="radio-sharing-providers" />
-                            <Label htmlFor="service_providers" className="cursor-pointer flex-1">
-                              مزودي الخدمات (الدفع، الشحن، التحليلات)
-                            </Label>
-                          </div>
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "government_entities" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="government_entities" id="government_entities" data-testid="radio-sharing-government" />
-                            <Label htmlFor="government_entities" className="cursor-pointer flex-1">
-                              الجهات الحكومية (عند الطلب النظامي)
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
+                      <FormLabel className="text-base">طريقة إتلاف البيانات *</FormLabel>
+                      <FormDescription>
+                        كيف سيتم التخلص من البيانات بطريقة آمنة بعد انتهاء فترة الاحتفاظ؟
+                      </FormDescription>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-destruction-method">
+                            <SelectValue placeholder="اختر طريقة الإتلاف" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {DESTRUCTION_METHODS.map((method) => (
+                            <SelectItem key={method.id} value={method.id}>
+                              {method.label}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="custom">طريقة أخرى</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {watchDestructionMethod === "custom" && (
+                  <FormField
+                    control={form.control}
+                    name="destruction_custom"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>وصف طريقة الإتلاف</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            {...field}
+                            placeholder="صف كيف سيتم إتلاف البيانات بطريقة آمنة"
+                            data-testid="textarea-destruction-custom"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800 dark:text-amber-200">
+                    سيتم التخلص من البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو استعادتها مرة أخرى.
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
           )}
 
-          {currentStep === 4 && (
+          {currentStep === 6 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="w-5 h-5" />
-                  الخطوة ٤: آلية الشكاوى
+                  الخطوة ٦: الحقوق والشكاوى
                 </CardTitle>
                 <CardDescription>
-                  حدد الجهة المسؤولة عن استقبال شكاوى حماية البيانات
+                  حقوق صاحب البيانات وآلية تقديم الشكاوى ومسؤول حماية البيانات
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="complaint_dept"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base">الجهة المسؤولة عن استقبال الشكاوى *</FormLabel>
-                      <FormControl>
-                        <RadioGroup 
-                          onValueChange={field.onChange} 
-                          value={field.value} 
-                          className="space-y-3 mt-2"
-                        >
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "customer_service" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="customer_service" id="customer_service" data-testid="radio-complaint-customer" />
-                            <Label htmlFor="customer_service" className="cursor-pointer flex-1">
-                              خدمة العملاء
-                            </Label>
-                          </div>
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "legal_dept" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="legal_dept" id="legal_dept" data-testid="radio-complaint-legal" />
-                            <Label htmlFor="legal_dept" className="cursor-pointer flex-1">
-                              الإدارة القانونية
-                            </Label>
-                          </div>
-                          <div className={cn(
-                            "flex items-center space-x-3 space-x-reverse border rounded-lg p-4 cursor-pointer hover-elevate",
-                            field.value === "compliance_dept" && "border-primary bg-primary/5"
-                          )}>
-                            <RadioGroupItem value="compliance_dept" id="compliance_dept" data-testid="radio-complaint-compliance" />
-                            <Label htmlFor="compliance_dept" className="cursor-pointer flex-1">
-                              إدارة الامتثال
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="space-y-4">
+                  <h4 className="font-semibold">ممارسة الحقوق</h4>
+                  
+                  <FormField
+                    control={form.control}
+                    name="rights_exercise_method"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>وسيلة ممارسة الحقوق *</FormLabel>
+                        <FormDescription>
+                          كيف يمكن لصاحب البيانات ممارسة حقوقه؟
+                        </FormDescription>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-rights-method">
+                              <SelectValue placeholder="اختر وسيلة ممارسة الحقوق" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {RIGHTS_EXERCISE_METHODS.map((method) => (
+                              <SelectItem key={method.id} value={method.id}>
+                                {method.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800 dark:text-green-200">
-                    سيتم تضمين معلومات الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا) تلقائياً كجهة تنظيمية للشكاوى.
-                  </AlertDescription>
-                </Alert>
+                  <FormField
+                    control={form.control}
+                    name="response_days"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>مدة الرد على طلبات الحقوق *</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(parseInt(value))} 
+                          value={field.value?.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-response-days">
+                              <SelectValue placeholder="اختر مدة الرد" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {RESPONSE_TIMEFRAMES.map((timeframe) => (
+                              <SelectItem key={timeframe.id} value={timeframe.days.toString()}>
+                                {timeframe.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="border rounded-lg p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base font-semibold">مسؤول حماية البيانات الشخصية</Label>
+                      <p className="text-sm text-muted-foreground">
+                        هل لديك مسؤول حماية بيانات معين؟
+                      </p>
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="has_dpo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-has-dpo"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {watchHasDpo && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                      <FormField
+                        control={form.control}
+                        name="dpo_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>الاسم</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="اسم مسؤول حماية البيانات" data-testid="input-dpo-name" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="dpo_email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                              البريد الإلكتروني
+                              {autoFilledFields.dpo_email && (
+                                <AutoDetectedBadge onClear={() => clearAutoFill("dpo_email")} />
+                              )}
+                            </FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="email" 
+                                dir="ltr" 
+                                placeholder="dpo@example.com" 
+                                data-testid="input-dpo-email"
+                                className={autoFilledFields.dpo_email ? "border-primary/50 bg-primary/5" : ""}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="dpo_address"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>العنوان</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="عنوان مسؤول حماية البيانات" data-testid="input-dpo-address" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="dpo_phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>رقم الهاتف</FormLabel>
+                            <FormControl>
+                              <Input {...field} dir="ltr" placeholder="+966" data-testid="input-dpo-phone" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t pt-6 space-y-4">
+                  <h4 className="font-semibold">آلية الشكاوى</h4>
+                  
+                  <FormField
+                    control={form.control}
+                    name="complaint_contact"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>جهة استقبال الشكاوى *</FormLabel>
+                        <FormDescription>
+                          الإدارة أو القسم المختص باستقبال الشكاوى
+                        </FormDescription>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="مثال: قسم خدمة العملاء / الإدارة القانونية / إدارة الامتثال"
+                            data-testid="input-complaint-contact"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="complaint_response_days"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>مدة الرد على الشكوى *</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(parseInt(value))} 
+                          value={field.value?.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger data-testid="select-complaint-response-days">
+                              <SelectValue placeholder="اختر مدة الرد على الشكوى" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {RESPONSE_TIMEFRAMES.map((timeframe) => (
+                              <SelectItem key={timeframe.id} value={timeframe.days.toString()}>
+                                {timeframe.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800 dark:text-green-200">
+                      سيتم تضمين معلومات {SDAIA_INFO.name} تلقائياً كجهة تنظيمية للشكاوى في حال عدم الرضا عن المعالجة.
+                    </AlertDescription>
+                  </Alert>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -1234,7 +1632,7 @@ ${policy.generatedContent}
             
             <div className="flex-1" />
             
-            {currentStep < 4 ? (
+            {currentStep < 6 ? (
               <Button
                 type="button"
                 onClick={nextStep}
