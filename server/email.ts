@@ -128,7 +128,7 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
                 <ul style="margin-bottom: 0;">
                     <li>راجع السياسة وتأكد من صحة المعلومات</li>
                     <li>أضف السياسة لموقعك الإلكتروني</li>
-                    <li>تأكد من وجود رابط واضح للسياسة في الفوتر</li>
+                    <li>تأكد من وجود رابط واضح للسياسة في موقعك الإلكتروني</li>
                 </ul>
             </div>
             
