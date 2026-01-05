@@ -1680,12 +1680,12 @@ ${policy.generatedContent}
                     )}
                   />
 
-                  <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800 dark:text-green-200">
-                      سيتم تضمين معلومات {SDAIA_INFO.name} تلقائياً كجهة تنظيمية للشكاوى في حال عدم الرضا عن المعالجة.
-                    </AlertDescription>
-                  </Alert>
+                  <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                    <p className="text-sm text-foreground">
+                      <span className="font-bold">سيتم تضمين</span> معلومات {SDAIA_INFO.name} تلقائياً كجهة تنظيمية للشكاوى في حال عدم الرضا عن المعالجة.
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
