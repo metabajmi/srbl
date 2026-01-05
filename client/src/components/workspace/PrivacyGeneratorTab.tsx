@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare, Sparkles, X, Scale, ClipboardList, UserCheck } from "lucide-react";
+import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare, Sparkles, X, Scale, ClipboardList, UserCheck, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { type PolicyDocument } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -1366,8 +1366,13 @@ ${policy.generatedContent}
                         </FormItem>
                       )}
                     />
-                    <div className="p-3 bg-muted/50 rounded-lg border text-sm text-muted-foreground">
-                      <strong>سيتم تضمين:</strong> ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها.
+                    <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg text-sm">
+                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Check className="w-3 h-3 text-primary" />
+                      </div>
+                      <span className="text-muted-foreground">
+                        سيتم تضمين ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها.
+                      </span>
                     </div>
                   </>
                 )}
