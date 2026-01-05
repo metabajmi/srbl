@@ -1372,6 +1372,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         policyDocumentId: policyDoc.id,
       });
       
+      // Send policy email to client
+      const contactEmail = intakeData.contact_email;
+      if (contactEmail && generatedContent) {
+        sendPolicyEmail({
+          to: contactEmail,
+          companyName: companyName,
+          policyContent: generatedContent,
+          policyId: policyDoc.id,
+        }).catch(err => console.error("Failed to send policy email:", err));
+      }
+      
       res.json({ 
         success: true, 
         policyId: policyDoc.id,
