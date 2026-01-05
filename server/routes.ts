@@ -1273,7 +1273,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "بيانات النموذج غير مكتملة" });
       }
       
-      // Check if this is the new 4-step wizard format
+      // Check if this is the new 6-step wizard format or old 4-step format
+      const is6StepFormat = !!intakeData?.legal_bases;
       const isWizardFormat = !!intakeData?.company_name;
       
       // Update workflow status
@@ -1283,8 +1284,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let generatedContent: string;
       
-      if (isWizardFormat) {
-        // New 4-step wizard format - use template-based generation
+      if (is6StepFormat) {
+        // New 6-step wizard format - use the new policyTextGenerator
+        const { generatePolicyHtml } = await import('./services/policyTextGenerator');
+        
+        const policyData = {
+          company_name: intakeData.company_name,
+          activity_type: intakeData.activity_type,
+          service_description: intakeData.service_description || "",
+          contact_team: intakeData.contact_team,
+          address: intakeData.address || intakeData.contact_address || "",
+          phone: intakeData.phone || intakeData.contact_phone || "",
+          email: intakeData.email || intakeData.contact_email || "",
+          cr_number: intakeData.cr_number || "",
+          policy_last_update: intakeData.policy_last_update,
+          data_collected: intakeData.data_collected || [],
+          collection_methods_direct: intakeData.collection_methods_direct || [],
+          collection_methods_indirect: intakeData.collection_methods_indirect || [],
+          collection_purposes: intakeData.collection_purposes || [],
+          data_usage_purposes: intakeData.data_usage_purposes || [],
+          legal_bases: intakeData.legal_bases || [],
+          legal_bases_explanations: intakeData.legal_bases_explanations || {},
+          disclosure_parties: intakeData.disclosure_parties || [],
+          storage_location: intakeData.storage_location || "inside_ksa",
+          retention_period: intakeData.retention_period || "statutory",
+          retention_years: intakeData.retention_years,
+          destruction_method: intakeData.destruction_method || "secure_deletion",
+          destruction_custom: intakeData.destruction_custom,
+          rights_exercise_method: intakeData.rights_exercise_method || "email",
+          response_days: intakeData.response_days || 30,
+          has_dpo: intakeData.has_dpo || false,
+          dpo_name: intakeData.dpo_name,
+          dpo_address: intakeData.dpo_address,
+          dpo_phone: intakeData.dpo_phone,
+          dpo_email: intakeData.dpo_email,
+          complaint_contact: intakeData.complaint_contact || "خدمة العملاء",
+          complaint_response_days: intakeData.complaint_response_days || 30,
+        };
+        
+        generatedContent = generatePolicyHtml(policyData);
+      } else if (isWizardFormat) {
+        // Old 4-step wizard format - use template-based generation
         const wizardData: WizardPolicyData = {
           company_name: intakeData.company_name,
           activity_type: intakeData.activity_type,
