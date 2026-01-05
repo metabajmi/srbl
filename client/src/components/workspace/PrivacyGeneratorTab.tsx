@@ -209,11 +209,6 @@ export default function PrivacyGeneratorTab() {
       const newAutoFilled: AutoFilledFields = {};
       const insights = scanData.policyInsights;
       
-      if (scanData.companyName && !form.getValues("company_name")) {
-        form.setValue("company_name", scanData.companyName);
-        newAutoFilled.company_name = true;
-      }
-      
       const detectedEmail = insights?.detectedEmails?.[0] || scanData.contactEmail;
       if (detectedEmail && !form.getValues("email")) {
         form.setValue("email", detectedEmail);
@@ -592,22 +587,12 @@ ${policy.generatedContent}
                   name="company_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        اسم الجهة *
-                        {autoFilledFields.company_name && (
-                          <AutoDetectedBadge onClear={() => clearAutoFill("company_name")} />
-                        )}
-                      </FormLabel>
+                      <FormLabel>اسم الجهة *</FormLabel>
                       <FormControl>
                         <Input 
                           {...field} 
                           placeholder="الاسم الرسمي للجهة" 
                           data-testid="input-company-name"
-                          className={autoFilledFields.company_name ? "border-primary/50 bg-primary/5" : ""}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            if (autoFilledFields.company_name) clearAutoFill("company_name");
-                          }}
                         />
                       </FormControl>
                       <FormMessage />
