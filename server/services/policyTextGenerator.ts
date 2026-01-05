@@ -140,14 +140,31 @@ function formatRetentionPeriod(period: string, years?: number, purpose?: string)
   }
 }
 
-function generateLegalBasesHtml(legalBases: string[], explanations: Record<string, string>, contactInfo: string): string {
+interface LegalBasesContext {
+  contactTeam: string;
+  email: string;
+  phone: string;
+  hasDpo: boolean;
+  dpoName?: string;
+  dpoEmail?: string;
+}
+
+function generateLegalBasesHtml(legalBases: string[], explanations: Record<string, string>, context: LegalBasesContext): string {
   const items: string[] = [];
+  
+  const contactPerson = context.hasDpo && context.dpoName 
+    ? `مسؤول حماية البيانات الشخصية (${context.dpoName})` 
+    : context.contactTeam;
+  
+  const contactDetails = context.hasDpo && context.dpoEmail 
+    ? `عبر البريد الإلكتروني: ${context.dpoEmail}` 
+    : `عبر البريد الإلكتروني: ${context.email} أو الاتصال على: ${context.phone}`;
   
   for (const basis of legalBases) {
     let text = '';
     switch (basis) {
       case 'explicit_consent':
-        text = `موافقتك الصريحة، ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناءً على مسوغات نظامية أخرى، وللقيام بذلك يمكنك التواصل مع ${contactInfo}`;
+        text = `موافقتك الصريحة، ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناءً على مسوغات نظامية أخرى. وللعدول عن موافقتك، يرجى التواصل مع ${contactPerson} ${contactDetails}`;
         break;
       case 'contractual_obligation':
         text = `تنفيذاً لالتزام تعاقدي: ${explanations[basis] || 'تنفيذ العقد المبرم معك'}`;
@@ -181,11 +198,19 @@ export function generatePolicyHtml(data: PolicyFormData): string {
   });
   
   const contactTeam = data.contact_team || 'خدمة العملاء';
-  const dpoContact = data.has_dpo && data.dpo_name ? data.dpo_name : contactTeam;
   const rightsMethod = RIGHTS_METHOD_LABELS[data.rights_exercise_method] || data.rights_exercise_method;
   const destructionMethod = data.destruction_method === 'custom' && data.destruction_custom 
     ? data.destruction_custom 
     : (DESTRUCTION_LABELS[data.destruction_method] || data.destruction_method);
+
+  const legalBasesContext: LegalBasesContext = {
+    contactTeam,
+    email: data.email,
+    phone: data.phone,
+    hasDpo: data.has_dpo,
+    dpoName: data.dpo_name,
+    dpoEmail: data.dpo_email,
+  };
 
   const dataCollectedItems = data.data_collected
     .map(id => DATA_TYPE_LABELS[id] || id)
@@ -307,7 +332,7 @@ ${disclosureHtml}
 <h2>المسوغات النظامية لجمع ومعالجة بياناتك الشخصية</h2>
 <p>وفقاً لنظام حماية البيانات الشخصية، فإن المسوغ النظامي الذي نعتمد عليه لمعالجة هذه البيانات:</p>
 <ul>
-${generateLegalBasesHtml(data.legal_bases, data.legal_bases_explanations, dpoContact)}
+${generateLegalBasesHtml(data.legal_bases, data.legal_bases_explanations, legalBasesContext)}
 </ul>
 
 <h2>كيف نقوم بتخزين بياناتك الشخصية؟</h2>
@@ -322,18 +347,34 @@ ${crossBorderSection}
 <li><strong>الحق في العلم:</strong> يحق لك معرفة طرق جمعنا لبياناتك الشخصية والمسوغ النظامي لجمعها ومعالجتها، وكيفية معالجتها وحفظها وإتلافها ولمن سيتم الإفصاح عنها، ويمكنك الاطلاع على كافة التفاصيل من خلال سياسة الخصوصية أو يمكنك التواصل معنا على البيانات الموضحة أعلاه.</li>
 <li><strong>الحق في الوصول إلى بياناتك الشخصية:</strong> يحق لك أن تطلب منا الاطلاع على بياناتك الشخصية، وذلك عن طريق ${rightsMethod}.</li>
 <li><strong>الحق في طلب الحصول على بياناتك الشخصية:</strong> يحق لك طلب الحصول على بياناتك الشخصية المتوفرة لدى جهة التحكم بصيغة مقروءة وواضحة متى ما كان ذلك ممكناً من الناحية التقنية، وذلك عن طريق ${rightsMethod}.</li>
-<li><strong>الحق في تصحيح بياناتك الشخصية:</strong> يحق لك أن تطلب منا تصحيح بياناتك الشخصية التي ترى أنها غير دقيقة أو غير صحيحة أو غير مكتملة، وذلك عن طريق ${rightsMethod}، وستتم مراجعتها وتحديثها خلال ${data.response_days} أيام عمل.</li>
+<li><strong>الحق في تصحيح بياناتك الشخصية:</strong> يحق لك أن تطلب منا تصحيح بياناتك الشخصية التي ترى أنها غير دقيقة أو غير صحيحة أو غير مكتملة، وذلك عن طريق ${rightsMethod}، وستتم مراجعتها وتحديثها خلال ${data.response_days} يوم.</li>
 <li><strong>الحق في إتلاف بياناتك الشخصية:</strong> يحق لك أن تطلب منا إتلاف بياناتك الشخصية في ظروف معينة وفقاً للمسوغات النظامية.</li>
 <li><strong>الحق في الرجوع عن موافقتك:</strong> يحق لك الرجوع عن موافقتك على معالجة بياناتك الشخصية -في أي وقت- ما لم تكن هناك مسوغات نظامية تتطلب عكس ذلك.</li>
 </ul>
-<p>ما عدا ما هو منصوص عليه نظاماً، لن تكون مطالباً بدفع أي رسوم مقابل ممارسة هذه الحقوق، وفي حال تم تقديم طلب لممارسة أحد هذه الحقوق، سيتم الرد عليك خلال ${data.response_days} أيام عمل من تاريخ استلام الطلب كاملاً.</p>
-<p>ولمزيد من التفاصيل عن معالجة بياناتك الشخصية، وكيفية ممارسة حقوقك، يمكنك التواصل مع ${data.has_dpo ? 'مسؤول حماية البيانات الشخصية بـ ' + data.company_name : 'فريق ' + contactTeam}، حسب بيانات التواصل الموضحة أعلاه.</p>
+<p>ما عدا ما هو منصوص عليه نظاماً، لن تكون مطالباً بدفع أي رسوم مقابل ممارسة هذه الحقوق، وفي حال تم تقديم طلب لممارسة أحد هذه الحقوق، سيتم الرد عليك خلال ${data.response_days} يوم من تاريخ استلام الطلب كاملاً.</p>
+
+<h3>كيفية ممارسة حقوقك</h3>
+<p>لممارسة أي من حقوقك المذكورة أعلاه، يرجى التواصل مع ${data.has_dpo && data.dpo_name ? `<strong>مسؤول حماية البيانات الشخصية</strong> (${data.dpo_name})` : `<strong>${contactTeam}</strong>`} عبر:</p>
+<ul>
+${data.has_dpo && data.dpo_email ? `<li><strong>البريد الإلكتروني:</strong> ${data.dpo_email}</li>` : `<li><strong>البريد الإلكتروني:</strong> ${data.email}</li>`}
+${data.has_dpo && data.dpo_phone ? `<li><strong>رقم الهاتف:</strong> ${data.dpo_phone}</li>` : `<li><strong>رقم الهاتف:</strong> ${data.phone}</li>`}
+</ul>
 
 ${dpoSection}
 
 <h2>كيف تقدم شكوى أو اعتراضاً؟</h2>
-<p>في حال وجود بعض المخاوف أو عدم التزامنا بنظام حماية البيانات الشخصية، يمكنك تقديم شكوى إلى ${data.complaint_contact || 'إدارة خدمة العملاء'} وذلك باستخدام بيانات التواصل الموضحة أعلاه.</p>
-<p>إذا لم تكن راضياً عن معالجتنا للشكوى أو في حال عدم ردنا خلال ${data.complaint_response_days} أيام عمل، يمكنك تقديم شكوى إلى الجهة المختصة (الهيئة السعودية للبيانات والذكاء الاصطناعي).</p>
+<p>في حال وجود أي مخاوف بشأن معالجة بياناتك الشخصية أو عدم التزامنا بنظام حماية البيانات الشخصية، يمكنك تقديم شكوى عبر الخطوات التالية:</p>
+
+<h3>الخطوة الأولى: التواصل معنا</h3>
+<p>يرجى التواصل مع <strong>${data.complaint_contact || contactTeam}</strong> عبر:</p>
+<ul>
+<li><strong>البريد الإلكتروني:</strong> ${data.email}</li>
+<li><strong>رقم الهاتف:</strong> ${data.phone}</li>
+</ul>
+<p>سنقوم بالرد على شكواك خلال <strong>${data.complaint_response_days} يوم</strong> من تاريخ استلامها.</p>
+
+<h3>الخطوة الثانية: التصعيد للجهة المختصة</h3>
+<p>إذا لم تكن راضياً عن معالجتنا للشكوى أو في حال عدم ردنا خلال المدة المحددة، يحق لك تقديم شكوى إلى الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا).</p>
 
 <h2>الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا)</h2>
 <ul>
