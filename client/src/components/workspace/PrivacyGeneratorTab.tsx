@@ -1371,7 +1371,7 @@ ${policy.generatedContent}
                         <Check className="w-3 h-3 text-primary" />
                       </div>
                       <span className="text-muted-foreground text-right">
-                        سيتم تضمين ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها.
+                        <strong className="text-foreground">سيتم تضمين</strong> ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها.
                       </span>
                     </div>
                   </>
