@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import Mailgun from "mailgun.js";
 import formData from "form-data";
+import { generatePDF, generateDOCX } from "./services/documentExporter";
 
 // Mailgun configuration (recommended for Saudi Arabia)
 const mailgun = new Mailgun(formData);
@@ -17,7 +18,7 @@ const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || "";
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Use verified domain or testing address
-const FROM_EMAIL = process.env.EMAIL_FROM || "Sirbal <noreply@sirbal.sa>";
+const FROM_EMAIL = process.env.EMAIL_FROM || "Sirbal <noreply@sirbal.co>";
 
 // Email provider selection: Mailgun first, then Resend
 const useMailgun = !!mg && !!MAILGUN_DOMAIN;
@@ -131,16 +132,57 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
                 </ul>
             </div>
             
-            <p>يمكنك تحميل السياسة بصيغ متعددة (PDF, Word, HTML) من حسابك على منصة سِرْبَال.</p>
+            <p>تجد مرفقاً نسخة من سياسة الخصوصية بصيغتي PDF و Word.</p>
         </div>
         <div class="footer">
             <p>هذا البريد مُرسل من منصة سِرْبَال للامتثال لنظام حماية البيانات الشخصية السعودي</p>
-            <p>لأي استفسارات، تواصل معنا عبر support@sirbal.sa</p>
+            <p>لأي استفسارات، تواصل معنا عبر support@sirbal.co</p>
         </div>
     </div>
 </body>
 </html>
   `;
+
+  // Generate PDF and DOCX attachments
+  let pdfBuffer: Buffer | null = null;
+  let docxBuffer: Buffer | null = null;
+  
+  try {
+    console.log("Generating PDF attachment...");
+    pdfBuffer = await generatePDF({
+      companyName: data.companyName,
+      content: data.policyContent,
+    });
+    console.log("PDF generated, size:", pdfBuffer.length, "bytes");
+  } catch (err) {
+    console.error("Failed to generate PDF:", err);
+  }
+  
+  try {
+    console.log("Generating DOCX attachment...");
+    docxBuffer = await generateDOCX({
+      companyName: data.companyName,
+      content: data.policyContent,
+    });
+    console.log("DOCX generated, size:", docxBuffer.length, "bytes");
+  } catch (err) {
+    console.error("Failed to generate DOCX:", err);
+  }
+
+  // Build attachments array
+  const attachments: Array<{ data: Buffer; filename: string }> = [];
+  if (pdfBuffer) {
+    attachments.push({
+      data: pdfBuffer,
+      filename: `سياسة_الخصوصية_${data.companyName}.pdf`,
+    });
+  }
+  if (docxBuffer) {
+    attachments.push({
+      data: docxBuffer,
+      filename: `سياسة_الخصوصية_${data.companyName}.docx`,
+    });
+  }
 
   // Try Mailgun first
   if (useMailgun) {
@@ -150,22 +192,29 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
         to: [data.to],
         subject: `سياسة الخصوصية جاهزة - ${data.companyName}`,
         html: htmlContent,
+        attachment: attachments.length > 0 ? attachments : undefined,
       });
-      console.log("Policy email sent via Mailgun:", result.id);
+      console.log("Policy email sent via Mailgun with attachments:", result.id);
       return true;
     } catch (error) {
       console.error("Mailgun error:", error);
     }
   }
 
-  // Fallback to Resend
+  // Fallback to Resend (with base64 attachments)
   if (resend) {
     try {
+      const resendAttachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.data.toString('base64'),
+      }));
+      
       const { data: result, error } = await resend.emails.send({
         from: FROM_EMAIL,
         to: [data.to],
         subject: `سياسة الخصوصية جاهزة - ${data.companyName}`,
         html: htmlContent,
+        attachments: resendAttachments.length > 0 ? resendAttachments : undefined,
       });
 
       if (error) {
@@ -173,7 +222,7 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
         return false;
       }
 
-      console.log("Policy email sent via Resend:", result?.id);
+      console.log("Policy email sent via Resend with attachments:", result?.id);
       return true;
     } catch (error) {
       console.error("Failed to send email:", error);

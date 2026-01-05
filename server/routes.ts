@@ -2592,10 +2592,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (type === "otp") {
         success = await sendOtpEmail({ to, code: "123456" });
       } else if (type === "policy") {
+        const testPolicyContent = `
+          <h2>1. مقدمة</h2>
+          <p>نحن في شركة اختبار نلتزم بحماية خصوصية بياناتك الشخصية وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL).</p>
+          
+          <h2>2. البيانات التي نجمعها</h2>
+          <ul>
+            <li>الاسم الكامل</li>
+            <li>البريد الإلكتروني</li>
+            <li>رقم الهاتف</li>
+          </ul>
+          
+          <h2>3. كيف نستخدم بياناتك</h2>
+          <p>نستخدم بياناتك الشخصية لتقديم خدماتنا وتحسين تجربتك.</p>
+          
+          <h2>4. حقوقك</h2>
+          <p>لديك الحق في الوصول إلى بياناتك وتصحيحها وحذفها.</p>
+          
+          <h2>5. الاتصال بنا</h2>
+          <p>للاستفسارات، تواصل معنا عبر: test@example.com</p>
+        `;
         success = await sendPolicyEmail({ 
           to, 
           companyName: "شركة اختبار", 
-          policyContent: "محتوى تجريبي", 
+          policyContent: testPolicyContent, 
           policyId: "test-123" 
         });
       } else if (type === "payment") {
