@@ -226,21 +226,6 @@ export default function PrivacyGeneratorTab() {
         newAutoFilled.phone = true;
       }
       
-      if (insights?.detectedDataTypes && insights.detectedDataTypes.length > 0 && form.getValues("data_collected").length === 0) {
-        const mappedTypes = insights.detectedDataTypes.map(type => {
-          const mapping: Record<string, string> = {
-            'identity': 'account_data',
-            'contact': 'contact_data',
-            'financial': 'financial_data',
-            'location': 'location_data',
-            'technical': 'cookie_data',
-            'sensitive': 'sensitive_data',
-          };
-          return mapping[type] || type;
-        });
-        form.setValue("data_collected", mappedTypes);
-        newAutoFilled.data_collected = true;
-      }
       
       if (insights?.storageLocation && !form.getValues("storage_location")) {
         form.setValue("storage_location", insights.storageLocation);
@@ -872,57 +857,43 @@ ${policy.generatedContent}
                   name="data_collected"
                   render={() => (
                     <FormItem>
-                      <FormLabel className="text-base flex items-center gap-2">
+                      <FormLabel className="text-base">
                         أنواع البيانات المجمعة *
-                        {autoFilledFields.data_collected && (
-                          <AutoDetectedBadge onClear={() => clearAutoFill("data_collected")} />
-                        )}
                       </FormLabel>
                       <FormDescription>
                         اختر جميع أنواع البيانات الشخصية التي تجمعها
                       </FormDescription>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                        {DATA_TYPES.map((type) => {
-                          const isAutoDetected = autoFilledFields.data_collected && 
-                            form.getValues("data_collected")?.includes(type.id);
-                          return (
-                            <FormField
-                              key={type.id}
-                              control={form.control}
-                              name="data_collected"
-                              render={({ field }) => (
-                                <FormItem className={cn(
-                                  "flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate",
-                                  isAutoDetected && "border-primary/50 bg-primary/5"
-                                )}>
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(type.id)}
-                                      onCheckedChange={(checked) => {
-                                        if (autoFilledFields.data_collected) clearAutoFill("data_collected");
-                                        return checked
-                                          ? field.onChange([...field.value, type.id])
-                                          : field.onChange(field.value?.filter((value) => value !== type.id));
-                                      }}
-                                      data-testid={`checkbox-data-${type.id}`}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none flex-1">
-                                    <FormLabel className="font-medium cursor-pointer flex items-center gap-2">
-                                      {type.label}
-                                      {isAutoDetected && (
-                                        <Sparkles className="w-3 h-3 text-primary" />
-                                      )}
-                                    </FormLabel>
-                                    {type.description && (
-                                      <p className="text-xs text-muted-foreground">{type.description}</p>
-                                    )}
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          );
-                        })}
+                        {DATA_TYPES.map((type) => (
+                          <FormField
+                            key={type.id}
+                            control={form.control}
+                            name="data_collected"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(type.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, type.id])
+                                        : field.onChange(field.value?.filter((value) => value !== type.id));
+                                    }}
+                                    data-testid={`checkbox-data-${type.id}`}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none flex-1">
+                                  <FormLabel className="font-medium cursor-pointer">
+                                    {type.label}
+                                  </FormLabel>
+                                  {type.description && (
+                                    <p className="text-xs text-muted-foreground">{type.description}</p>
+                                  )}
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
                       </div>
                       <FormMessage />
                     </FormItem>
