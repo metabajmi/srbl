@@ -193,6 +193,12 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
         subject: `سياسة الخصوصية جاهزة - ${data.companyName}`,
         html: htmlContent,
         attachment: attachments.length > 0 ? attachments : undefined,
+        "h:Reply-To": "support@sirbal.co",
+        "h:List-Unsubscribe": "<mailto:unsubscribe@sirbal.co>",
+        "o:tag": ["policy", "sirbal"],
+        "o:tracking": "yes",
+        "o:tracking-clicks": "yes",
+        "o:tracking-opens": "yes",
       });
       console.log("Policy email sent via Mailgun with attachments:", result.id);
       return true;
@@ -215,6 +221,7 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
         subject: `سياسة الخصوصية جاهزة - ${data.companyName}`,
         html: htmlContent,
         attachments: resendAttachments.length > 0 ? resendAttachments : undefined,
+        replyTo: "support@sirbal.co",
       });
 
       if (error) {
@@ -378,6 +385,9 @@ export async function sendPaymentConfirmationEmail(data: PaymentConfirmationData
         to: [data.to],
         subject: `تأكيد الدفع - ${amountSAR} ر.س`,
         html: htmlContent,
+        "h:Reply-To": "support@sirbal.co",
+        "o:tag": ["payment", "receipt", "sirbal"],
+        "o:tracking": "yes",
       });
       console.log("Payment confirmation email sent via Mailgun:", result.id);
       return true;
@@ -394,6 +404,7 @@ export async function sendPaymentConfirmationEmail(data: PaymentConfirmationData
         to: [data.to],
         subject: `تأكيد الدفع - ${amountSAR} ر.س`,
         html: htmlContent,
+        replyTo: "support@sirbal.co",
       });
 
       if (error) {
@@ -529,6 +540,9 @@ export async function sendOtpEmail(data: OtpEmailData): Promise<boolean> {
         to: [data.to],
         subject: `رمز التحقق: ${data.code}`,
         html: htmlContent,
+        "h:Reply-To": "support@sirbal.co",
+        "o:tag": ["otp", "auth", "sirbal"],
+        "o:tracking": "no",
       });
       console.log("OTP email sent via Mailgun:", result.id);
       return true;
@@ -545,6 +559,7 @@ export async function sendOtpEmail(data: OtpEmailData): Promise<boolean> {
         to: [data.to],
         subject: `رمز التحقق: ${data.code}`,
         html: htmlContent,
+        replyTo: "support@sirbal.co",
       });
 
       if (error) {
