@@ -2567,6 +2567,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Test email endpoint (admin only)
+  app.post("/api/admin/test-email", requireAdminAuth, async (req, res) => {
+    try {
+      const { to, type } = req.body;
+      
+      if (!to || !type) {
+        return res.status(400).json({ message: "البريد الإلكتروني ونوع الرسالة مطلوبان" });
+      }
+
+      let success = false;
+      
+      if (type === "otp") {
+        success = await sendOtpEmail({ to, code: "123456" });
+      } else if (type === "policy") {
+        success = await sendPolicyEmail({ 
+          to, 
+          companyName: "شركة اختبار", 
+          policyContent: "محتوى تجريبي", 
+          policyId: "test-123" 
+        });
+      } else if (type === "payment") {
+        success = await sendPaymentConfirmationEmail({
+          to,
+          companyName: "شركة اختبار",
+          amount: 9900,
+          paymentId: "test-payment-123"
+        });
+      } else {
+        return res.status(400).json({ message: "نوع الرسالة غير صالح" });
+      }
+
+      if (success) {
+        res.json({ success: true, message: `تم إرسال رسالة ${type} إلى ${to}` });
+      } else {
+        res.status(500).json({ success: false, message: "فشل إرسال البريد الإلكتروني" });
+      }
+    } catch (error) {
+      console.error("Test email error:", error);
+      res.status(500).json({ message: "حدث خطأ أثناء إرسال البريد التجريبي" });
+    }
+  });
+
   // Admin statistics (all roles)
   app.get("/api/admin/stats", requireAdminAuth, async (req, res) => {
     try {

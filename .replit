@@ -46,4 +46,4 @@ integrations = ["javascript_mem_db:1.0.0", "javascript_openai:1.0.0", "javascrip
 
 [userenv.shared]
 VITE_MOYASAR_PUBLISHABLE_KEY = "${MOYASAR_PUBLISHABLE_KEY}"
-EMAIL_FROM = "Sirbal <postmaster@sandbox513612a2d13d4f379e2e89b6a95f7abc.mailgun.org>"
+EMAIL_FROM = "Sirbal <postmaster@sirbal.co>"
