@@ -1367,7 +1367,7 @@ ${policy.generatedContent}
                       )}
                     />
                     <div className="p-3 bg-muted/50 rounded-lg border text-sm text-muted-foreground">
-                      <strong>ملاحظة:</strong> ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها.
+                      <strong>سيتم تضمين:</strong> ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها.
                     </div>
                   </>
                 )}
