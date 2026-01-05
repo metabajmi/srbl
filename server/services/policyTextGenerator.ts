@@ -106,8 +106,6 @@ const STORAGE_LABELS: Record<string, string> = {
   inside_ksa: 'داخل المملكة العربية السعودية',
   outside_ksa: 'خارج المملكة العربية السعودية',
   both: 'داخل وخارج المملكة العربية السعودية',
-  cloud_ksa: 'مزود خدمات الحوسبة السحابية (داخل المملكة)',
-  cloud_international: 'مزود خدمات الحوسبة السحابية (دولي)',
 };
 
 const DESTRUCTION_LABELS: Record<string, string> = {
@@ -243,7 +241,7 @@ export function generatePolicyHtml(data: PolicyFormData): string {
   const storageLocationText = STORAGE_LABELS[data.storage_location] || data.storage_location;
   const retentionText = formatRetentionPeriod(data.retention_period, data.retention_years);
 
-  const crossBorderSection = (data.storage_location === 'outside_ksa' || data.storage_location === 'both' || data.storage_location === 'cloud_international') ? `
+  const crossBorderSection = (data.storage_location === 'outside_ksa' || data.storage_location === 'both') ? `
 <h2>نقل البيانات خارج المملكة</h2>
 <p>قد يتم نقل بياناتك الشخصية إلى خوادم خارج المملكة العربية السعودية. نلتزم في هذه الحالة بما يلي وفقاً للمادة ٢٩ من نظام حماية البيانات الشخصية:</p>
 <ul>
