@@ -689,25 +689,61 @@ ${policy.generatedContent}
                 <FormField
                   control={form.control}
                   name="service_description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        وصف الخدمات المقدمة *
-                        {autoFilledFields.service_description && (
-                          <AutoDetectedBadge onClear={() => clearAutoFill("service_description")} />
-                        )}
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          placeholder="نبذة مختصرة عن مهام واختصاصات الجهة والخدمات المقدمة والفئة المستهدفة"
-                          className={autoFilledFields.service_description ? "border-primary/50 bg-primary/5" : ""}
-                          data-testid="input-service-description" 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const companyName = form.watch("company_name");
+                    const generateSuggestedDescription = () => {
+                      if (!companyName) {
+                        toast({
+                          title: "أدخل اسم الجهة أولاً",
+                          description: "يرجى إدخال اسم الجهة لتوليد وصف مقترح",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      const suggestedText = `نحن في ${companyName} نقدّر خصوصية عملائنا ونلتزم بحماية بياناتهم الشخصية وفقًا لنظام حماية البيانات الشخصية في المملكة العربية السعودية (PDPL) واللوائح الأخرى ذات الصلة بحماية البيانات. يوضح هذا البيان ممارساتنا المتعلقة بجمع البيانات الشخصية واستخدامها وحمايتها`;
+                      field.onChange(suggestedText);
+                      if (autoFilledFields.service_description) clearAutoFill("service_description");
+                    };
+                    
+                    return (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="flex items-center gap-2">
+                            مقدمة سياسة الخصوصية *
+                            {autoFilledFields.service_description && (
+                              <AutoDetectedBadge onClear={() => clearAutoFill("service_description")} />
+                            )}
+                          </FormLabel>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={generateSuggestedDescription}
+                            data-testid="button-generate-description"
+                            className="text-xs"
+                          >
+                            <Sparkles className="w-3 h-3 ml-1" />
+                            توليد مقترح
+                          </Button>
+                        </div>
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            placeholder="مقدمة سياسة الخصوصية التي تعرّف بالجهة والتزامها بحماية البيانات"
+                            className={cn(
+                              "min-h-[100px]",
+                              autoFilledFields.service_description ? "border-primary/50 bg-primary/5" : ""
+                            )}
+                            data-testid="input-service-description" 
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          انقر على "توليد مقترح" لإنشاء نص تعريفي تلقائي باسم جهتك
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 <div className="border rounded-lg p-4 space-y-4">
