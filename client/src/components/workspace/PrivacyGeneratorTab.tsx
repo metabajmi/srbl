@@ -1061,9 +1061,9 @@ ${policy.generatedContent}
                     name="data_usage_purposes"
                     render={() => (
                       <FormItem>
-                        <FormLabel className="text-base">كيف نستخدم بياناتك الشخصية؟ *</FormLabel>
+                        <FormLabel className="text-base">كيفية استخدام البيانات الشخصية *</FormLabel>
                         <FormDescription>
-                          كيفية استخدام البيانات المجموعة
+                          أضف كيفية استخدامك للبيانات الشخصية التي جمعتها بشكل مباشر وغير مباشر
                         </FormDescription>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                           {DATA_USAGE_PURPOSES.map((usage) => (
