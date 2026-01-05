@@ -818,22 +818,6 @@ ${policy.generatedContent}
                     />
                   </div>
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="policy_last_update"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>تاريخ آخر تحديث للسياسة</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="date" data-testid="input-policy-update-date" />
-                      </FormControl>
-                      <FormDescription>
-                        التاريخ الذي سيظهر في السياسة كتاريخ آخر تحديث
-                      </FormDescription>
-                    </FormItem>
-                  )}
-                />
               </CardContent>
             </Card>
           )}
