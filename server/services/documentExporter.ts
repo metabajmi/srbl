@@ -1,206 +1,9 @@
 import HTMLtoDOCX from "html-to-docx";
-import PdfPrinter from "pdfmake";
-import htmlToPdfmake from "html-to-pdfmake";
-import { JSDOM } from "jsdom";
+import PDFDocument from "pdfkit";
 
 interface PolicyDocument {
   companyName: string;
   content: string;
-}
-
-// Define fonts for pdfmake - use built-in Roboto with Arabic support
-const fonts = {
-  Roboto: {
-    normal: 'node_modules/pdfmake/build/vfs_fonts.js',
-    bold: 'node_modules/pdfmake/build/vfs_fonts.js',
-    italics: 'node_modules/pdfmake/build/vfs_fonts.js',
-    bolditalics: 'node_modules/pdfmake/build/vfs_fonts.js'
-  }
-};
-
-export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
-  console.log('[PDF] Starting PDF generation for:', policy.companyName);
-  const startTime = Date.now();
-  
-  try {
-    const today = new Date().toLocaleDateString('ar-SA', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-
-    // Parse HTML content using JSDOM for htmlToPdfmake
-    const { window } = new JSDOM('');
-    const htmlContent = htmlToPdfmake(policy.content, { window });
-
-    // Create document definition
-    const docDefinition: any = {
-      pageSize: 'A4',
-      pageMargins: [40, 60, 40, 60],
-      
-      // Header with green gradient simulation
-      header: {
-        columns: [
-          {
-            width: '*',
-            stack: [
-              { 
-                text: 'سياسة الخصوصية', 
-                style: 'headerTitle',
-                alignment: 'center'
-              },
-              { 
-                text: policy.companyName, 
-                style: 'headerCompany',
-                alignment: 'center'
-              },
-              { 
-                text: `تاريخ الإصدار: ${today}`, 
-                style: 'headerDate',
-                alignment: 'center'
-              }
-            ],
-            fillColor: '#16a34a',
-            margin: [40, 20, 40, 20]
-          }
-        ]
-      },
-
-      // Footer
-      footer: function(currentPage: number, pageCount: number) {
-        return {
-          columns: [
-            {
-              text: [
-                { text: 'تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)\n', style: 'footerText' },
-                { text: 'www.sirbal.co', style: 'footerLink' }
-              ],
-              alignment: 'center',
-              margin: [0, 20, 0, 0]
-            }
-          ]
-        };
-      },
-
-      content: [
-        // Green header box
-        {
-          table: {
-            widths: ['*'],
-            body: [[
-              {
-                stack: [
-                  { text: 'سياسة الخصوصية', style: 'mainTitle', alignment: 'center' },
-                  { text: policy.companyName, style: 'companyName', alignment: 'center' },
-                  { text: `تاريخ الإصدار: ${today}`, style: 'dateText', alignment: 'center' }
-                ],
-                fillColor: '#16a34a',
-                margin: [20, 20, 20, 20]
-              }
-            ]]
-          },
-          layout: 'noBorders',
-          margin: [0, 0, 0, 30]
-        },
-        // Main content from HTML
-        htmlContent
-      ],
-
-      styles: {
-        mainTitle: {
-          fontSize: 24,
-          bold: true,
-          color: '#ffffff',
-          margin: [0, 0, 0, 10]
-        },
-        companyName: {
-          fontSize: 16,
-          bold: true,
-          color: '#ffffff',
-          margin: [0, 0, 0, 5]
-        },
-        dateText: {
-          fontSize: 12,
-          color: '#ffffff',
-          opacity: 0.9
-        },
-        headerTitle: {
-          fontSize: 20,
-          bold: true,
-          color: '#ffffff'
-        },
-        headerCompany: {
-          fontSize: 14,
-          bold: true,
-          color: '#ffffff'
-        },
-        headerDate: {
-          fontSize: 10,
-          color: '#ffffff'
-        },
-        footerText: {
-          fontSize: 9,
-          color: '#6b7280'
-        },
-        footerLink: {
-          fontSize: 9,
-          color: '#16a34a'
-        },
-        h1: {
-          fontSize: 18,
-          bold: true,
-          color: '#16a34a',
-          margin: [0, 20, 0, 10]
-        },
-        h2: {
-          fontSize: 14,
-          bold: true,
-          color: '#15803d',
-          margin: [0, 15, 0, 8]
-        },
-        h3: {
-          fontSize: 12,
-          bold: true,
-          color: '#166534',
-          margin: [0, 10, 0, 5]
-        }
-      },
-
-      defaultStyle: {
-        fontSize: 11,
-        lineHeight: 1.5,
-        alignment: 'right'
-      }
-    };
-
-    // Create PDF using pdfmake
-    const printer = new PdfPrinter(fonts);
-    const pdfDoc = printer.createPdfKitDocument(docDefinition);
-
-    // Collect buffer chunks
-    const chunks: Buffer[] = [];
-    
-    return new Promise((resolve, reject) => {
-      pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      pdfDoc.on('end', () => {
-        const pdfBuffer = Buffer.concat(chunks);
-        const elapsed = Date.now() - startTime;
-        console.log(`[PDF] Generated successfully in ${elapsed}ms, size: ${pdfBuffer.length} bytes`);
-        resolve(pdfBuffer);
-      });
-      pdfDoc.on('error', (err: Error) => {
-        const elapsed = Date.now() - startTime;
-        console.error(`[PDF] Generation failed after ${elapsed}ms:`, err);
-        reject(err);
-      });
-      pdfDoc.end();
-    });
-
-  } catch (error) {
-    const elapsed = Date.now() - startTime;
-    console.error(`[PDF] Generation failed after ${elapsed}ms:`, error);
-    throw error;
-  }
 }
 
 // Helper function to strip HTML tags for plain text
@@ -210,6 +13,11 @@ function stripHtmlTags(html: string): string {
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/div>/gi, '\n')
     .replace(/<\/li>/gi, '\n')
+    .replace(/<h[1-6][^>]*>/gi, '\n\n')
+    .replace(/<\/h[1-6]>/gi, '\n')
+    .replace(/<ul[^>]*>/gi, '\n')
+    .replace(/<\/ul>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
     .replace(/<[^>]*>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -218,6 +26,150 @@ function stripHtmlTags(html: string): string {
     .replace(/&quot;/g, '"')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+// Extract sections from HTML content
+function extractSections(html: string): { title: string; content: string }[] {
+  const sections: { title: string; content: string }[] = [];
+  
+  // Split by h2 tags
+  const h2Regex = /<h2[^>]*>(.*?)<\/h2>/gi;
+  const parts = html.split(h2Regex);
+  
+  // First part is intro (before first h2)
+  if (parts[0] && parts[0].trim()) {
+    const introText = stripHtmlTags(parts[0]).trim();
+    if (introText) {
+      sections.push({ title: '', content: introText });
+    }
+  }
+  
+  // Process h2 sections
+  for (let i = 1; i < parts.length; i += 2) {
+    const title = stripHtmlTags(parts[i] || '').trim();
+    const content = stripHtmlTags(parts[i + 1] || '').trim();
+    if (title || content) {
+      sections.push({ title, content });
+    }
+  }
+  
+  // If no sections found, just use the whole content
+  if (sections.length === 0) {
+    sections.push({ title: '', content: stripHtmlTags(html) });
+  }
+  
+  return sections;
+}
+
+export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
+  console.log('[PDF] Starting PDF generation for:', policy.companyName);
+  const startTime = Date.now();
+  
+  return new Promise((resolve, reject) => {
+    try {
+      const today = new Date().toLocaleDateString('ar-SA', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+
+      // Create PDF document with RTL support
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: { top: 50, bottom: 50, left: 50, right: 50 },
+        info: {
+          Title: `سياسة الخصوصية - ${policy.companyName}`,
+          Author: 'Sirbal - سِرْبَال',
+          Subject: 'سياسة الخصوصية',
+        }
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        const elapsed = Date.now() - startTime;
+        console.log(`[PDF] Generated successfully in ${elapsed}ms, size: ${pdfBuffer.length} bytes`);
+        resolve(pdfBuffer);
+      });
+      doc.on('error', (err: Error) => {
+        const elapsed = Date.now() - startTime;
+        console.error(`[PDF] Generation failed after ${elapsed}ms:`, err);
+        reject(err);
+      });
+
+      // Header with green background
+      doc.rect(0, 0, doc.page.width, 120).fill('#16a34a');
+      
+      // Header text (white on green)
+      doc.fillColor('#ffffff')
+         .fontSize(24)
+         .text('سياسة الخصوصية', 50, 30, { align: 'center', width: doc.page.width - 100 });
+      
+      doc.fontSize(16)
+         .text(policy.companyName, 50, 60, { align: 'center', width: doc.page.width - 100 });
+      
+      doc.fontSize(11)
+         .text(`تاريخ الإصدار: ${today}`, 50, 85, { align: 'center', width: doc.page.width - 100 });
+
+      // Move below header
+      doc.y = 140;
+      doc.fillColor('#1a1a1a');
+
+      // Extract and render sections
+      const sections = extractSections(policy.content);
+      
+      for (const section of sections) {
+        // Check if we need a new page
+        if (doc.y > doc.page.height - 100) {
+          doc.addPage();
+        }
+
+        // Section title (if exists)
+        if (section.title) {
+          doc.fillColor('#15803d')
+             .fontSize(14)
+             .text(section.title, { align: 'right' });
+          doc.moveDown(0.3);
+        }
+
+        // Section content
+        if (section.content) {
+          doc.fillColor('#1a1a1a')
+             .fontSize(11)
+             .text(section.content, { align: 'right', lineGap: 4 });
+          doc.moveDown(1);
+        }
+      }
+
+      // Footer
+      doc.moveDown(2);
+      if (doc.y > doc.page.height - 80) {
+        doc.addPage();
+      }
+      
+      // Footer line
+      doc.strokeColor('#e5e7eb')
+         .lineWidth(1)
+         .moveTo(50, doc.y)
+         .lineTo(doc.page.width - 50, doc.y)
+         .stroke();
+      
+      doc.moveDown(0.5);
+      doc.fillColor('#6b7280')
+         .fontSize(9)
+         .text('تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)', { align: 'center' })
+         .text('www.sirbal.co', { align: 'center' });
+
+      // Finalize
+      doc.end();
+
+    } catch (error) {
+      const elapsed = Date.now() - startTime;
+      console.error(`[PDF] Generation failed after ${elapsed}ms:`, error);
+      reject(error);
+    }
+  });
 }
 
 export async function generateDOCX(policy: PolicyDocument): Promise<Buffer> {
