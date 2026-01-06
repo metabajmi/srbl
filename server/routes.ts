@@ -237,6 +237,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   // Session Configuration
   // ============================================
+  
+  // Trust proxy for Replit's reverse proxy (required for secure cookies)
+  app.set("trust proxy", 1);
+  
   const PgSession = connectPgSimple(session);
   
   app.use(
