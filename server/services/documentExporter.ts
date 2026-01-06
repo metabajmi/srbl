@@ -12,6 +12,9 @@ export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
   // Find chromium executable
   const chromiumPath = process.env.CHROMIUM_PATH || '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
   
+  console.log('[PDF] Starting PDF generation for:', policy.companyName);
+  const startTime = Date.now();
+  
   const browser = await puppeteer.launch({
     headless: true,
     executablePath: chromiumPath,
@@ -20,12 +23,23 @@ export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
+      '--disable-web-security',
+      '--font-render-hinting=none',
     ],
   });
   
   try {
     const page = await browser.newPage();
-    await page.setContent(htmlTemplate, { waitUntil: 'networkidle0' });
+    
+    // Use domcontentloaded instead of networkidle0 - no external resource waiting
+    // This prevents timeout from slow Google Fonts loading
+    await page.setContent(htmlTemplate, { 
+      waitUntil: 'domcontentloaded',
+      timeout: 60000 // 60 second timeout
+    });
+    
+    // Brief wait for CSS to apply
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     const pdfBuffer = await page.pdf({
       format: 'A4',
@@ -36,9 +50,17 @@ export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
         bottom: '20mm',
         left: '20mm',
       },
+      timeout: 60000 // 60 second timeout for PDF generation
     });
     
+    const elapsed = Date.now() - startTime;
+    console.log(`[PDF] Generated successfully in ${elapsed}ms, size: ${pdfBuffer.length} bytes`);
+    
     return Buffer.from(pdfBuffer);
+  } catch (error) {
+    const elapsed = Date.now() - startTime;
+    console.error(`[PDF] Generation failed after ${elapsed}ms:`, error);
+    throw error;
   } finally {
     await browser.close();
   }
@@ -72,8 +94,7 @@ function wrapWithPDFTemplate(content: string, companyName: string): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سياسة الخصوصية - ${companyName}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-        
+        /* Use local system fonts - no external loading for faster PDF generation */
         * {
             margin: 0;
             padding: 0;
@@ -81,7 +102,7 @@ function wrapWithPDFTemplate(content: string, companyName: string): string {
         }
         
         body {
-            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            font-family: 'Segoe UI', 'Tahoma', 'Arial', 'Helvetica', sans-serif;
             font-size: 12pt;
             line-height: 1.8;
             color: #1a1a1a;
