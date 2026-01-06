@@ -670,19 +670,63 @@ export async function discoverFallbackPolicyUrls(baseUrl: string, html: string):
     return false;
   }
   
-  console.log(`[FallbackDiscovery] Probing standard policy URLs for ${platform}...`);
+  console.log(`[FallbackDiscovery] Probing standard policy URLs for ${platform} (parallel)...`);
   
-  for (const path of allPaths.privacy) {
-    if (await probeUrl(path, 'privacy')) break;
+  // Parallel probe function that returns first success
+  async function probeUrlsParallel(paths: string[], type: DiscoveredPage['type']): Promise<void> {
+    const results = await Promise.allSettled(
+      paths.map(async (path) => {
+        try {
+          const fullUrl = new URL(path, baseUrl).href;
+          if (seenUrls.has(fullUrl)) return null;
+          
+          const response = await fetch(fullUrl, {
+            method: 'HEAD',
+            headers: { 
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            },
+            signal: AbortSignal.timeout(3000), // Reduced timeout for faster probing
+            redirect: 'follow',
+          });
+          
+          if (response.ok || response.status === 200 || response.status === 403) {
+            return { fullUrl, path, status: response.status };
+          }
+        } catch (error) {
+          // Ignore errors
+        }
+        return null;
+      })
+    );
+    
+    // Take only the first successful result
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value) {
+        const { fullUrl, path, status } = result.value;
+        if (!seenUrls.has(fullUrl)) {
+          seenUrls.add(fullUrl);
+          discovered.push({
+            url: fullUrl,
+            type,
+            foundBy: 'internal_link',
+            linkText: `(fallback: ${path})`,
+            confidence: status === 403 ? 0.8 : 0.7,
+            depth: 0,
+          });
+          console.log(`[FallbackDiscovery] ✓ Found ${type} at: ${fullUrl} (status: ${status})`);
+          break; // Only keep first match
+        }
+      }
+    }
   }
   
-  for (const path of allPaths.terms) {
-    if (await probeUrl(path, 'terms')) break;
-  }
-  
-  for (const path of allPaths.refund) {
-    if (await probeUrl(path, 'refund')) break;
-  }
+  // Probe all categories in parallel
+  await Promise.all([
+    probeUrlsParallel(allPaths.privacy, 'privacy'),
+    probeUrlsParallel(allPaths.terms, 'terms'),
+    probeUrlsParallel(allPaths.refund, 'refund'),
+  ]);
   
   console.log(`[FallbackDiscovery] Discovered ${discovered.length} pages via fallback probing`);
   return discovered;
