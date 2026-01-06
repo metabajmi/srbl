@@ -134,10 +134,6 @@ export default function HomePage() {
       <section className="section">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center mb-10 md:mb-12 animate-slide-up">
-            <Badge className="mb-4 animate-stagger-1 inline-block" variant="secondary">
-              <Shield className="w-3 h-3 ml-1" />
-              متوافق مع نظام حماية البيانات الشخصية السعودي
-            </Badge>
             <p className="text-base sm:text-lg text-muted-foreground mb-6 max-w-2xl mx-auto animate-stagger-2">
               كل ما تحتاجه لضمان امتثال موقعك أو تطبيقك لنظام حماية البيانات الشخصية السعودي - في مكان واحد
             </p>
