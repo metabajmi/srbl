@@ -1,67 +1,55 @@
 import HTMLtoDOCX from "html-to-docx";
-import PdfPrinter from "pdfmake";
-// @ts-ignore - html-to-pdfmake lacks type definitions
-import htmlToPdfmake from "html-to-pdfmake";
-import { JSDOM } from "jsdom";
-import type { TDocumentDefinitions, Content } from "pdfmake/interfaces";
+import path from "path";
 
 interface PolicyDocument {
   companyName: string;
   content: string;
 }
 
-// Define fonts for pdfmake (using built-in Roboto)
-const fonts = {
-  Roboto: {
-    normal: 'node_modules/pdfmake/build/vfs_fonts.js',
-    bold: 'node_modules/pdfmake/build/vfs_fonts.js',
-    italics: 'node_modules/pdfmake/build/vfs_fonts.js',
-    bolditalics: 'node_modules/pdfmake/build/vfs_fonts.js'
-  }
-};
-
 export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
   console.log('[PDF] Starting PDF generation for:', policy.companyName);
   const startTime = Date.now();
   
   try {
-    // Create JSDOM window for html-to-pdfmake
-    const { window } = new JSDOM('');
+    // Dynamic import for pdfmake (CommonJS module)
+    const PdfPrinter = require('pdfmake');
     
-    // Convert HTML content to pdfmake format
-    const htmlContent = `
-      <div style="text-align: right; direction: rtl;">
-        <h1 style="color: #059669; text-align: center;">سياسة الخصوصية</h1>
-        <h2 style="color: #374151; text-align: center;">${policy.companyName}</h2>
-        <hr/>
-        ${policy.content}
-        <hr/>
-        <p style="text-align: center; color: #6b7280; font-size: 10pt;">
-          تم إنشاء هذه السياسة بواسطة منصة سِرْبَال للامتثال لنظام حماية البيانات الشخصية
-        </p>
-        <p style="text-align: center; color: #6b7280; font-size: 10pt;">www.sirbal.co</p>
-      </div>
-    `;
+    // Define fonts using absolute paths
+    const fonts = {
+      Roboto: {
+        normal: path.join(process.cwd(), 'node_modules/pdfmake/build/vfs_fonts.js'),
+        bold: path.join(process.cwd(), 'node_modules/pdfmake/build/vfs_fonts.js'),
+        italics: path.join(process.cwd(), 'node_modules/pdfmake/build/vfs_fonts.js'),
+        bolditalics: path.join(process.cwd(), 'node_modules/pdfmake/build/vfs_fonts.js')
+      }
+    };
     
-    const pdfContent = htmlToPdfmake(htmlContent, { window }) as Content;
-    
-    // Create document definition
-    const docDefinition: TDocumentDefinitions = {
-      content: pdfContent,
+    // Build pdfmake content directly (more reliable than html-to-pdfmake for Arabic)
+    const docDefinition = {
+      content: [
+        { text: 'سياسة الخصوصية', style: 'header', alignment: 'center' },
+        { text: policy.companyName, style: 'subheader', alignment: 'center' },
+        { canvas: [{ type: 'line', x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1, lineColor: '#e5e7eb' }] },
+        { text: '\n' },
+        { text: stripHtmlTags(policy.content), style: 'body', alignment: 'right' },
+        { text: '\n' },
+        { canvas: [{ type: 'line', x1: 0, y1: 5, x2: 515, y2: 5, lineWidth: 1, lineColor: '#e5e7eb' }] },
+        { text: '\n' },
+        { text: 'تم إنشاء هذه السياسة بواسطة منصة سِرْبَال للامتثال لنظام حماية البيانات الشخصية', style: 'footer', alignment: 'center' },
+        { text: 'www.sirbal.co', style: 'footer', alignment: 'center' }
+      ],
       defaultStyle: {
-        font: 'Roboto',
         fontSize: 11,
         lineHeight: 1.5,
       },
       styles: {
-        'html-h1': { fontSize: 20, bold: true, margin: [0, 10, 0, 10] },
-        'html-h2': { fontSize: 16, bold: true, margin: [0, 8, 0, 8] },
-        'html-h3': { fontSize: 14, bold: true, margin: [0, 6, 0, 6] },
-        'html-p': { margin: [0, 4, 0, 4] },
-        'html-li': { margin: [0, 2, 0, 2] },
+        header: { fontSize: 22, bold: true, color: '#059669', margin: [0, 0, 0, 10] },
+        subheader: { fontSize: 16, color: '#374151', margin: [0, 0, 0, 20] },
+        body: { fontSize: 11, margin: [0, 5, 0, 5] },
+        footer: { fontSize: 9, color: '#6b7280', margin: [0, 2, 0, 2] }
       },
-      pageSize: 'A4',
-      pageMargins: [40, 40, 40, 40],
+      pageSize: 'A4' as const,
+      pageMargins: [40, 40, 40, 40] as [number, number, number, number],
     };
     
     // Generate PDF using pdfmake
@@ -91,6 +79,23 @@ export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
     console.error(`[PDF] Generation failed after ${elapsed}ms:`, error);
     throw error;
   }
+}
+
+// Helper function to strip HTML tags for plain text PDF
+function stripHtmlTags(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 export async function generateDOCX(policy: PolicyDocument): Promise<Buffer> {
