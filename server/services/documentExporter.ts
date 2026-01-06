@@ -1,175 +1,71 @@
 import HTMLtoDOCX from "html-to-docx";
-import PDFDocument from "pdfkit";
+import { getBrowser } from "../scanner/browser";
 
 interface PolicyDocument {
   companyName: string;
   content: string;
 }
 
-// Helper function to strip HTML tags for plain text
-function stripHtmlTags(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<h[1-6][^>]*>/gi, '\n\n')
-    .replace(/<\/h[1-6]>/gi, '\n')
-    .replace(/<ul[^>]*>/gi, '\n')
-    .replace(/<\/ul>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '• ')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-// Extract sections from HTML content
-function extractSections(html: string): { title: string; content: string }[] {
-  const sections: { title: string; content: string }[] = [];
-  
-  // Split by h2 tags
-  const h2Regex = /<h2[^>]*>(.*?)<\/h2>/gi;
-  const parts = html.split(h2Regex);
-  
-  // First part is intro (before first h2)
-  if (parts[0] && parts[0].trim()) {
-    const introText = stripHtmlTags(parts[0]).trim();
-    if (introText) {
-      sections.push({ title: '', content: introText });
-    }
-  }
-  
-  // Process h2 sections
-  for (let i = 1; i < parts.length; i += 2) {
-    const title = stripHtmlTags(parts[i] || '').trim();
-    const content = stripHtmlTags(parts[i + 1] || '').trim();
-    if (title || content) {
-      sections.push({ title, content });
-    }
-  }
-  
-  // If no sections found, just use the whole content
-  if (sections.length === 0) {
-    sections.push({ title: '', content: stripHtmlTags(html) });
-  }
-  
-  return sections;
-}
-
 export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
+  const htmlTemplate = wrapWithPDFTemplate(policy.content, policy.companyName);
+  
   console.log('[PDF] Starting PDF generation for:', policy.companyName);
   const startTime = Date.now();
   
-  return new Promise((resolve, reject) => {
-    try {
-      const today = new Date().toLocaleDateString('ar-SA', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
-
-      // Create PDF document with RTL support
-      const doc = new PDFDocument({
-        size: 'A4',
-        margins: { top: 50, bottom: 50, left: 50, right: 50 },
-        info: {
-          Title: `سياسة الخصوصية - ${policy.companyName}`,
-          Author: 'Sirbal - سِرْبَال',
-          Subject: 'سياسة الخصوصية',
-        }
-      });
-
-      const chunks: Buffer[] = [];
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', () => {
-        const pdfBuffer = Buffer.concat(chunks);
-        const elapsed = Date.now() - startTime;
-        console.log(`[PDF] Generated successfully in ${elapsed}ms, size: ${pdfBuffer.length} bytes`);
-        resolve(pdfBuffer);
-      });
-      doc.on('error', (err: Error) => {
-        const elapsed = Date.now() - startTime;
-        console.error(`[PDF] Generation failed after ${elapsed}ms:`, err);
-        reject(err);
-      });
-
-      // Header with green background
-      doc.rect(0, 0, doc.page.width, 120).fill('#16a34a');
-      
-      // Header text (white on green)
-      doc.fillColor('#ffffff')
-         .fontSize(24)
-         .text('سياسة الخصوصية', 50, 30, { align: 'center', width: doc.page.width - 100 });
-      
-      doc.fontSize(16)
-         .text(policy.companyName, 50, 60, { align: 'center', width: doc.page.width - 100 });
-      
-      doc.fontSize(11)
-         .text(`تاريخ الإصدار: ${today}`, 50, 85, { align: 'center', width: doc.page.width - 100 });
-
-      // Move below header
-      doc.y = 140;
-      doc.fillColor('#1a1a1a');
-
-      // Extract and render sections
-      const sections = extractSections(policy.content);
-      
-      for (const section of sections) {
-        // Check if we need a new page
-        if (doc.y > doc.page.height - 100) {
-          doc.addPage();
-        }
-
-        // Section title (if exists)
-        if (section.title) {
-          doc.fillColor('#15803d')
-             .fontSize(14)
-             .text(section.title, { align: 'right' });
-          doc.moveDown(0.3);
-        }
-
-        // Section content
-        if (section.content) {
-          doc.fillColor('#1a1a1a')
-             .fontSize(11)
-             .text(section.content, { align: 'right', lineGap: 4 });
-          doc.moveDown(1);
-        }
+  let page = null;
+  try {
+    // Use existing browser from scanner instead of creating new one
+    const browser = await getBrowser();
+    page = await browser.newPage();
+    
+    // Set shorter timeouts
+    page.setDefaultNavigationTimeout(25000);
+    page.setDefaultTimeout(25000);
+    
+    // Set viewport for A4
+    await page.setViewport({ width: 794, height: 1123 });
+    
+    // Set content directly (no network fetch needed)
+    await page.setContent(htmlTemplate, { 
+      waitUntil: 'domcontentloaded',
+      timeout: 25000
+    });
+    
+    // Wait for fonts to load
+    await page.evaluate(() => document.fonts.ready);
+    
+    // Small delay for CSS
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '10mm',
+        right: '10mm',
+        bottom: '10mm',
+        left: '10mm',
+      },
+      timeout: 20000
+    });
+    
+    const elapsed = Date.now() - startTime;
+    console.log(`[PDF] Generated successfully in ${elapsed}ms, size: ${pdfBuffer.length} bytes`);
+    
+    return Buffer.from(pdfBuffer);
+  } catch (error) {
+    const elapsed = Date.now() - startTime;
+    console.error(`[PDF] Generation failed after ${elapsed}ms:`, error);
+    throw error;
+  } finally {
+    if (page) {
+      try {
+        await page.close();
+      } catch (e) {
+        // Ignore close errors
       }
-
-      // Footer
-      doc.moveDown(2);
-      if (doc.y > doc.page.height - 80) {
-        doc.addPage();
-      }
-      
-      // Footer line
-      doc.strokeColor('#e5e7eb')
-         .lineWidth(1)
-         .moveTo(50, doc.y)
-         .lineTo(doc.page.width - 50, doc.y)
-         .stroke();
-      
-      doc.moveDown(0.5);
-      doc.fillColor('#6b7280')
-         .fontSize(9)
-         .text('تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)', { align: 'center' })
-         .text('www.sirbal.co', { align: 'center' });
-
-      // Finalize
-      doc.end();
-
-    } catch (error) {
-      const elapsed = Date.now() - startTime;
-      console.error(`[PDF] Generation failed after ${elapsed}ms:`, error);
-      reject(error);
     }
-  });
+  }
 }
 
 export async function generateDOCX(policy: PolicyDocument): Promise<Buffer> {
@@ -189,6 +85,124 @@ export async function generateDOCX(policy: PolicyDocument): Promise<Buffer> {
   });
   
   return Buffer.from(docxBuffer as ArrayBuffer);
+}
+
+function wrapWithPDFTemplate(content: string, companyName: string): string {
+  const today = new Date().toLocaleDateString('ar-SA', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>سياسة الخصوصية - ${companyName}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body { 
+            font-family: 'Cairo', 'Segoe UI', sans-serif; 
+            line-height: 1.8; 
+            color: #1a1a1a; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 40px 20px;
+            direction: rtl;
+            text-align: right;
+        }
+        h1 { 
+            color: #16a34a; 
+            text-align: center; 
+            border-bottom: 3px solid #16a34a; 
+            padding-bottom: 20px; 
+        }
+        h2 { 
+            color: #15803d; 
+            border-right: 5px solid #22c55e; 
+            padding-right: 15px; 
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 40px; 
+            padding: 30px; 
+            background: linear-gradient(135deg, #16a34a, #22c55e); 
+            color: white; 
+            border-radius: 10px; 
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .header h1 { 
+            color: white; 
+            border-bottom: none;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header .company-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .header .date {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .content { 
+            background: #fff; 
+            padding: 40px; 
+            border-radius: 10px;
+        }
+        .footer { 
+            margin-top: 50px; 
+            padding-top: 30px; 
+            border-top: 2px solid #e5e7eb; 
+            text-align: center; 
+            color: #6b7280;
+            font-size: 13px;
+        }
+        ul { 
+            list-style-type: disc; 
+            padding-right: 25px;
+            margin-bottom: 15px;
+        }
+        li { 
+            margin-bottom: 8px; 
+        }
+        p {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+        @media print { 
+            body { padding: 20px; } 
+            .header { 
+                background: linear-gradient(135deg, #16a34a, #22c55e) !important; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            } 
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>سياسة الخصوصية</h1>
+        <div class="company-name">${companyName}</div>
+        <div class="date">تاريخ الإصدار: ${today}</div>
+    </div>
+    <div class="content">${content}</div>
+    <div class="footer">
+        <p>تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)</p>
+        <p>www.sirbal.co</p>
+    </div>
+</body>
+</html>`;
 }
 
 function wrapWithDocxTemplate(content: string, companyName: string): string {
