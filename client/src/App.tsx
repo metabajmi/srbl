@@ -269,10 +269,12 @@ function AppContent() {
             {/* Don't show main header on admin pages */}
             {!isAdminPage && (
               <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 gap-4">
-                <SidebarTrigger 
+                {/* Sidebar trigger hidden for MVP launch - keep code for future */}
+                {/* <SidebarTrigger 
                   data-testid="button-sidebar-toggle" 
                   className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-md p-2.5 shrink-0"
-                />
+                /> */}
+                <div className="flex-1" /> {/* Spacer to push login button to the left */}
                 <div className="flex items-center gap-2 sm:gap-3">
                   {!isLoggedIn ? (
                     <Button
@@ -303,8 +305,8 @@ function AppContent() {
               <Router />
             </main>
           </div>
-          {/* Don't show sidebar on admin pages */}
-          {!isAdminPage && <AppSidebar />}
+          {/* Sidebar hidden for MVP launch - keep code for future */}
+          {/* {!isAdminPage && <AppSidebar />} */}
         </div>
         
         <Toaster />
