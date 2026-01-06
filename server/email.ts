@@ -187,6 +187,12 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
   // Try Mailgun first
   if (useMailgun) {
     try {
+      console.log("[Email] Sending via Mailgun...");
+      console.log("[Email] From:", FROM_EMAIL);
+      console.log("[Email] To:", data.to);
+      console.log("[Email] Domain:", MAILGUN_DOMAIN);
+      console.log("[Email] Attachments:", attachments.length);
+      
       const result = await mg!.messages.create(MAILGUN_DOMAIN, {
         from: FROM_EMAIL,
         to: [data.to],
@@ -200,11 +206,17 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
         "o:tracking-clicks": "yes",
         "o:tracking-opens": "yes",
       });
-      console.log("Policy email sent via Mailgun with attachments:", result.id);
+      console.log("[Email] ✓ Policy email sent via Mailgun:", result.id);
+      console.log("[Email] Full result:", JSON.stringify(result, null, 2));
       return true;
-    } catch (error) {
-      console.error("Mailgun error:", error);
+    } catch (error: any) {
+      console.error("[Email] ✗ Mailgun error:", error.message || error);
+      console.error("[Email] Full error:", JSON.stringify(error, null, 2));
     }
+  } else {
+    console.log("[Email] Mailgun not configured, useMailgun:", useMailgun);
+    console.log("[Email] mg exists:", !!mg);
+    console.log("[Email] MAILGUN_DOMAIN:", MAILGUN_DOMAIN || "(empty)");
   }
 
   // Fallback to Resend (with base64 attachments)
