@@ -7,7 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { ScanProvider } from "@/contexts/ScanContext";
-import { LogIn } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 import { OTPModal } from "@/components/OTPModal";
 import HomePage from "@/pages/HomePage";
 import ScanResultsPage from "@/pages/ScanResultsPage";
@@ -186,15 +186,15 @@ function Router() {
         <Redirect to="/" />
       </Route>
       
-      {/* Client Dashboard & Pages - Protected */}
+      {/* Client Dashboard - Redirect to home for MVP */}
       <Route path="/dashboard">
-        <ClientRoute component={DashboardPage} />
+        <Redirect to="/" />
       </Route>
       <Route path="/my-policies">
-        <ClientRoute component={MyPoliciesPage} />
+        <Redirect to="/" />
       </Route>
       <Route path="/my-requests">
-        <ClientRoute component={MyRequestsPage} />
+        <Redirect to="/" />
       </Route>
       
       {/* Main pages - Public */}
@@ -202,24 +202,30 @@ function Router() {
       <Route path="/scans" component={HomePage} />
       <Route path="/scan/:id" component={ScanResultsPage} />
       
-      {/* Tools - Some protected, some public */}
-      <Route path="/workspace" component={ComplianceWorkspacePage} />
-      <Route path="/internal-compliance">
-        <ClientRoute component={InternalComplianceWorkspacePage} />
+      {/* Tools - Redirect to home for MVP (Coming Soon) */}
+      <Route path="/workspace">
+        <Redirect to="/" />
       </Route>
-      <Route path="/privacy-generator" component={PrivacyGeneratorPage} />
-      <Route path="/terms-generator" component={TermsGeneratorPage} />
-      <Route path="/smart-assistant" component={SmartAssistantPage} />
-      
-      {/* Internal Compliance - Protected */}
+      <Route path="/internal-compliance">
+        <Redirect to="/" />
+      </Route>
+      <Route path="/privacy-generator">
+        <Redirect to="/" />
+      </Route>
+      <Route path="/terms-generator">
+        <Redirect to="/" />
+      </Route>
+      <Route path="/smart-assistant">
+        <Redirect to="/" />
+      </Route>
       <Route path="/ropa">
-        <ClientRoute component={RopaPage} />
+        <Redirect to="/" />
       </Route>
       <Route path="/dsar">
-        <ClientRoute component={DsarPage} />
+        <Redirect to="/" />
       </Route>
       <Route path="/dpia">
-        <ClientRoute component={DpiaPage} />
+        <Redirect to="/" />
       </Route>
       
       {/* Fallback to 404 */}
@@ -291,11 +297,21 @@ function AppContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate("/dashboard")}
-                      data-testid="button-header-dashboard"
+                      onClick={async () => {
+                        try {
+                          await fetch("/api/auth/logout", { method: "POST" });
+                          localStorage.removeItem("user");
+                          setIsLoggedIn(false);
+                          queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+                        } catch (e) {
+                          console.error("Logout error:", e);
+                        }
+                      }}
+                      data-testid="button-header-logout"
                       className="text-sm"
                     >
-                      لوحة التحكم
+                      <LogOut className="w-4 h-4 ml-1.5" />
+                      <span className="hidden sm:inline">تسجيل الخروج</span>
                     </Button>
                   )}
                 </div>
