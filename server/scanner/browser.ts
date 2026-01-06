@@ -87,7 +87,7 @@ const BROWSER_OPTIONS = {
 };
 
 const PAGE_OPTIONS = {
-  timeout: 45000,
+  timeout: 20000, // Reduced from 45s for faster scans
   waitUntil: 'domcontentloaded' as const,
 };
 
