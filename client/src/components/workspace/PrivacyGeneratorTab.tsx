@@ -575,7 +575,7 @@ ${policy.generatedContent}
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="w-5 h-5" />
-                  الخطوة ١: معلومات الجهة
+                  معلومات الجهة
                 </CardTitle>
                 <CardDescription>
                   معلومات أساسية عن جهتك وبيانات التواصل
@@ -830,7 +830,7 @@ ${policy.generatedContent}
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Database className="w-5 h-5" />
-                  الخطوة ٢: البيانات المجمعة
+                  البيانات المجمعة
                 </CardTitle>
                 <CardDescription>
                   ما هي البيانات الشخصية التي يتم جمعها؟
@@ -893,7 +893,7 @@ ${policy.generatedContent}
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ClipboardList className="w-5 h-5" />
-                  الخطوة ٣: طرق الجمع والأغراض
+                  طرق الجمع والأغراض
                 </CardTitle>
                 <CardDescription>
                   كيف يتم جمع بياناتك الشخصية وما هو الغرض من جمعها؟
@@ -1071,7 +1071,7 @@ ${policy.generatedContent}
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Scale className="w-5 h-5" />
-                  الخطوة ٤: المسوغات والإفصاح
+                  المسوغات والإفصاح
                 </CardTitle>
                 <CardDescription>
                   المسوغات النظامية لجمع ومعالجة بياناتك الشخصية وجهات الإفصاح
@@ -1211,7 +1211,7 @@ ${policy.generatedContent}
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <HardDrive className="w-5 h-5" />
-                  الخطوة ٥: التخزين والاحتفاظ
+                  التخزين والاحتفاظ
                 </CardTitle>
                 <CardDescription>
                   كيف نقوم بتخزين بياناتك الشخصية والاحتفاظ بها؟
@@ -1401,7 +1401,7 @@ ${policy.generatedContent}
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="w-5 h-5" />
-                  الخطوة ٦: الحقوق والشكاوى
+                  الحقوق والشكاوى
                 </CardTitle>
                 <CardDescription>
                   حقوق صاحب البيانات وآلية تقديم الشكاوى ومسؤول حماية البيانات
