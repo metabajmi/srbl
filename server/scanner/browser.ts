@@ -217,7 +217,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
         break;
       } catch (navError) {
         console.log(`[Scanner] Strategy ${strategy.name} failed, trying next...`);
-        await randomDelay(500, 1000);
+        await randomDelay(100, 300);
       }
     }
     
@@ -247,8 +247,8 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       console.log(`[Scanner] Body selector wait timed out, continuing anyway...`);
     }
     
-    // Wait for JavaScript-rendered content (SPA sites)
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Wait for JavaScript-rendered content (SPA sites) - reduced for performance
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Check for Cloudflare challenge and wait for it to resolve
     const isCloudflareChallenge = await page.evaluate(() => {
@@ -279,8 +279,8 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
         }
       } catch (e) {}
       
-      // Wait up to 20 seconds for Cloudflare to complete challenge
-      for (let i = 0; i < 20; i++) {
+      // Wait up to 8 seconds for Cloudflare to complete challenge (reduced for performance)
+      for (let i = 0; i < 8; i++) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Occasional mouse movement to appear more human
@@ -299,7 +299,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
           
           if (!stillChallenge && html.length > 50000) {
             console.log(`[Scanner] ✓ Cloudflare bypassed after ${i + 1}s (${html.length} bytes)`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 500));
             break;
           }
           
@@ -312,37 +312,23 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       }
     }
     
-    // Brief settle time after page load
-    await randomDelay(500, 1000);
+    // Brief settle time after page load (reduced for performance)
+    await randomDelay(100, 300);
     
-    // Simulate human-like behavior: random mouse movements and scrolling
+    // Simulate minimal human-like behavior for bot detection bypass (optimized for speed)
     try {
-      // Random mouse movements
-      for (let i = 0; i < 3; i++) {
-        await page.mouse.move(
-          Math.floor(Math.random() * 800) + 100,
-          Math.floor(Math.random() * 400) + 100
-        );
-        await randomDelay(100, 300);
-      }
+      // Single mouse movement
+      await page.mouse.move(
+        Math.floor(Math.random() * 800) + 100,
+        Math.floor(Math.random() * 400) + 100
+      );
       
-      // Scroll down to trigger lazy-loaded content
-      await page.evaluate(() => {
-        window.scrollTo(0, Math.floor(document.body.scrollHeight * 0.3));
-      });
-      await randomDelay(300, 600);
-      
-      // Scroll to bottom
+      // Scroll to trigger lazy-loaded content
       await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight);
-      });
-      await randomDelay(500, 1000);
-      
-      // Scroll back to top
-      await page.evaluate(() => {
         window.scrollTo(0, 0);
       });
-      await randomDelay(200, 400);
+      await randomDelay(100, 200);
       
       console.log(`[Scanner] Human-like behavior simulation completed`);
     } catch (e) {
