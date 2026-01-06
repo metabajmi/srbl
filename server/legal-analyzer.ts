@@ -25,8 +25,13 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const apiKey = process.env.OPENAI_API_KEY;
-const openai = new OpenAI({ apiKey: apiKey || "missing-key" });
+// Initialize OpenAI with Replit AI Integrations
+const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+const openai = new OpenAI({ 
+  apiKey: apiKey || "missing-key",
+  ...(baseURL && { baseURL })
+});
 
 export interface LegalArticle {
   id: string;

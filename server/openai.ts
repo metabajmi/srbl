@@ -1,15 +1,20 @@
 import OpenAI from "openai";
 import * as cheerio from "cheerio";
 
-// Initialize OpenAI with error handling
-const apiKey = process.env.OPENAI_API_KEY;
+// Initialize OpenAI with Replit AI Integrations
+// Uses AI_INTEGRATIONS_OPENAI_API_KEY and AI_INTEGRATIONS_OPENAI_BASE_URL
+// Falls back to direct OPENAI_API_KEY if Replit integration not available
+const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+
 if (!apiKey) {
-  console.error("WARNING: OPENAI_API_KEY is not set in environment variables");
+  console.error("WARNING: OpenAI API key is not set. Policy generation will not work.");
 }
 
 // Initialize OpenAI client
 const openai = new OpenAI({ 
-  apiKey: apiKey || "missing-key"
+  apiKey: apiKey || "missing-key",
+  ...(baseURL && { baseURL })
 });
 
 export interface ComplianceAnalysisResult {
