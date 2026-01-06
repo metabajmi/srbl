@@ -23,8 +23,6 @@ export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--disable-web-security',
-      '--font-render-hinting=none',
     ],
   });
   
