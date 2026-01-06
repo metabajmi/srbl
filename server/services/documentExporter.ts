@@ -33,14 +33,17 @@ export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
     page.setDefaultNavigationTimeout(15000);
     page.setDefaultTimeout(15000);
     
-    // Set content directly - no network waiting needed since we use local fonts
+    // Set content and wait for fonts to load
     await page.setContent(htmlTemplate, { 
-      waitUntil: 'domcontentloaded',
-      timeout: 15000
+      waitUntil: 'networkidle0',
+      timeout: 20000
     });
     
-    // Small delay for CSS to apply
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Wait for fonts to load
+    await page.evaluateHandle('document.fonts.ready');
+    
+    // Small delay for CSS to fully apply
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     const pdfBuffer = await page.pdf({
       format: 'A4',
@@ -106,119 +109,121 @@ export async function generateDOCX(policy: PolicyDocument): Promise<Buffer> {
 }
 
 function wrapWithPDFTemplate(content: string, companyName: string): string {
-  return `
-<!DOCTYPE html>
+  const today = new Date().toLocaleDateString('ar-SA', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سياسة الخصوصية - ${companyName}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Use local system fonts - no external loading for faster PDF generation */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
-        body {
-            font-family: 'Segoe UI', 'Tahoma', 'Arial', 'Helvetica', sans-serif;
-            font-size: 12pt;
-            line-height: 1.8;
-            color: #1a1a1a;
+        body { 
+            font-family: 'Cairo', 'Segoe UI', sans-serif; 
+            line-height: 1.8; 
+            color: #1a1a1a; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 40px 20px;
             direction: rtl;
             text-align: right;
         }
-        
-        .header {
-            text-align: center;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #059669;
-            margin-bottom: 30px;
+        h1 { 
+            color: #16a34a; 
+            text-align: center; 
+            border-bottom: 3px solid #16a34a; 
+            padding-bottom: 20px; 
         }
-        
-        .header h1 {
-            color: #059669;
-            font-size: 24pt;
-            margin-bottom: 10px;
-        }
-        
-        .header .company {
-            font-size: 14pt;
-            color: #374151;
-        }
-        
-        .content {
-            text-align: justify;
-        }
-        
-        h2 {
-            color: #059669;
-            font-size: 14pt;
-            margin-top: 25px;
+        h2 { 
+            color: #15803d; 
+            border-right: 5px solid #22c55e; 
+            padding-right: 15px; 
+            margin-top: 30px;
             margin-bottom: 15px;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 8px;
+            font-size: 18px;
         }
-        
-        h3 {
-            color: #1f2937;
-            font-size: 12pt;
-            margin-top: 20px;
+        .header { 
+            text-align: center; 
+            margin-bottom: 40px; 
+            padding: 30px; 
+            background: linear-gradient(135deg, #16a34a, #22c55e); 
+            color: white; 
+            border-radius: 10px; 
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .header h1 { 
+            color: white; 
+            border-bottom: none;
+            font-size: 28px;
             margin-bottom: 10px;
         }
-        
+        .header .company-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .header .date {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .content { 
+            background: #fff; 
+            padding: 40px; 
+            border-radius: 10px;
+        }
+        .footer { 
+            margin-top: 50px; 
+            padding-top: 30px; 
+            border-top: 2px solid #e5e7eb; 
+            text-align: center; 
+            color: #6b7280;
+            font-size: 13px;
+        }
+        ul { 
+            list-style-type: disc; 
+            padding-right: 25px;
+            margin-bottom: 15px;
+        }
+        li { 
+            margin-bottom: 8px; 
+        }
         p {
             margin-bottom: 12px;
             text-align: justify;
         }
-        
-        ul, ol {
-            margin-bottom: 15px;
-            padding-right: 25px;
-        }
-        
-        li {
-            margin-bottom: 8px;
-        }
-        
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            text-align: center;
-            font-size: 10pt;
-            color: #6b7280;
-        }
-        
-        .badge {
-            display: inline-block;
-            background: #dcfce7;
-            color: #166534;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 10pt;
-            margin-top: 10px;
+        @media print { 
+            body { padding: 20px; } 
+            .header { 
+                background: linear-gradient(135deg, #16a34a, #22c55e) !important; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            } 
         }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>سياسة الخصوصية</h1>
-        <div class="company">${companyName}</div>
+        <div class="company-name">${companyName}</div>
+        <div class="date">تاريخ الإصدار: ${today}</div>
     </div>
-    
-    <div class="content">
-        ${content}
-    </div>
-    
+    <div class="content">${content}</div>
     <div class="footer">
-        <p>تم إنشاء هذه السياسة بواسطة منصة سِرْبَال للامتثال لنظام حماية البيانات الشخصية</p>
+        <p>تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)</p>
         <p>www.sirbal.co</p>
     </div>
 </body>
-</html>
-  `;
+</html>`;
 }
 
 function wrapWithDocxTemplate(content: string, companyName: string): string {
