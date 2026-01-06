@@ -132,7 +132,7 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
                 </ul>
             </div>
             
-            <p>تجد مرفقاً نسخة من سياسة الخصوصية بصيغة Word.</p>
+            <p>تجد مرفقاً نسخة من سياسة الخصوصية بصيغتي PDF و Word.</p>
         </div>
         <div class="footer">
             <p>هذا البريد مُرسل من منصة سِرْبَال للامتثال لنظام حماية البيانات الشخصية السعودي</p>
@@ -143,8 +143,20 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
 </html>
   `;
 
-  // Generate DOCX attachment only (PDF disabled due to Puppeteer timeout issues)
+  // Generate PDF and DOCX attachments
+  let pdfBuffer: Buffer | null = null;
   let docxBuffer: Buffer | null = null;
+  
+  try {
+    console.log("Generating PDF attachment...");
+    pdfBuffer = await generatePDF({
+      companyName: data.companyName,
+      content: data.policyContent,
+    });
+    console.log("PDF generated, size:", pdfBuffer.length, "bytes");
+  } catch (err) {
+    console.error("Failed to generate PDF:", err);
+  }
   
   try {
     console.log("Generating DOCX attachment...");
@@ -157,8 +169,14 @@ export async function sendPolicyEmail(data: PolicyEmailData): Promise<boolean> {
     console.error("Failed to generate DOCX:", err);
   }
 
-  // Build attachments array (DOCX only)
+  // Build attachments array
   const attachments: Array<{ data: Buffer; filename: string }> = [];
+  if (pdfBuffer) {
+    attachments.push({
+      data: pdfBuffer,
+      filename: `سياسة_الخصوصية_${data.companyName}.pdf`,
+    });
+  }
   if (docxBuffer) {
     attachments.push({
       data: docxBuffer,
