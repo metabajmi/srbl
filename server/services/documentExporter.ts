@@ -1,78 +1,209 @@
 import HTMLtoDOCX from "html-to-docx";
-import puppeteer from "puppeteer";
+import PdfPrinter from "pdfmake";
+import htmlToPdfmake from "html-to-pdfmake";
+import { JSDOM } from "jsdom";
 
 interface PolicyDocument {
   companyName: string;
   content: string;
 }
 
+// Define fonts for pdfmake - use built-in Roboto with Arabic support
+const fonts = {
+  Roboto: {
+    normal: 'node_modules/pdfmake/build/vfs_fonts.js',
+    bold: 'node_modules/pdfmake/build/vfs_fonts.js',
+    italics: 'node_modules/pdfmake/build/vfs_fonts.js',
+    bolditalics: 'node_modules/pdfmake/build/vfs_fonts.js'
+  }
+};
+
 export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
-  const htmlTemplate = wrapWithPDFTemplate(policy.content, policy.companyName);
-  
   console.log('[PDF] Starting PDF generation for:', policy.companyName);
   const startTime = Date.now();
   
-  let browser = null;
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--single-process',
-      ],
+    const today = new Date().toLocaleDateString('ar-SA', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
     });
-    
-    const page = await browser.newPage();
-    
-    // Set short timeouts to avoid hanging
-    page.setDefaultNavigationTimeout(15000);
-    page.setDefaultTimeout(15000);
-    
-    // Set content and wait for fonts to load
-    await page.setContent(htmlTemplate, { 
-      waitUntil: 'networkidle0',
-      timeout: 20000
-    });
-    
-    // Wait for fonts to load
-    await page.evaluateHandle('document.fonts.ready');
-    
-    // Small delay for CSS to fully apply
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '15mm',
-        right: '15mm',
-        bottom: '15mm',
-        left: '15mm',
+
+    // Parse HTML content using JSDOM for htmlToPdfmake
+    const { window } = new JSDOM('');
+    const htmlContent = htmlToPdfmake(policy.content, { window });
+
+    // Create document definition
+    const docDefinition: any = {
+      pageSize: 'A4',
+      pageMargins: [40, 60, 40, 60],
+      
+      // Header with green gradient simulation
+      header: {
+        columns: [
+          {
+            width: '*',
+            stack: [
+              { 
+                text: 'سياسة الخصوصية', 
+                style: 'headerTitle',
+                alignment: 'center'
+              },
+              { 
+                text: policy.companyName, 
+                style: 'headerCompany',
+                alignment: 'center'
+              },
+              { 
+                text: `تاريخ الإصدار: ${today}`, 
+                style: 'headerDate',
+                alignment: 'center'
+              }
+            ],
+            fillColor: '#16a34a',
+            margin: [40, 20, 40, 20]
+          }
+        ]
       },
-      timeout: 15000
+
+      // Footer
+      footer: function(currentPage: number, pageCount: number) {
+        return {
+          columns: [
+            {
+              text: [
+                { text: 'تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)\n', style: 'footerText' },
+                { text: 'www.sirbal.co', style: 'footerLink' }
+              ],
+              alignment: 'center',
+              margin: [0, 20, 0, 0]
+            }
+          ]
+        };
+      },
+
+      content: [
+        // Green header box
+        {
+          table: {
+            widths: ['*'],
+            body: [[
+              {
+                stack: [
+                  { text: 'سياسة الخصوصية', style: 'mainTitle', alignment: 'center' },
+                  { text: policy.companyName, style: 'companyName', alignment: 'center' },
+                  { text: `تاريخ الإصدار: ${today}`, style: 'dateText', alignment: 'center' }
+                ],
+                fillColor: '#16a34a',
+                margin: [20, 20, 20, 20]
+              }
+            ]]
+          },
+          layout: 'noBorders',
+          margin: [0, 0, 0, 30]
+        },
+        // Main content from HTML
+        htmlContent
+      ],
+
+      styles: {
+        mainTitle: {
+          fontSize: 24,
+          bold: true,
+          color: '#ffffff',
+          margin: [0, 0, 0, 10]
+        },
+        companyName: {
+          fontSize: 16,
+          bold: true,
+          color: '#ffffff',
+          margin: [0, 0, 0, 5]
+        },
+        dateText: {
+          fontSize: 12,
+          color: '#ffffff',
+          opacity: 0.9
+        },
+        headerTitle: {
+          fontSize: 20,
+          bold: true,
+          color: '#ffffff'
+        },
+        headerCompany: {
+          fontSize: 14,
+          bold: true,
+          color: '#ffffff'
+        },
+        headerDate: {
+          fontSize: 10,
+          color: '#ffffff'
+        },
+        footerText: {
+          fontSize: 9,
+          color: '#6b7280'
+        },
+        footerLink: {
+          fontSize: 9,
+          color: '#16a34a'
+        },
+        h1: {
+          fontSize: 18,
+          bold: true,
+          color: '#16a34a',
+          margin: [0, 20, 0, 10]
+        },
+        h2: {
+          fontSize: 14,
+          bold: true,
+          color: '#15803d',
+          margin: [0, 15, 0, 8]
+        },
+        h3: {
+          fontSize: 12,
+          bold: true,
+          color: '#166534',
+          margin: [0, 10, 0, 5]
+        }
+      },
+
+      defaultStyle: {
+        fontSize: 11,
+        lineHeight: 1.5,
+        alignment: 'right'
+      }
+    };
+
+    // Create PDF using pdfmake
+    const printer = new PdfPrinter(fonts);
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+
+    // Collect buffer chunks
+    const chunks: Buffer[] = [];
+    
+    return new Promise((resolve, reject) => {
+      pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      pdfDoc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        const elapsed = Date.now() - startTime;
+        console.log(`[PDF] Generated successfully in ${elapsed}ms, size: ${pdfBuffer.length} bytes`);
+        resolve(pdfBuffer);
+      });
+      pdfDoc.on('error', (err: Error) => {
+        const elapsed = Date.now() - startTime;
+        console.error(`[PDF] Generation failed after ${elapsed}ms:`, err);
+        reject(err);
+      });
+      pdfDoc.end();
     });
-    
-    const elapsed = Date.now() - startTime;
-    console.log(`[PDF] Generated successfully in ${elapsed}ms, size: ${pdfBuffer.length} bytes`);
-    
-    return Buffer.from(pdfBuffer);
+
   } catch (error) {
     const elapsed = Date.now() - startTime;
     console.error(`[PDF] Generation failed after ${elapsed}ms:`, error);
     throw error;
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 }
 
-// Helper function to strip HTML tags for plain text PDF
+// Helper function to strip HTML tags for plain text
 function stripHtmlTags(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')
@@ -106,124 +237,6 @@ export async function generateDOCX(policy: PolicyDocument): Promise<Buffer> {
   });
   
   return Buffer.from(docxBuffer as ArrayBuffer);
-}
-
-function wrapWithPDFTemplate(content: string, companyName: string): string {
-  const today = new Date().toLocaleDateString('ar-SA', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
-  
-  return `<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>سياسة الخصوصية - ${companyName}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body { 
-            font-family: 'Cairo', 'Segoe UI', sans-serif; 
-            line-height: 1.8; 
-            color: #1a1a1a; 
-            max-width: 900px; 
-            margin: 0 auto; 
-            padding: 40px 20px;
-            direction: rtl;
-            text-align: right;
-        }
-        h1 { 
-            color: #16a34a; 
-            text-align: center; 
-            border-bottom: 3px solid #16a34a; 
-            padding-bottom: 20px; 
-        }
-        h2 { 
-            color: #15803d; 
-            border-right: 5px solid #22c55e; 
-            padding-right: 15px; 
-            margin-top: 30px;
-            margin-bottom: 15px;
-            font-size: 18px;
-        }
-        .header { 
-            text-align: center; 
-            margin-bottom: 40px; 
-            padding: 30px; 
-            background: linear-gradient(135deg, #16a34a, #22c55e); 
-            color: white; 
-            border-radius: 10px; 
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        .header h1 { 
-            color: white; 
-            border-bottom: none;
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-        .header .company-name {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-        .header .date {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        .content { 
-            background: #fff; 
-            padding: 40px; 
-            border-radius: 10px;
-        }
-        .footer { 
-            margin-top: 50px; 
-            padding-top: 30px; 
-            border-top: 2px solid #e5e7eb; 
-            text-align: center; 
-            color: #6b7280;
-            font-size: 13px;
-        }
-        ul { 
-            list-style-type: disc; 
-            padding-right: 25px;
-            margin-bottom: 15px;
-        }
-        li { 
-            margin-bottom: 8px; 
-        }
-        p {
-            margin-bottom: 12px;
-            text-align: justify;
-        }
-        @media print { 
-            body { padding: 20px; } 
-            .header { 
-                background: linear-gradient(135deg, #16a34a, #22c55e) !important; 
-                -webkit-print-color-adjust: exact; 
-                print-color-adjust: exact; 
-            } 
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>سياسة الخصوصية</h1>
-        <div class="company-name">${companyName}</div>
-        <div class="date">تاريخ الإصدار: ${today}</div>
-    </div>
-    <div class="content">${content}</div>
-    <div class="footer">
-        <p>تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)</p>
-        <p>www.sirbal.co</p>
-    </div>
-</body>
-</html>`;
 }
 
 function wrapWithDocxTemplate(content: string, companyName: string): string {
