@@ -202,17 +202,13 @@ function Router() {
       <Route path="/scans" component={HomePage} />
       <Route path="/scan/:id" component={ScanResultsPage} />
       
-      {/* Tools - Redirect to home for MVP (Coming Soon) */}
-      <Route path="/workspace">
-        <Redirect to="/" />
-      </Route>
+      {/* Policy Generator - Active (accessed from scan results) */}
+      <Route path="/workspace" component={ComplianceWorkspacePage} />
+      <Route path="/privacy-generator" component={PrivacyGeneratorPage} />
+      <Route path="/terms-generator" component={TermsGeneratorPage} />
+      
+      {/* Other Tools - Redirect to home for MVP (Coming Soon) */}
       <Route path="/internal-compliance">
-        <Redirect to="/" />
-      </Route>
-      <Route path="/privacy-generator">
-        <Redirect to="/" />
-      </Route>
-      <Route path="/terms-generator">
         <Redirect to="/" />
       </Route>
       <Route path="/smart-assistant">
