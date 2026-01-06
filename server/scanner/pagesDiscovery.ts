@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import pLimit from 'p-limit';
 
 export interface DiscoveredPage {
   url: string;
@@ -670,12 +671,15 @@ export async function discoverFallbackPolicyUrls(baseUrl: string, html: string):
     return false;
   }
   
-  console.log(`[FallbackDiscovery] Probing standard policy URLs for ${platform} (parallel)...`);
+  console.log(`[FallbackDiscovery] Probing standard policy URLs for ${platform} (parallel with concurrency limit)...`);
   
-  // Parallel probe function that returns first success
+  // Limit concurrent requests to avoid rate-limiting/WAF triggers
+  const limit = pLimit(4);
+  
+  // Parallel probe function with concurrency control that returns first success
   async function probeUrlsParallel(paths: string[], type: DiscoveredPage['type']): Promise<void> {
     const results = await Promise.allSettled(
-      paths.map(async (path) => {
+      paths.map((path) => limit(async () => {
         try {
           const fullUrl = new URL(path, baseUrl).href;
           if (seenUrls.has(fullUrl)) return null;
@@ -686,7 +690,7 @@ export async function discoverFallbackPolicyUrls(baseUrl: string, html: string):
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             },
-            signal: AbortSignal.timeout(3000), // Reduced timeout for faster probing
+            signal: AbortSignal.timeout(4000), // Balanced timeout for reliability
             redirect: 'follow',
           });
           
@@ -697,7 +701,7 @@ export async function discoverFallbackPolicyUrls(baseUrl: string, html: string):
           // Ignore errors
         }
         return null;
-      })
+      }))
     );
     
     // Take only the first successful result
@@ -721,7 +725,7 @@ export async function discoverFallbackPolicyUrls(baseUrl: string, html: string):
     }
   }
   
-  // Probe all categories in parallel
+  // Probe all categories in parallel (each category limited to 4 concurrent requests)
   await Promise.all([
     probeUrlsParallel(allPaths.privacy, 'privacy'),
     probeUrlsParallel(allPaths.terms, 'terms'),

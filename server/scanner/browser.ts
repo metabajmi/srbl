@@ -217,7 +217,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
         break;
       } catch (navError) {
         console.log(`[Scanner] Strategy ${strategy.name} failed, trying next...`);
-        await randomDelay(100, 300);
+        await randomDelay(300, 500);
       }
     }
     
@@ -247,8 +247,8 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       console.log(`[Scanner] Body selector wait timed out, continuing anyway...`);
     }
     
-    // Wait for JavaScript-rendered content (SPA sites) - reduced for performance
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for JavaScript-rendered content (SPA sites) - optimized for performance
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Check for Cloudflare challenge and wait for it to resolve
     const isCloudflareChallenge = await page.evaluate(() => {
@@ -279,8 +279,8 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
         }
       } catch (e) {}
       
-      // Wait up to 8 seconds for Cloudflare to complete challenge (reduced for performance)
-      for (let i = 0; i < 8; i++) {
+      // Wait up to 12 seconds for Cloudflare to complete challenge (balanced for performance)
+      for (let i = 0; i < 12; i++) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Occasional mouse movement to appear more human
@@ -312,8 +312,8 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       }
     }
     
-    // Brief settle time after page load (reduced for performance)
-    await randomDelay(100, 300);
+    // Brief settle time after page load (optimized for performance)
+    await randomDelay(300, 500);
     
     // Simulate minimal human-like behavior for bot detection bypass (optimized for speed)
     try {
