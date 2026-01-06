@@ -1,6 +1,9 @@
 import HTMLtoDOCX from "html-to-docx";
-// @ts-ignore - pdfmake ESM import
-import PdfPrinter from "pdfmake/src/Printer.js";
+import { createRequire } from "module";
+
+// Create require for CommonJS modules in ESM context
+const require = createRequire(import.meta.url);
+const PdfPrinter = require("pdfmake/src/Printer");
 
 // Use built-in Helvetica fonts (no external files needed)
 const fonts = {
