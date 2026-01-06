@@ -158,8 +158,8 @@ export interface ComprehensiveScanResult {
 }
 
 const DEFAULT_CONFIG: ComprehensiveScanConfig = {
-  max_pages_to_crawl: 50,
-  render_timeout_ms: 60000,
+  max_pages_to_crawl: 30, // Reduced for faster scans
+  render_timeout_ms: 25000, // Reduced from 60s for faster scans
   deep_scan: true,
   include_screenshots: false,
   fetch_policy_content: true,
