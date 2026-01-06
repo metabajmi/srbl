@@ -121,6 +121,10 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
   const browser = await getBrowser();
   const page = await browser.newPage();
   
+  // Set default timeouts for all operations
+  page.setDefaultNavigationTimeout(PAGE_OPTIONS.timeout);
+  page.setDefaultTimeout(PAGE_OPTIONS.timeout);
+  
   try {
     await page.setViewport({ width: 1920, height: 1080 });
     
@@ -196,12 +200,11 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     console.log(`[Scanner] Navigating to ${url}...`);
     let response;
     
-    // Try multiple navigation strategies
+    // Try multiple navigation strategies with reduced timeouts for faster scans
     const navigationStrategies = [
-      { name: 'domcontentloaded', timeout: 45000, waitUntil: 'domcontentloaded' as const },
-      { name: 'load', timeout: 30000, waitUntil: 'load' as const },
-      { name: 'networkidle0', timeout: 25000, waitUntil: 'networkidle0' as const },
-      { name: 'networkidle2', timeout: 20000, waitUntil: 'networkidle2' as const },
+      { name: 'domcontentloaded', timeout: PAGE_OPTIONS.timeout, waitUntil: 'domcontentloaded' as const },
+      { name: 'load', timeout: 15000, waitUntil: 'load' as const },
+      { name: 'networkidle2', timeout: 10000, waitUntil: 'networkidle2' as const },
     ];
     
     let navigationSuccess = false;
