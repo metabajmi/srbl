@@ -1,9 +1,4 @@
 import HTMLtoDOCX from "html-to-docx";
-import { createRequire } from "module";
-
-// Create require for CommonJS modules in ESM context
-const require = createRequire(import.meta.url);
-const PdfPrinter = require("pdfmake/src/Printer");
 
 // Use built-in Helvetica fonts (no external files needed)
 const fonts = {
@@ -25,6 +20,10 @@ export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
   const startTime = Date.now();
   
   try {
+    // Dynamic import for pdfmake ESM module
+    const PdfPrinterModule = await import("pdfmake/src/Printer.js");
+    const PdfPrinter = PdfPrinterModule.default;
+    
     // Build pdfmake document definition
     const docDefinition = {
       content: [
