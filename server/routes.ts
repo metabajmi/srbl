@@ -1419,21 +1419,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         policyDocumentId: policyDoc.id,
       });
       
-      // Send policy email to user's registered email (OTP email)
+      // Send policy email to user's registered email (OTP email) - AWAIT to ensure delivery
       const user = await storage.getUser(userId!);
+      let emailSent = false;
       if (user?.email && generatedContent) {
-        sendPolicyEmail({
-          to: user.email,
-          companyName: companyName,
-          policyContent: generatedContent,
-          policyId: policyDoc.id,
-        }).catch(err => console.error("Failed to send policy email:", err));
+        try {
+          console.log("[Route] Sending policy email to:", user.email);
+          emailSent = await sendPolicyEmail({
+            to: user.email,
+            companyName: companyName,
+            policyContent: generatedContent,
+            policyId: policyDoc.id,
+          });
+          console.log("[Route] Email sent result:", emailSent);
+        } catch (err) {
+          console.error("[Route] Failed to send policy email:", err);
+        }
       }
       
       res.json({ 
         success: true, 
         policyId: policyDoc.id,
-        message: "تم توليد سياسة الخصوصية بنجاح",
+        emailSent: emailSent,
+        message: emailSent ? "تم توليد سياسة الخصوصية وإرسالها بنجاح" : "تم توليد سياسة الخصوصية",
       });
     } catch (error) {
       console.error("Error generating policy from request:", error);
@@ -2908,15 +2916,21 @@ async function processPrivacyPolicyGeneration(policyId: string, userEmail?: stri
       generatedContent,
     });
     
-    // Send email to user's registered email (OTP email)
+    // Send email to user's registered email (OTP email) - AWAIT to ensure delivery
     const emailTo = userEmail || policy.contactEmail;
     if (emailTo && generatedContent) {
-      sendPolicyEmail({
-        to: emailTo,
-        companyName: policy.companyName,
-        policyContent: generatedContent,
-        policyId: policyId,
-      }).catch(err => console.error("Failed to send policy email:", err));
+      try {
+        console.log("[Background] Sending policy email to:", emailTo);
+        const emailSent = await sendPolicyEmail({
+          to: emailTo,
+          companyName: policy.companyName,
+          policyContent: generatedContent,
+          policyId: policyId,
+        });
+        console.log("[Background] Email sent result:", emailSent);
+      } catch (err) {
+        console.error("[Background] Failed to send policy email:", err);
+      }
     }
   } catch (error) {
     console.error("Error processing privacy policy generation:", error);
