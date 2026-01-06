@@ -29,6 +29,10 @@ export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
   try {
     const page = await browser.newPage();
     
+    // Override Puppeteer's default 30s timeout to 60s
+    page.setDefaultNavigationTimeout(60000);
+    page.setDefaultTimeout(60000);
+    
     // Use domcontentloaded instead of networkidle0 - no external resource waiting
     // This prevents timeout from slow Google Fonts loading
     await page.setContent(htmlTemplate, { 
