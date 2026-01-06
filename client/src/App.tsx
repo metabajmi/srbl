@@ -140,10 +140,10 @@ function AdminGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useClientAuth();
   const { isAdmin } = useAdminAuth();
   
-  // If a client (not admin) tries to access admin pages, redirect to dashboard
+  // If a client (not admin) tries to access admin pages, redirect to home
   useEffect(() => {
     if (isAuthenticated && !isAdmin) {
-      navigate("/dashboard");
+      navigate("/");
     }
   }, [isAuthenticated, isAdmin, navigate]);
   
