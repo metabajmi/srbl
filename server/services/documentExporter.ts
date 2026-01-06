@@ -1,70 +1,95 @@
-import puppeteer from "puppeteer";
 import HTMLtoDOCX from "html-to-docx";
+import PdfPrinter from "pdfmake";
+// @ts-ignore - html-to-pdfmake lacks type definitions
+import htmlToPdfmake from "html-to-pdfmake";
+import { JSDOM } from "jsdom";
+import type { TDocumentDefinitions, Content } from "pdfmake/interfaces";
 
 interface PolicyDocument {
   companyName: string;
   content: string;
 }
 
+// Define fonts for pdfmake (using built-in Roboto)
+const fonts = {
+  Roboto: {
+    normal: 'node_modules/pdfmake/build/vfs_fonts.js',
+    bold: 'node_modules/pdfmake/build/vfs_fonts.js',
+    italics: 'node_modules/pdfmake/build/vfs_fonts.js',
+    bolditalics: 'node_modules/pdfmake/build/vfs_fonts.js'
+  }
+};
+
 export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
-  const htmlTemplate = wrapWithPDFTemplate(policy.content, policy.companyName);
-  
-  // Find chromium executable
-  const chromiumPath = process.env.CHROMIUM_PATH || '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
-  
   console.log('[PDF] Starting PDF generation for:', policy.companyName);
   const startTime = Date.now();
   
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath: chromiumPath,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-    ],
-  });
-  
   try {
-    const page = await browser.newPage();
+    // Create JSDOM window for html-to-pdfmake
+    const { window } = new JSDOM('');
     
-    // Override Puppeteer's default 30s timeout to 60s
-    page.setDefaultNavigationTimeout(60000);
-    page.setDefaultTimeout(60000);
+    // Convert HTML content to pdfmake format
+    const htmlContent = `
+      <div style="text-align: right; direction: rtl;">
+        <h1 style="color: #059669; text-align: center;">سياسة الخصوصية</h1>
+        <h2 style="color: #374151; text-align: center;">${policy.companyName}</h2>
+        <hr/>
+        ${policy.content}
+        <hr/>
+        <p style="text-align: center; color: #6b7280; font-size: 10pt;">
+          تم إنشاء هذه السياسة بواسطة منصة سِرْبَال للامتثال لنظام حماية البيانات الشخصية
+        </p>
+        <p style="text-align: center; color: #6b7280; font-size: 10pt;">www.sirbal.co</p>
+      </div>
+    `;
     
-    // Use domcontentloaded instead of networkidle0 - no external resource waiting
-    // This prevents timeout from slow Google Fonts loading
-    await page.setContent(htmlTemplate, { 
-      waitUntil: 'domcontentloaded',
-      timeout: 60000 // 60 second timeout
-    });
+    const pdfContent = htmlToPdfmake(htmlContent, { window }) as Content;
     
-    // Brief wait for CSS to apply
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20mm',
-        right: '20mm',
-        bottom: '20mm',
-        left: '20mm',
+    // Create document definition
+    const docDefinition: TDocumentDefinitions = {
+      content: pdfContent,
+      defaultStyle: {
+        font: 'Roboto',
+        fontSize: 11,
+        lineHeight: 1.5,
       },
-      timeout: 60000 // 60 second timeout for PDF generation
+      styles: {
+        'html-h1': { fontSize: 20, bold: true, margin: [0, 10, 0, 10] },
+        'html-h2': { fontSize: 16, bold: true, margin: [0, 8, 0, 8] },
+        'html-h3': { fontSize: 14, bold: true, margin: [0, 6, 0, 6] },
+        'html-p': { margin: [0, 4, 0, 4] },
+        'html-li': { margin: [0, 2, 0, 2] },
+      },
+      pageSize: 'A4',
+      pageMargins: [40, 40, 40, 40],
+    };
+    
+    // Generate PDF using pdfmake
+    const printer = new PdfPrinter(fonts);
+    const pdfDoc = printer.createPdfKitDocument(docDefinition);
+    
+    // Collect PDF data into buffer
+    const chunks: Buffer[] = [];
+    
+    return new Promise<Buffer>((resolve, reject) => {
+      pdfDoc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      pdfDoc.on('end', () => {
+        const pdfBuffer = Buffer.concat(chunks);
+        const elapsed = Date.now() - startTime;
+        console.log(`[PDF] Generated successfully in ${elapsed}ms, size: ${pdfBuffer.length} bytes`);
+        resolve(pdfBuffer);
+      });
+      pdfDoc.on('error', (err: Error) => {
+        const elapsed = Date.now() - startTime;
+        console.error(`[PDF] Generation failed after ${elapsed}ms:`, err);
+        reject(err);
+      });
+      pdfDoc.end();
     });
-    
-    const elapsed = Date.now() - startTime;
-    console.log(`[PDF] Generated successfully in ${elapsed}ms, size: ${pdfBuffer.length} bytes`);
-    
-    return Buffer.from(pdfBuffer);
   } catch (error) {
     const elapsed = Date.now() - startTime;
     console.error(`[PDF] Generation failed after ${elapsed}ms:`, error);
     throw error;
-  } finally {
-    await browser.close();
   }
 }
 
