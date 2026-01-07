@@ -90,6 +90,11 @@ export default function HomePage() {
 
   const features = [
     {
+      icon: <Shield className="w-6 h-6" />,
+      title: "متوافق",
+      description: "مع نظام حماية البيانات الشخصية السعودي",
+    },
+    {
       icon: <Sparkles className="w-6 h-6" />,
       title: "ذكاء اصطناعي متقدم",
       description: "تحليل دقيق ومتخصص باستخدام أحدث التقنيات",
@@ -374,7 +379,11 @@ export default function HomePage() {
               <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold">لماذا تختار منصتنا؟</CardTitle>
             </CardHeader>
             <CardContent className="pb-6 sm:pb-8">
-              <div className="grid gap-6 sm:gap-8 grid-cols-1 md:grid-cols-2">
+              <div className="grid gap-6 sm:gap-8 grid-cols-1 md:grid-cols-3">
+                <div className="text-center space-y-2 sm:space-y-3">
+                  <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
+                  <p className="text-sm sm:text-base font-semibold text-muted-foreground">متوافق مع اللوائح السعودية</p>
+                </div>
                 <div className="text-center space-y-2 sm:space-y-3">
                   <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary">AI</div>
                   <p className="text-sm sm:text-base font-semibold text-muted-foreground">تحليل ذكي بأحدث التقنيات</p>
