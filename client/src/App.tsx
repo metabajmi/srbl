@@ -276,7 +276,7 @@ function AppContent() {
           <div className="flex flex-col flex-1 min-w-0">
             {/* Don't show main header on admin pages */}
             {!isAdminPage && (
-              <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 gap-4">
+              <header className="absolute top-0 left-0 right-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 gap-4">
                 {/* Sidebar trigger hidden for MVP launch - keep code for future */}
                 {/* <SidebarTrigger 
                   data-testid="button-sidebar-toggle" 
@@ -290,10 +290,10 @@ function AppContent() {
                       size="sm"
                       onClick={() => setShowOTPModal(true)}
                       data-testid="button-header-login"
-                      className="text-sm"
+                      className="text-sm shadow-md"
                     >
                       <LogIn className="w-4 h-4 ml-1.5" />
-                      <span className="hidden sm:inline">تسجيل الدخول</span>
+                      <span>تسجيل الدخول</span>
                     </Button>
                   ) : (
                     <Button
@@ -310,10 +310,10 @@ function AppContent() {
                         }
                       }}
                       data-testid="button-header-logout"
-                      className="text-sm"
+                      className="text-sm shadow-md bg-white/80 backdrop-blur-sm"
                     >
                       <LogOut className="w-4 h-4 ml-1.5" />
-                      <span className="hidden sm:inline">تسجيل الخروج</span>
+                      <span>تسجيل الخروج</span>
                     </Button>
                   )}
                 </div>
