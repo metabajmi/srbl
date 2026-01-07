@@ -108,9 +108,9 @@ export default function HomePage() {
 
   return (
     <div className="page-wrapper bg-background">
-      {/* Brand Header */}
-      <section className="bg-gradient-to-b from-primary/15 via-primary/8 to-primary/3 border-b backdrop-blur-sm animate-fade-in">
-        <div className="container py-12 md:py-16">
+      {/* Brand Header - extends to top behind navbar */}
+      <section className="bg-gradient-to-b from-primary/15 via-primary/8 to-primary/3 backdrop-blur-sm animate-fade-in">
+        <div className="container pt-16 pb-12 md:pt-20 md:pb-16">
           <div className="flex items-center justify-center gap-4 md:gap-5">
             <div className="flex items-center justify-center animate-scale-in shrink-0">
               <Shield className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-primary drop-shadow-sm transition-smooth hover:drop-shadow-lg" />
