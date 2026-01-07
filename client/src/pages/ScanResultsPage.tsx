@@ -310,23 +310,9 @@ export default function ScanResultsPage() {
 
       <div className="container py-6 max-w-4xl">
         
-        {/* Scanning Progress with animated progress bar */}
+        {/* Scanning Progress with animated progress bar - Compact & Centered */}
         {(scan.status === "pending" || scan.status === "scanning") && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center gap-4">
-                <Globe className="w-16 h-16 animate-spin text-primary" />
-                <p className="text-lg font-bold">جاري تحميل النتائج...</p>
-                <p className="text-sm text-muted-foreground text-center" dir="ltr">{scan.url}</p>
-                <Progress 
-                  value={scanProgress} 
-                  animated={true}
-                  className="w-full max-w-md h-2" 
-                  data-testid="progress-results-scan" 
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <ScanLoadingState url={scan.url} progress={scanProgress} />
         )}
 
         {/* Results */}
@@ -1136,6 +1122,76 @@ function TermsConditionsAuditCard({ audit }: TermsConditionsAuditProps) {
           </div>
         )}
 
+      </CardContent>
+    </Card>
+  );
+}
+
+// Rotating tips messages for engaging loading experience
+const LOADING_TIPS = [
+  "جاري الاتصال بالموقع وتحليل البنية البرمجية...",
+  "يقوم الذكاء الاصطناعي الآن بقراءة سياسة الخصوصية...",
+  "هل تعلم؟ نظام حماية البيانات (PDPL) يفرض غرامات تصل لـ 5 ملايين ريال.",
+  "نتأكد من وجود آلية واضحة لموافقة الزوار (Cookies)...",
+  "جاري مطابقة الموقع مع متطلبات 'سدايا'...",
+  "نقوم الآن بتجهيز تقرير الامتثال القانوني...",
+];
+
+// Compact & Centered Loading State with Rotating Tips
+function ScanLoadingState({ url, progress }: { url: string; progress: number }) {
+  const [currentTipIndex, setCurrentTipIndex] = useState(0);
+  const [fadeState, setFadeState] = useState<'in' | 'out'>('in');
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Start fade out
+      setFadeState('out');
+      
+      // After fade out, change tip and fade in
+      setTimeout(() => {
+        setCurrentTipIndex((prev) => (prev + 1) % LOADING_TIPS.length);
+        setFadeState('in');
+      }, 300);
+    }, 4000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  return (
+    <Card className="mb-6">
+      <CardContent className="py-12">
+        {/* Centered content with proper vertical spacing */}
+        <div className="flex flex-col items-center justify-center min-h-[280px] gap-3">
+          {/* Globe Icon - closer to text */}
+          <Globe className="w-14 h-14 animate-spin text-primary" />
+          
+          {/* Main Title - 12px gap from icon */}
+          <h2 className="text-lg font-bold leading-relaxed pb-1">جاري تحميل النتائج...</h2>
+          
+          {/* URL */}
+          <p className="text-sm text-muted-foreground text-center" dir="ltr">{url}</p>
+          
+          {/* Progress Bar - 16px gap */}
+          <div className="w-full max-w-md mt-2">
+            <Progress 
+              value={progress} 
+              animated={true}
+              className="w-full h-2" 
+              data-testid="progress-results-scan" 
+            />
+          </div>
+          
+          {/* Rotating Tips - 16px gap from progress bar */}
+          <div className="mt-4 h-6 flex items-center justify-center">
+            <p 
+              className={`text-sm text-gray-500 dark:text-gray-400 text-center transition-opacity duration-300 ${
+                fadeState === 'in' ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              {LOADING_TIPS[currentTipIndex]}
+            </p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
