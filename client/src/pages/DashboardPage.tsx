@@ -13,12 +13,15 @@ import {
   CheckCircle2,
   FileCheck,
   Search,
-  Shield
+  Shield,
+  ChevronDown
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { BackButton } from "@/components/BackButton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { type PolicyDocument } from "@shared/schema";
 
 export default function DashboardPage() {
   const [, navigate] = useLocation();
@@ -47,7 +50,7 @@ export default function DashboardPage() {
   }
 
   // Fetch user's policies
-  const { data: policies = [], isLoading: policiesLoading } = useQuery<any[]>({
+  const { data: policies = [], isLoading: policiesLoading } = useQuery<PolicyDocument[]>({
     queryKey: ["/api/user/policies"],
   });
 
@@ -112,6 +115,121 @@ export default function DashboardPage() {
       default:
         return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
+  };
+
+  const generateHtmlContent = (policy: PolicyDocument) => {
+    const escapeHtml = (text: string): string => {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    };
+    
+    const safeCompanyName = escapeHtml(policy.companyName);
+    const safeDate = escapeHtml(new Date(policy.createdAt!).toLocaleDateString('ar-SA', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }));
+    
+    return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>سياسة الخصوصية - ${safeCompanyName}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+        body { font-family: 'Cairo', sans-serif; line-height: 1.8; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        h1 { color: #16a34a; text-align: center; border-bottom: 3px solid #16a34a; padding-bottom: 20px; }
+        h2 { color: #15803d; border-right: 5px solid #22c55e; padding-right: 15px; margin-top: 30px; }
+        .header { text-align: center; margin-bottom: 40px; padding: 30px; background: linear-gradient(135deg, #16a34a, #22c55e); color: white; border-radius: 10px; }
+        .header h1 { color: white; border-bottom: none; }
+        .content { background: #fff; padding: 40px; border-radius: 10px; }
+        .footer { margin-top: 50px; padding-top: 30px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; }
+        ul { list-style-type: disc; padding-right: 20px; }
+        li { margin-bottom: 8px; }
+        @media print { body { padding: 20px; } .header { background: #16a34a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>سياسة الخصوصية</h1>
+        <div>${safeCompanyName}</div>
+        <div>تاريخ الإصدار: ${safeDate}</div>
+    </div>
+    <div class="content">${policy.generatedContent || ''}</div>
+    <div class="footer">
+        <p>تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)</p>
+    </div>
+</body>
+</html>`;
+  };
+
+  const handleDownload = (policy: PolicyDocument, format: 'html' | 'pdf' | 'word') => {
+    if (!policy.generatedContent) {
+      toast({
+        title: "خطأ",
+        description: "لا يوجد محتوى للتحميل",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const htmlContent = generateHtmlContent(policy);
+    const fileName = `سياسة-الخصوصية-${policy.companyName}`;
+    
+    if (format === 'html') {
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else if (format === 'pdf') {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      }
+    } else if (format === 'word') {
+      const wordContent = `
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="UTF-8">
+<style>
+body { font-family: 'Cairo', 'Arial', sans-serif; direction: rtl; text-align: right; line-height: 1.8; }
+h1 { color: #16a34a; text-align: center; }
+h2 { color: #15803d; border-right: 5px solid #22c55e; padding-right: 15px; }
+</style>
+</head>
+<body dir="rtl">
+<h1>سياسة الخصوصية</h1>
+<p style="text-align: center; font-weight: bold;">${policy.companyName}</p>
+<p style="text-align: center; color: #6b7280;">تاريخ الإصدار: ${new Date(policy.createdAt!).toLocaleDateString('ar-SA')}</p>
+<hr/>
+${policy.generatedContent}
+</body>
+</html>`;
+      const blob = new Blob(['\ufeff', wordContent], { type: 'application/msword;charset=UTF-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.doc`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+    
+    toast({
+      title: "تم التحميل",
+      description: `تم تحميل الوثيقة بصيغة ${format.toUpperCase()}`,
+    });
   };
 
   return (
@@ -203,7 +321,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {policies.map((policy: any, index: number) => (
+                  {policies.map((policy: PolicyDocument, index: number) => (
                     <div 
                       key={policy.id || index} 
                       className="flex items-center justify-between p-3 rounded-lg border bg-card hover-elevate"
@@ -214,25 +332,48 @@ export default function DashboardPage() {
                           <Shield className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium">{policy.title || "سياسة الخصوصية"}</p>
+                          <p className="font-medium">{policy.companyName || "سياسة الخصوصية"}</p>
                           <p className="text-sm text-muted-foreground">
-                            {policy.createdAt ? formatDate(policy.createdAt) : "تاريخ غير محدد"}
+                            {policy.createdAt ? formatDate(policy.createdAt.toString()) : "تاريخ غير محدد"}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(policy.status || "completed")}
-                        {policy.downloadUrl && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            asChild
-                            data-testid={`button-download-${policy.id || index}`}
-                          >
-                            <a href={policy.downloadUrl} download>
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </Button>
+                        {policy.generatedContent && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                data-testid={`button-download-${policy.id || index}`}
+                              >
+                                <Download className="h-4 w-4 ml-1" />
+                                تحميل
+                                <ChevronDown className="h-3 w-3 mr-1" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={() => handleDownload(policy, 'html')}
+                                data-testid={`button-download-html-${policy.id || index}`}
+                              >
+                                HTML
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDownload(policy, 'pdf')}
+                                data-testid={`button-download-pdf-${policy.id || index}`}
+                              >
+                                PDF (طباعة)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDownload(policy, 'word')}
+                                data-testid={`button-download-word-${policy.id || index}`}
+                              >
+                                Word
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </div>
                     </div>
