@@ -1117,6 +1117,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User route: Get user's activity log
+  app.get("/api/user/activity", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+      
+      const activities: any[] = [];
+      
+      // Get user's scans as activities
+      const scans = await storage.getScansByUserId(userId);
+      for (const scan of scans.slice(0, 10)) {
+        activities.push({
+          id: `scan-${scan.id}`,
+          type: "scan",
+          action: "فحص موقع",
+          description: `فحص الموقع: ${scan.url}`,
+          createdAt: scan.createdAt,
+        });
+      }
+      
+      // Get user's policy requests as activities
+      const requests = await storage.getPolicyGenerationRequestsByUserId(userId);
+      for (const request of requests.slice(0, 10)) {
+        activities.push({
+          id: `policy-${request.id}`,
+          type: "policy",
+          action: "إنشاء سياسة",
+          description: `إنشاء سياسة خصوصية`,
+          createdAt: request.createdAt,
+        });
+      }
+      
+      // Sort by date (newest first)
+      activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      res.json(activities.slice(0, 20));
+    } catch (error) {
+      console.error("Error fetching user activity:", error);
+      res.status(500).json({ error: "فشل في جلب سجل النشاط" });
+    }
+  });
+
   // ========== Admin-Only Policy Routes (History/Versions) ==========
 
   // Admin route: Get all policies including drafts, history, and archived
