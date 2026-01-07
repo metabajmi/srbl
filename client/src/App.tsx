@@ -263,6 +263,8 @@ function AppContent() {
   
   // Check if on admin pages
   const isAdminPage = location.startsWith("/admin");
+  // Check if on home page (for transparent header)
+  const isHomePage = location === "/" || location === "";
 
   const style = {
     "--sidebar-width": "20rem",
@@ -276,7 +278,7 @@ function AppContent() {
           <div className="flex flex-col flex-1 min-w-0">
             {/* Don't show main header on admin pages */}
             {!isAdminPage && (
-              <header className="absolute top-0 left-0 right-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 gap-4">
+              <header className={`${isHomePage ? 'absolute top-0 left-0 right-0' : 'sticky top-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'} z-40 flex items-center justify-between px-4 sm:px-6 py-3 gap-4`}>
                 {/* Sidebar trigger hidden for MVP launch - keep code for future */}
                 {/* <SidebarTrigger 
                   data-testid="button-sidebar-toggle" 
