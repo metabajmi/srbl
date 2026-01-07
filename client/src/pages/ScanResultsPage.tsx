@@ -275,7 +275,7 @@ export default function ScanResultsPage() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
         <div className="container flex h-14 items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <BackButton label="رجوع" />
+            <BackButton />
             <Shield className="w-6 h-6 text-primary" />
             <span className="font-bold hidden sm:inline">نتائج الفحص</span>
           </div>
