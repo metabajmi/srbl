@@ -408,7 +408,7 @@ export default function HomePage() {
           <div className="flex flex-col items-center gap-4 sm:gap-5 text-center">
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary shrink-0" />
-              <p className="text-sm font-medium">منصة حماية البيانات الشخصية</p>
+              <p className="text-sm font-medium">منصة سربال</p>
             </div>
             <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
               هذه المنصة مصممة للمساعدة في تحقيق الامتثال لنظام حماية البيانات الشخصية السعودي
