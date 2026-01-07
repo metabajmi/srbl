@@ -184,11 +184,26 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     
     await page.setRequestInterception(true);
     
+    // Resource types to block for faster scanning (we only need text content)
+    const BLOCKED_RESOURCE_TYPES = ['image', 'media', 'font'];
+    const BLOCKED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.mp4', '.mp3', '.wav', '.ogg', '.webm', '.woff', '.woff2', '.ttf', '.eot', '.otf'];
+    
     page.on('request', (request) => {
+      const resourceType = request.resourceType();
+      const url = request.url().toLowerCase();
+      
+      // Block non-text resources to speed up scanning
+      if (BLOCKED_RESOURCE_TYPES.includes(resourceType) || 
+          BLOCKED_EXTENSIONS.some(ext => url.includes(ext))) {
+        request.abort();
+        return;
+      }
+      
+      // Track the request for analysis
       networkRequests.push({
         url: request.url(),
         method: request.method(),
-        resourceType: request.resourceType(),
+        resourceType: resourceType,
         headers: request.headers(),
       });
       request.continue();
@@ -557,6 +572,46 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     await page.close();
     console.log('[Scanner] Page closed');
   }
+}
+
+/**
+ * Clean HTML content by removing non-text elements that add noise without value
+ * Preserves all text content including footer, navigation, and policy links
+ */
+export function cleanHtmlForAnalysis(html: string): string {
+  if (!html) return '';
+  
+  let cleaned = html;
+  
+  // Remove SVG elements (vector graphics - no text value)
+  cleaned = cleaned.replace(/<svg[\s\S]*?<\/svg>/gi, '');
+  
+  // Remove path elements (SVG paths)
+  cleaned = cleaned.replace(/<path[^>]*\/?>/gi, '');
+  
+  // Remove canvas elements
+  cleaned = cleaned.replace(/<canvas[\s\S]*?<\/canvas>/gi, '');
+  
+  // Remove inline style blocks (CSS - no text value for analysis)
+  cleaned = cleaned.replace(/<style[\s\S]*?<\/style>/gi, '');
+  
+  // Remove script blocks (JavaScript - no text value)
+  cleaned = cleaned.replace(/<script[\s\S]*?<\/script>/gi, '');
+  
+  // Remove base64 encoded data (embedded images/fonts)
+  cleaned = cleaned.replace(/data:[^;]+;base64,[a-zA-Z0-9+/=]+/gi, '');
+  
+  // Remove inline base64 in attributes
+  cleaned = cleaned.replace(/src="data:[^"]+"/gi, 'src=""');
+  cleaned = cleaned.replace(/href="data:[^"]+"/gi, 'href=""');
+  
+  // Remove empty tags that may have contained removed content
+  cleaned = cleaned.replace(/<(\w+)[^>]*>\s*<\/\1>/gi, '');
+  
+  // Collapse multiple whitespace
+  cleaned = cleaned.replace(/\s{3,}/g, ' ');
+  
+  return cleaned;
 }
 
 export function validateUrl(url: string): { valid: boolean; error?: string; normalizedUrl?: string } {

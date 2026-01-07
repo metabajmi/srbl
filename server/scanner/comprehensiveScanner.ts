@@ -356,33 +356,43 @@ export async function runComprehensiveScan(
   
   const complianceAuditResult = auditPolicyCompliance(parsedPolicies);
   
-  // Run specialized 12-element privacy policy audit
-  // Relaxed check: run if policy exists and has any meaningful content (wordCount > 10)
+  // Run specialized audits in PARALLEL for speed optimization
   const privacyPolicy = parsedPolicies.find(p => p.type === 'privacy');
+  const termsPolicy = parsedPolicies.find(p => p.type === 'terms');
+  
+  // Create audit promises for parallel execution
+  const auditPromises: Promise<void>[] = [];
   let privacyPolicyAudit: PrivacyPolicyAudit | undefined;
+  let termsConditionsAudit: TermsConditionsAudit | undefined;
+  
+  // Privacy policy audit promise
   if (privacyPolicy && privacyPolicy.fullText && privacyPolicy.wordCount > 10) {
-    console.log(`\n[PrivacyElementCheck] Running 12-element privacy policy audit...`);
-    console.log(`[PrivacyElementCheck] Policy text length: ${privacyPolicy.fullText.length} chars, words: ${privacyPolicy.wordCount}`);
-    privacyPolicyAudit = auditPrivacyPolicy(privacyPolicy.fullText);
-    console.log(`[PrivacyElementCheck] Results: Found=${privacyPolicyAudit.elementsFound}/12, Partial=${privacyPolicyAudit.elementsPartial}/12, Missing=${privacyPolicyAudit.elementsMissing}/12`);
-    console.log(`[PrivacyElementCheck] Compliance: ${privacyPolicyAudit.compliancePercentage}%`);
+    auditPromises.push((async () => {
+      console.log(`\n[PrivacyElementCheck] Running 12-element privacy policy audit...`);
+      console.log(`[PrivacyElementCheck] Policy text length: ${privacyPolicy.fullText.length} chars, words: ${privacyPolicy.wordCount}`);
+      privacyPolicyAudit = auditPrivacyPolicy(privacyPolicy.fullText);
+      console.log(`[PrivacyElementCheck] Results: Found=${privacyPolicyAudit.elementsFound}/12, Partial=${privacyPolicyAudit.elementsPartial}/12, Missing=${privacyPolicyAudit.elementsMissing}/12`);
+      console.log(`[PrivacyElementCheck] Compliance: ${privacyPolicyAudit.compliancePercentage}%`);
+    })());
   } else {
     console.log(`\n[PrivacyElementCheck] Skipped - no valid privacy policy found (policy: ${!!privacyPolicy}, wordCount: ${privacyPolicy?.wordCount || 0})`);
   }
   
-  // Run specialized 12-module Terms & Conditions audit
-  // Relaxed check: run if policy exists and has any meaningful content (wordCount > 10)
-  const termsPolicy = parsedPolicies.find(p => p.type === 'terms');
-  let termsConditionsAudit: TermsConditionsAudit | undefined;
+  // Terms & Conditions audit promise
   if (termsPolicy && termsPolicy.fullText && termsPolicy.wordCount > 10) {
-    console.log(`\n[TermsConditionsCheck] Running 12-module T&C audit...`);
-    console.log(`[TermsConditionsCheck] Terms text length: ${termsPolicy.fullText.length} chars, words: ${termsPolicy.wordCount}`);
-    termsConditionsAudit = checkTermsConditions(termsPolicy.fullText);
-    console.log(`[TermsConditionsCheck] Results: Found=${termsConditionsAudit.modulesFound}/12, Partial=${termsConditionsAudit.modulesPartial}/12, Missing=${termsConditionsAudit.modulesMissing}/12`);
-    console.log(`[TermsConditionsCheck] Compliance: ${termsConditionsAudit.compliancePercentage}%`);
+    auditPromises.push((async () => {
+      console.log(`\n[TermsConditionsCheck] Running 12-module T&C audit...`);
+      console.log(`[TermsConditionsCheck] Terms text length: ${termsPolicy.fullText.length} chars, words: ${termsPolicy.wordCount}`);
+      termsConditionsAudit = checkTermsConditions(termsPolicy.fullText);
+      console.log(`[TermsConditionsCheck] Results: Found=${termsConditionsAudit.modulesFound}/12, Partial=${termsConditionsAudit.modulesPartial}/12, Missing=${termsConditionsAudit.modulesMissing}/12`);
+      console.log(`[TermsConditionsCheck] Compliance: ${termsConditionsAudit.compliancePercentage}%`);
+    })());
   } else {
     console.log(`\n[TermsConditionsCheck] Skipped - no valid terms policy found (policy: ${!!termsPolicy}, wordCount: ${termsPolicy?.wordCount || 0})`);
   }
+  
+  // Wait for all audits to complete in parallel
+  await Promise.all(auditPromises);
   
   const scanDuration = Date.now() - startTime;
   
