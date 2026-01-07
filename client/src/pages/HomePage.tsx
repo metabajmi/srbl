@@ -415,9 +415,21 @@ export default function HomePage() {
               ولا تغني عن الاستشارة القانونية المتخصصة
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+              <Link href="/privacy">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  data-testid="link-privacy-policy"
+                >
+                  سياسة الخصوصية
+                </Button>
+              </Link>
+              <span className="text-muted-foreground/50">|</span>
               <p className="text-xs text-muted-foreground">
                 © 2026 منصة سربال - جميع الحقوق محفوظة
               </p>
+              <span className="text-muted-foreground/50">|</span>
               <Link href="/admin/login">
                 <Button 
                   variant="ghost" 
