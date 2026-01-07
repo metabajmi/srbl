@@ -217,7 +217,7 @@ export default function PrivacyPage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-foreground">
                   <Mail className="w-5 h-5 text-primary" />
-                  <span>privacy@sirbal.co</span>
+                  <span>support@sirbal.co</span>
                 </div>
                 <div className="flex items-center gap-3 text-foreground">
                   <MapPin className="w-5 h-5 text-primary" />
