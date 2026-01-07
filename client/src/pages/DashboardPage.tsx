@@ -268,7 +268,7 @@ ${policy.generatedContent}
         </div>
 
         <div className="grid gap-6">
-          {/* Card 1: Client Profile */}
+          {/* Card 1: Client Profile - Professional ID Card Style */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -277,25 +277,37 @@ ${policy.generatedContent}
               </CardTitle>
               <CardDescription>معلومات حسابك الشخصية</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    الاسم
-                  </p>
-                  <p className="font-medium" data-testid="text-user-name">
-                    {user.name || "غير محدد"}
-                  </p>
+            <CardContent>
+              {/* Grid: 1 column on mobile, 2 columns on desktop */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Name Info Box */}
+                <div className="bg-gray-50 dark:bg-muted/30 p-4 rounded-lg border border-gray-100 dark:border-border">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/10 flex-shrink-0">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">الاسم</p>
+                      <p className="font-bold text-lg truncate" data-testid="text-user-name">
+                        {user.name || "غير محدد"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    البريد الإلكتروني
-                  </p>
-                  <p className="font-medium text-left" dir="ltr" data-testid="text-user-email">
-                    {user.email}
-                  </p>
+                
+                {/* Email Info Box */}
+                <div className="bg-gray-50 dark:bg-muted/30 p-4 rounded-lg border border-gray-100 dark:border-border">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/10 flex-shrink-0">
+                      <Mail className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">البريد الإلكتروني</p>
+                      <p className="font-bold text-lg truncate" dir="ltr" data-testid="text-user-email">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
