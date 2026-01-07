@@ -235,8 +235,22 @@ ${policy.generatedContent}
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20" dir="rtl">
       <div className="max-w-4xl mx-auto p-6 space-y-6">
+        {/* Logout Button - Top Right */}
+        <div className="flex justify-start">
+          <Button 
+            variant="destructive" 
+            onClick={handleLogout}
+            data-testid="button-logout"
+          >
+            <LogOut className="h-4 w-4 ml-2" />
+            تسجيل الخروج
+          </Button>
+        </div>
+        
+        {/* Breadcrumb */}
         <BackButton />
         
+        {/* Page Title */}
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
@@ -283,18 +297,6 @@ ${policy.generatedContent}
                     {user.email}
                   </p>
                 </div>
-              </div>
-              
-              <div className="pt-4 border-t">
-                <Button 
-                  variant="destructive" 
-                  onClick={handleLogout}
-                  data-testid="button-logout"
-                  className="w-full sm:w-auto"
-                >
-                  <LogOut className="h-4 w-4 ml-2" />
-                  تسجيل الخروج
-                </Button>
               </div>
             </CardContent>
           </Card>
