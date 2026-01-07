@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation, Redirect } from "wouter";
+import { Switch, Route, useLocation, Redirect, Link } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,7 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { ScanProvider } from "@/contexts/ScanContext";
-import { LogIn, LogOut } from "lucide-react";
+import { LogIn, User } from "lucide-react";
 import { OTPModal } from "@/components/OTPModal";
 import HomePage from "@/pages/HomePage";
 import ScanResultsPage from "@/pages/ScanResultsPage";
@@ -188,9 +188,9 @@ function Router() {
         <Redirect to="/" />
       </Route>
       
-      {/* Client Dashboard - Redirect to home for MVP */}
+      {/* Client Dashboard */}
       <Route path="/dashboard">
-        <Redirect to="/" />
+        <ClientRoute component={DashboardPage} />
       </Route>
       <Route path="/my-policies">
         <Redirect to="/" />
@@ -298,25 +298,17 @@ function AppContent() {
                       <span>تسجيل الدخول</span>
                     </Button>
                   ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        try {
-                          await fetch("/api/auth/logout", { method: "POST" });
-                          localStorage.removeItem("user");
-                          setIsLoggedIn(false);
-                          queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-                        } catch (e) {
-                          console.error("Logout error:", e);
-                        }
-                      }}
-                      data-testid="button-header-logout"
-                      className="text-sm shadow-md bg-white/80 backdrop-blur-sm"
-                    >
-                      <LogOut className="w-4 h-4 ml-1.5" />
-                      <span>تسجيل الخروج</span>
-                    </Button>
+                    <Link href="/dashboard">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        data-testid="button-header-my-account"
+                        className="text-sm"
+                      >
+                        <User className="w-4 h-4 ml-1.5" />
+                        <span>حسابي</span>
+                      </Button>
+                    </Link>
                   )}
                 </div>
               </header>
