@@ -257,7 +257,7 @@ ${policy.generatedContent}
               <User className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-l from-primary to-primary/60 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-l from-primary to-primary/60 bg-clip-text text-transparent leading-relaxed pb-2">
                 حسابي
               </h1>
               <p className="text-muted-foreground">
