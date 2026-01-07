@@ -426,6 +426,17 @@ export default function HomePage() {
                 </Button>
               </Link>
               <span className="text-muted-foreground/50">|</span>
+              <Link href="/terms">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  data-testid="link-terms"
+                >
+                  الشروط والأحكام
+                </Button>
+              </Link>
+              <span className="text-muted-foreground/50">|</span>
               <p className="text-xs text-muted-foreground">
                 © 2026 منصة سربال - جميع الحقوق محفوظة
               </p>

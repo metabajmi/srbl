@@ -31,6 +31,7 @@ import DpiaPage from "@/pages/DpiaPage";
 import ComplianceWorkspacePage from "@/pages/ComplianceWorkspacePage";
 import InternalComplianceWorkspacePage from "@/pages/InternalComplianceWorkspacePage";
 import PrivacyPage from "@/pages/PrivacyPage";
+import TermsPage from "@/pages/TermsPage";
 import NotFound from "@/pages/not-found";
 import { useEffect, useState } from "react";
 
@@ -227,6 +228,7 @@ function Router() {
       
       {/* Static Pages */}
       <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/terms" component={TermsPage} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />
