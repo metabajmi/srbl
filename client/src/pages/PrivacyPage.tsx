@@ -62,7 +62,7 @@ export default function PrivacyPage() {
                 <h3 className="font-semibold text-foreground mb-2">1. بيانات الحساب</h3>
                 <ul className="list-disc list-inside space-y-1 mr-4">
                   <li>البريد الإلكتروني (مطلوب للتسجيل وتسجيل الدخول)</li>
-                  <li>الاسم (اختياري)</li>
+                  <li>الاسم الكامل: نجمع اسمك للتحقق من هويتك، وتخصيص واجهة المستخدم، وضمان أمان الحساب</li>
                 </ul>
               </div>
               

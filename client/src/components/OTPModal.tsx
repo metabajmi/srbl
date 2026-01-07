@@ -145,13 +145,14 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
             
             <form onSubmit={handleSendOtp} className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="name">الاسم (اختياري)</Label>
+                <Label htmlFor="name">الاسم *</Label>
                 <Input
                   id="name"
                   type="text"
                   placeholder="أدخل اسمك"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  required
                   data-testid="input-otp-name"
                   dir="rtl"
                 />
@@ -207,7 +208,7 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={!email || !agreedToTerms || sendOtpMutation.isPending}
+                disabled={!name.trim() || !email || !agreedToTerms || sendOtpMutation.isPending}
                 data-testid="button-send-otp"
               >
                 {sendOtpMutation.isPending ? (
