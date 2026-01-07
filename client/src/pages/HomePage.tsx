@@ -97,7 +97,7 @@ export default function HomePage() {
     {
       icon: <Sparkles className="w-6 h-6" />,
       title: "ذكاء اصطناعي متقدم",
-      description: "نستخدم GPT-4o لتحليل دقيق ومتخصص",
+      description: "تحليل دقيق ومتخصص باستخدام أحدث التقنيات",
     },
     {
       icon: <FileText className="w-6 h-6" />,
@@ -386,7 +386,7 @@ export default function HomePage() {
                 </div>
                 <div className="text-center space-y-2 sm:space-y-3">
                   <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary">AI</div>
-                  <p className="text-sm sm:text-base font-semibold text-muted-foreground">تحليل ذكي بتقنية GPT-4o</p>
+                  <p className="text-sm sm:text-base font-semibold text-muted-foreground">تحليل ذكي بأحدث التقنيات</p>
                 </div>
                 <div className="text-center space-y-2 sm:space-y-3">
                   <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary">دقائق</div>
