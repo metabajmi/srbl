@@ -376,21 +376,24 @@ export default function HomePage() {
           <div className="max-w-3xl mx-auto animate-slide-up">
           <Card className="shadow-xl bg-gradient-to-br from-primary/10 via-primary/8 to-transparent border-2 border-primary/20 transition-smooth duration-300 hover:shadow-2xl">
             <CardHeader className="text-center pb-6 sm:pb-8">
-              <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold">لماذا تختار منصتنا؟</CardTitle>
+              <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold">لماذا نحن؟</CardTitle>
             </CardHeader>
             <CardContent className="pb-6 sm:pb-8">
               <div className="grid gap-6 sm:gap-8 grid-cols-1 md:grid-cols-3">
                 <div className="text-center space-y-2 sm:space-y-3">
                   <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
-                  <p className="text-sm sm:text-base font-semibold text-muted-foreground">متوافق مع اللوائح السعودية</p>
+                  <h3 className="text-lg font-bold text-foreground">امتثال محلي كامل</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">محتوى مصمم خصيصاً ليتوافق مع الأنظمة السعودية 100%.</p>
                 </div>
                 <div className="text-center space-y-2 sm:space-y-3">
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary">AI</div>
-                  <p className="text-sm sm:text-base font-semibold text-muted-foreground">تحليل ذكي بأحدث التقنيات</p>
+                  <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
+                  <h3 className="text-lg font-bold text-foreground">تقنيات ذكية</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">نستخدم الذكاء الاصطناعي لضمان دقة الوثائق وجودتها.</p>
                 </div>
                 <div className="text-center space-y-2 sm:space-y-3">
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary">دقائق</div>
-                  <p className="text-sm sm:text-base font-semibold text-muted-foreground">احصل على وثائق جاهزة فوراً</p>
+                  <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
+                  <h3 className="text-lg font-bold text-foreground">إنجاز فوري</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">لا تنتظر أياماً، احصل على مستنداتك القانونية في لحظات.</p>
                 </div>
               </div>
             </CardContent>
@@ -413,7 +416,7 @@ export default function HomePage() {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               <p className="text-xs text-muted-foreground">
-                © 2024 منصة حماية البيانات - جميع الحقوق محفوظة
+                © 2026 منصة سربال - جميع الحقوق محفوظة
               </p>
               <Link href="/admin/login">
                 <Button 
