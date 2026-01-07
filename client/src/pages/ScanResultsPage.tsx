@@ -117,7 +117,17 @@ export default function ScanResultsPage() {
 
   // Handle successful OTP verification
   const handleOTPSuccess = (user: any, claimedScanId?: string | null) => {
+    // Save user to localStorage for global authentication
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    }
+    
+    // Update local auth state
     setIsLoggedIn(true);
+    
+    // Trigger storage event for other components to detect auth change
+    window.dispatchEvent(new Event("storage"));
+    
     // Refetch issues and scan data now that user is authenticated
     refetch();
     refetchIssues();
