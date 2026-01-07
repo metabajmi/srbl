@@ -188,13 +188,45 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     const BLOCKED_RESOURCE_TYPES = ['image', 'media', 'font'];
     const BLOCKED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.mp4', '.mp3', '.wav', '.ogg', '.webm', '.woff', '.woff2', '.ttf', '.eot', '.otf'];
     
+    // Known tracking/analytics patterns to block (SAFE - these never contain policy content)
+    const BLOCKED_TRACKERS = [
+      'google-analytics.com', 'googletagmanager.com', 'doubleclick.net',
+      'facebook.com/tr', 'facebook.net/signals', 'connect.facebook.net',
+      'hotjar.com', 'intercom.io', 'segment.com', 'mixpanel.com',
+      'mouseflow.com', 'fullstory.com', 'crazyegg.com', 'optimizely.com',
+      'amplitude.com', 'heap.io', 'clarity.ms', 'mparticle.com',
+      'tiktok.com/i18n', 'snap.licdn.com', 'bat.bing.com', 'adservice.google'
+    ];
+    
+    // Extract main domain to ensure we never block it
+    const mainDomain = new URL(url).hostname.replace(/^www\./, '');
+    
     page.on('request', (request) => {
       const resourceType = request.resourceType();
-      const url = request.url().toLowerCase();
+      const reqUrl = request.url().toLowerCase();
+      const reqDomain = new URL(reqUrl).hostname.replace(/^www\./, '');
+      
+      // NEVER block main domain resources
+      if (reqDomain === mainDomain || reqDomain.endsWith('.' + mainDomain)) {
+        networkRequests.push({
+          url: request.url(),
+          method: request.method(),
+          resourceType: resourceType,
+          headers: request.headers(),
+        });
+        request.continue();
+        return;
+      }
       
       // Block non-text resources to speed up scanning
       if (BLOCKED_RESOURCE_TYPES.includes(resourceType) || 
-          BLOCKED_EXTENSIONS.some(ext => url.includes(ext))) {
+          BLOCKED_EXTENSIONS.some(ext => reqUrl.includes(ext))) {
+        request.abort();
+        return;
+      }
+      
+      // Block known trackers/analytics (SAFE - these never contain policy content)
+      if (BLOCKED_TRACKERS.some(tracker => reqUrl.includes(tracker))) {
         request.abort();
         return;
       }
@@ -215,24 +247,76 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     console.log(`[Scanner] Navigating to ${url}...`);
     let response;
     
-    // Try multiple navigation strategies with reduced timeouts for faster scans
-    const navigationStrategies = [
-      { name: 'domcontentloaded', timeout: PAGE_OPTIONS.timeout, waitUntil: 'domcontentloaded' as const },
-      { name: 'load', timeout: 15000, waitUntil: 'load' as const },
-      { name: 'networkidle2', timeout: 10000, waitUntil: 'networkidle2' as const },
-    ];
+    // Smart Timeout: Race between fast navigation and timeout with content verification
+    const FAST_TIMEOUT = 7000; // 7 seconds for fast path
+    const FULL_TIMEOUT = 20000; // Full timeout as fallback
+    const MIN_CONTENT_LENGTH = 500; // Minimum content to consider page loaded
+    
+    const timeoutPromise = (ms: number) => new Promise<'timeout'>((resolve) => 
+      setTimeout(() => resolve('timeout'), ms)
+    );
+    
+    console.log(`[Scanner] Attempting fast navigation (${FAST_TIMEOUT}ms timeout)...`);
     
     let navigationSuccess = false;
-    for (const strategy of navigationStrategies) {
-      try {
-        console.log(`[Scanner] Trying navigation strategy: ${strategy.name} (timeout: ${strategy.timeout}ms)`);
-        response = await page.goto(url, { timeout: strategy.timeout, waitUntil: strategy.waitUntil });
+    
+    // Fast path: try to load with networkidle2 but race against timeout
+    try {
+      const fastResult = await Promise.race([
+        page.goto(url, { timeout: FULL_TIMEOUT, waitUntil: 'networkidle2' }),
+        timeoutPromise(FAST_TIMEOUT)
+      ]);
+      
+      if (fastResult === 'timeout') {
+        // Timeout triggered - check if we have enough content
+        const contentLength = await page.evaluate(() => document.body?.innerText?.length || 0);
+        console.log(`[Scanner] Fast timeout triggered, content length: ${contentLength} chars`);
+        
+        if (contentLength >= MIN_CONTENT_LENGTH) {
+          // Enough content loaded, proceed with what we have
+          console.log(`[Scanner] ✓ Sufficient content loaded, proceeding with scan`);
+          response = null; // We can still scan the page
+          navigationSuccess = true;
+        } else {
+          // Not enough content, wait for full load
+          console.log(`[Scanner] Insufficient content, waiting for full load...`);
+          try {
+            response = await page.waitForNavigation({ timeout: FULL_TIMEOUT - FAST_TIMEOUT, waitUntil: 'load' });
+            navigationSuccess = true;
+            console.log(`[Scanner] ✓ Full navigation completed`);
+          } catch (e) {
+            // Even if this fails, check content again
+            const finalContent = await page.evaluate(() => document.body?.innerText?.length || 0);
+            if (finalContent >= MIN_CONTENT_LENGTH) {
+              navigationSuccess = true;
+              console.log(`[Scanner] ✓ Recovered with ${finalContent} chars of content`);
+            }
+          }
+        }
+      } else {
+        response = fastResult;
         navigationSuccess = true;
-        console.log(`[Scanner] ✓ Navigation successful with strategy: ${strategy.name}`);
-        break;
-      } catch (navError) {
-        console.log(`[Scanner] Strategy ${strategy.name} failed, trying next...`);
-        await randomDelay(300, 500);
+        console.log(`[Scanner] ✓ Fast navigation completed successfully`);
+      }
+    } catch (navError) {
+      console.log(`[Scanner] Initial navigation failed, trying fallback strategies...`);
+      
+      // Fallback: try simpler strategies
+      const fallbackStrategies = [
+        { name: 'domcontentloaded', timeout: 10000, waitUntil: 'domcontentloaded' as const },
+        { name: 'load', timeout: 8000, waitUntil: 'load' as const },
+      ];
+      
+      for (const strategy of fallbackStrategies) {
+        try {
+          console.log(`[Scanner] Trying fallback: ${strategy.name}`);
+          response = await page.goto(url, { timeout: strategy.timeout, waitUntil: strategy.waitUntil });
+          navigationSuccess = true;
+          console.log(`[Scanner] ✓ Fallback ${strategy.name} succeeded`);
+          break;
+        } catch (e) {
+          console.log(`[Scanner] Fallback ${strategy.name} failed`);
+        }
       }
     }
     

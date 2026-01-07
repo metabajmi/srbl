@@ -1,0 +1,33 @@
+The scanner is currently slow due to hanging network requests and large data payloads. I need to optimize it for speed, BUT WITH A STRICT CONDITION:
+
+🔴 CRITICAL REQUIREMENT: ACCURACY FIRST. If ANY of the following optimizations risks compromising the accuracy of the scan results (e.g., missing a policy link, failing to detect content), DO NOT IMPLEMENT IT. Accuracy is more important than speed.
+
+Please implement these specific "High-Impact" optimizations ONLY IF they are 100% safe:
+
+1. Conditional Ad & Tracker Blocking:
+
+Action: Intercept requests and abort ONLY if the URL matches known non-essential tracking patterns: ['google-analytics', 'doubleclick', 'facebook.com/tr', 'hotjar', 'intercom'].
+
+Safety Check: Ensure that you NEVER block the main domain's resources or CDNs (like jquery, bootstrap, aws) that might be required to render the page layout.
+
+Reasoning: We need the DOM to render fully. Blocking Google Analytics is safe; blocking a CDN that hosts the footer CSS is NOT.
+
+2. Smart HTML Attribute Stripping (Token Reduction):
+
+Action: Before sending HTML to the AI, use a parser to remove "noise" attributes: class, id, style, data-*, aria-*.
+
+CRITICAL EXCEPTION: You MUST KEEP the href attribute (for links) and the src attribute (if needed for analysis).
+
+Safety Check: If the AI logic relies on specific class names (e.g., finding a div called "privacy-policy-container"), then DO NOT strip classes. If the AI relies only on text and links, proceed with stripping.
+
+3. "Smart Timeout" with Content Verification:
+
+Action: Use a race condition: Promise.race([ page.goto(..., { waitUntil: 'networkidle2' }), timeout(7000) ]).
+
+Safety Check (The "Empty Page" Guard): If the 7-second timeout triggers, CHECK the document body length before proceeding.
+
+If body.innerText.length < 500 chars: It means the page hasn't loaded (blocked by timeout). In this case, WAIT longer (fallback to full load).
+
+If body.innerText.length > 500 chars: Proceed to scan what is there.
+
+Summary: Prioritize speed by blocking noise, but if there is any doubt that an optimization might hide a link or text, skip the optimization and prioritize full loading.
