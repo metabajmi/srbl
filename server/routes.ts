@@ -1361,6 +1361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           destruction_method: intakeData.destruction_method || "secure_deletion",
           destruction_custom: intakeData.destruction_custom,
           rights_exercise_method: intakeData.rights_exercise_method || "email",
+          rights_contact_details: intakeData.rights_contact_details || "",
           response_days: intakeData.response_days || 30,
           has_dpo: intakeData.has_dpo || false,
           dpo_name: intakeData.dpo_name,
@@ -1368,8 +1369,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dpo_phone: intakeData.dpo_phone,
           dpo_email: intakeData.dpo_email,
           complaint_contact: intakeData.complaint_contact || "خدمة العملاء",
+          complaint_contact_details: intakeData.complaint_contact_details || "",
           complaint_response_days: intakeData.complaint_response_days || 30,
         };
+        
+        // Debug: Log rights and complaints contact details
+        console.log('[Policy Generator] Rights contact details:', intakeData.rights_contact_details);
+        console.log('[Policy Generator] Complaints contact details:', intakeData.complaint_contact_details);
         
         generatedContent = generatePolicyHtml(policyData);
       } else if (isWizardFormat) {
