@@ -102,7 +102,7 @@ export default function ScanResultsPage() {
   const { setScanData } = useScanContext();
   const [scanProgress, setScanProgress] = useState(0);
   const scanStartTimeRef = useRef<number | null>(null);
-  const SCAN_DURATION_MS = 35000; // ~35 seconds estimated scan time
+  const SCAN_DURATION_MS = 15000; // ~15 seconds estimated scan time (Privacy-Only mode)
   
   // Check authentication state (reactive to storage changes)
   const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated());
