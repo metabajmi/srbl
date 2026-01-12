@@ -712,6 +712,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const warningCount = violations.filter((v: any) => v.severity === 'warning' || v.severity === 'medium').length;
       const suggestionCount = violations.filter((v: any) => v.severity === 'suggestion' || v.severity === 'low' || v.severity === 'info').length;
       
+      // Extract privacy policy and terms info from discovered pages
+      const discoveredPages = comprehensiveResult.discovered_pages || [];
+      const privacyPage = discoveredPages.find((p: any) => p.type === 'privacy');
+      const termsPage = discoveredPages.find((p: any) => p.type === 'terms');
+      
+      // Also check if privacy_policy_audit exists (means we found and analyzed a privacy policy)
+      const hasPrivacyPolicy = !!(privacyPage || comprehensiveResult.privacy_policy_audit);
+      const privacyPolicyUrl = privacyPage?.url || comprehensiveResult.legal_pages?.find((p: any) => p.type === 'privacy')?.url || null;
+      
+      const hasTermsAndConditions = !!(termsPage || comprehensiveResult.terms_conditions_audit);
+      const termsAndConditionsUrl = termsPage?.url || comprehensiveResult.legal_pages?.find((p: any) => p.type === 'terms')?.url || null;
+      
       // Update scan with comprehensive results
       await storage.updateScan(scanId, {
         status: "completed",
@@ -721,6 +733,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         criticalCount,
         warningCount,
         suggestionCount,
+        hasPrivacyPolicy,
+        privacyPolicyUrl,
+        hasTermsAndConditions,
+        termsAndConditionsUrl,
         analysisResult: comprehensiveResult as any,
       });
       
