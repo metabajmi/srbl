@@ -1,31 +1,38 @@
-import { useQuery } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
+  FileText, 
+  MessageSquare, 
+  Settings, 
   LogOut, 
-  User,
-  FileText,
-  Clock,
-  Download,
-  Mail,
-  CheckCircle2,
-  FileCheck,
+  Shield, 
+  AlertCircle, 
+  AlertTriangle, 
+  CheckCircle, 
+  Globe, 
   Search,
-  Shield,
-  ChevronDown
+  Download,
+  CreditCard,
+  Loader2,
+  FileCheck
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
-import { BackButton } from "@/components/BackButton";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { type PolicyDocument } from "@shared/schema";
+import { useState, useEffect } from "react";
+import type { ComplianceScan, ComplianceIssue, PolicyDocument } from "@shared/schema";
+import MoyasarPayment from "@/components/MoyasarPayment";
 
 export default function DashboardPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("scan");
+  const [showPayment, setShowPayment] = useState(false);
+  const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
   
   // Get user from localStorage
   let user = { id: "", email: "", name: "" };
@@ -38,7 +45,7 @@ export default function DashboardPage() {
     console.error("Failed to parse user from localStorage", e);
   }
   
-  // Redirect to home if not authenticated
+  // Redirect to home if not authenticated (OTP modal handles auth)
   useEffect(() => {
     if (!user.id) {
       navigate("/");
@@ -49,403 +56,561 @@ export default function DashboardPage() {
     return null;
   }
 
+  // Fetch user's latest scan
+  const { data: latestScan, isLoading: scanLoading, error: scanError } = useQuery<ComplianceScan>({
+    queryKey: ["/api/user/scans/latest"],
+    retry: false,
+  });
+  
+  // Fetch issues for the latest scan (when authenticated)
+  const { data: issues = [] } = useQuery<ComplianceIssue[]>({
+    queryKey: ["/api/scans", latestScan?.id, "issues"],
+    queryFn: async () => {
+      const response = await fetch(`/api/scans/${latestScan?.id}/issues`);
+      if (!response.ok) throw new Error("Failed to fetch issues");
+      return response.json();
+    },
+    enabled: !!latestScan?.id && latestScan?.status === "completed",
+  });
+  
   // Fetch user's policies
-  const { data: policies = [], isLoading: policiesLoading } = useQuery<PolicyDocument[]>({
+  const { data: policies = [] } = useQuery<PolicyDocument[]>({
     queryKey: ["/api/user/policies"],
   });
-
-  // Fetch user's activity log
-  const { data: activityLog = [], isLoading: activityLoading } = useQuery<any[]>({
-    queryKey: ["/api/user/activity"],
+  
+  // Fetch user's policy requests
+  const { data: policyRequests = [] } = useQuery<any[]>({
+    queryKey: ["/api/policy-requests"],
   });
 
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       localStorage.removeItem("user");
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "تم تسجيل الخروج",
         description: "نراك قريباً!",
       });
-      window.dispatchEvent(new Event("storage"));
       navigate("/");
     } catch (error) {
       localStorage.removeItem("user");
       navigate("/");
     }
   };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ar-SA", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString("ar-SA", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <Badge variant="default" className="bg-green-500">مكتمل</Badge>;
-      case "pending":
-        return <Badge variant="secondary">قيد الانتظار</Badge>;
-      case "processing":
-        return <Badge variant="outline">جاري المعالجة</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "scan":
-        return <Search className="h-4 w-4 text-primary" />;
-      case "policy":
-        return <FileText className="h-4 w-4 text-green-500" />;
-      case "login":
-        return <User className="h-4 w-4 text-blue-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const generateHtmlContent = (policy: PolicyDocument) => {
-    const escapeHtml = (text: string): string => {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    };
-    
-    const safeCompanyName = escapeHtml(policy.companyName);
-    const safeDate = escapeHtml(new Date(policy.createdAt!).toLocaleDateString('ar-SA', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    }));
-    
-    return `<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>سياسة الخصوصية - ${safeCompanyName}</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-        body { font-family: 'Cairo', sans-serif; line-height: 1.8; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 40px 20px; }
-        h1 { color: #16a34a; text-align: center; border-bottom: 3px solid #16a34a; padding-bottom: 20px; }
-        h2 { color: #15803d; border-right: 5px solid #22c55e; padding-right: 15px; margin-top: 30px; }
-        .header { text-align: center; margin-bottom: 40px; padding: 30px; background: linear-gradient(135deg, #16a34a, #22c55e); color: white; border-radius: 10px; }
-        .header h1 { color: white; border-bottom: none; }
-        .content { background: #fff; padding: 40px; border-radius: 10px; }
-        .footer { margin-top: 50px; padding-top: 30px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; }
-        ul { list-style-type: disc; padding-right: 20px; }
-        li { margin-bottom: 8px; }
-        @media print { body { padding: 20px; } .header { background: #16a34a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>سياسة الخصوصية</h1>
-        <div>${safeCompanyName}</div>
-        <div>تاريخ الإصدار: ${safeDate}</div>
-    </div>
-    <div class="content">${policy.generatedContent || ''}</div>
-    <div class="footer">
-        <p>تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)</p>
-    </div>
-</body>
-</html>`;
-  };
-
-  const handleDownload = (policy: PolicyDocument, format: 'html' | 'pdf' | 'word') => {
-    if (!policy.generatedContent) {
+  
+  // Create policy request mutation
+  // ========== BYPASS MODE FOR TESTING ==========
+  // Changed to bypass Moyasar payment and use dummy payment ID
+  const createRequestMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/policy-requests", {
+        scanId: latestScan?.id,
+        intakeData: {
+          companyName: extractDomainName(latestScan?.url || ""),
+          businessType: "تجارة إلكترونية",
+          entityType: "private",
+          contactEmail: user.email,
+          dataCategories: [],
+        },
+      });
+      return response.json();
+    },
+    onSuccess: async (data) => {
+      // BYPASS: Skip Moyasar payment form and call success directly with dummy ID
+      // Original code:
+      // setCurrentRequestId(data.id);
+      // setShowPayment(true);
+      
+      // BYPASS: Simulate successful payment with dummy ID
+      await handlePaymentComplete("BYPASS_TEST", data.id);
+    },
+    onError: () => {
       toast({
         title: "خطأ",
-        description: "لا يوجد محتوى للتحميل",
+        description: "فشل في إنشاء طلب السياسة",
         variant: "destructive",
       });
-      return;
-    }
-    
-    const htmlContent = generateHtmlContent(policy);
-    const fileName = `سياسة-الخصوصية-${policy.companyName}`;
-    
-    if (format === 'html') {
-      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } else if (format === 'pdf') {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
+    },
+  });
+  // ========== END BYPASS MODE ==========
+  
+  // Handle payment completion
+  // Modified to accept optional requestId for BYPASS mode
+  const handlePaymentComplete = async (paymentId: string, requestIdOverride?: string) => {
+    const activeRequestId = requestIdOverride || currentRequestId;
+    try {
+      // Verify payment
+      const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
+        paymentId,
+        requestId: activeRequestId,
+      });
+      
+      if (!verifyResponse.ok) {
+        throw new Error("فشل التحقق من الدفع");
       }
-    } else if (format === 'word') {
-      const wordContent = `
-<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-<head>
-<meta charset="UTF-8">
-<style>
-body { font-family: 'Cairo', 'Arial', sans-serif; direction: rtl; text-align: right; line-height: 1.8; }
-h1 { color: #16a34a; text-align: center; }
-h2 { color: #15803d; border-right: 5px solid #22c55e; padding-right: 15px; }
-</style>
-</head>
-<body dir="rtl">
-<h1>سياسة الخصوصية</h1>
-<p style="text-align: center; font-weight: bold;">${policy.companyName}</p>
-<p style="text-align: center; color: #6b7280;">تاريخ الإصدار: ${new Date(policy.createdAt!).toLocaleDateString('ar-SA')}</p>
-<hr/>
-${policy.generatedContent}
-</body>
-</html>`;
-      const blob = new Blob(['\ufeff', wordContent], { type: 'application/msword;charset=UTF-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}.doc`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      
+      // Trigger policy generation
+      const generateResponse = await apiRequest("POST", `/api/policy-requests/${activeRequestId}/generate`);
+      
+      if (!generateResponse.ok) {
+        throw new Error("فشل في بدء توليد السياسة");
+      }
+      
+      toast({
+        title: "تم الدفع بنجاح",
+        description: "جاري توليد سياسة الخصوصية...",
+      });
+      
+      setShowPayment(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/policy-requests"] });
+      setActiveTab("policies");
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: error.message || "حدث خطأ أثناء معالجة الدفع",
+        variant: "destructive",
+      });
     }
-    
-    toast({
-      title: "تم التحميل",
-      description: `تم تحميل الوثيقة بصيغة ${format.toUpperCase()}`,
-    });
+  };
+  
+  // Filter issues by severity
+  const criticalIssues = issues.filter(i => i.severity === "critical");
+  const warningIssues = issues.filter(i => i.severity === "warning");
+  const suggestionIssues = issues.filter(i => i.severity === "suggestion");
+  
+  // Get compliance badge color
+  const getComplianceBadge = (level: string | null | undefined) => {
+    switch (level) {
+      case "high":
+        return <Badge className="bg-green-500 text-white">امتثال مرتفع</Badge>;
+      case "medium":
+        return <Badge className="bg-yellow-500 text-white">امتثال متوسط</Badge>;
+      case "low":
+        return <Badge className="bg-red-500 text-white">امتثال منخفض</Badge>;
+      default:
+        return <Badge variant="outline">غير محدد</Badge>;
+    }
+  };
+  
+  // Extract domain name from URL
+  const extractDomainName = (url: string): string => {
+    try {
+      const hostname = new URL(url).hostname;
+      return hostname.replace(/^www\./, "");
+    } catch {
+      return url;
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20" dir="rtl">
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        {/* Logout Button - Top Right */}
-        <div className="flex justify-start">
-          <Button 
-            variant="destructive" 
-            onClick={handleLogout}
-            data-testid="button-logout"
-          >
-            <LogOut className="h-4 w-4 ml-2" />
-            تسجيل الخروج
-          </Button>
-        </div>
-        
-        {/* Breadcrumb */}
-        <BackButton />
-        
-        {/* Page Title */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <User className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-l from-primary to-primary/60 bg-clip-text text-transparent leading-relaxed pb-2">
-                حسابي
-              </h1>
-              <p className="text-muted-foreground">
-                إدارة حسابك ووثائقك
-              </p>
-            </div>
-          </div>
-        </div>
+  // No scan state
+  const hasNoScans = !scanLoading && (scanError || !latestScan);
 
-        <div className="grid gap-6">
-          {/* Card 1: Client Profile - Professional ID Card Style */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                بيانات العميل
-              </CardTitle>
-              <CardDescription>معلومات حسابك الشخصية</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Grid: 1 column on mobile, 2 columns on desktop */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Name Info Box */}
-                <div className="bg-gray-50 dark:bg-muted/30 p-4 rounded-lg border border-gray-100 dark:border-border">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-primary/10 flex-shrink-0">
-                      <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground mb-1">الاسم</p>
-                      <p className="font-bold text-lg truncate" data-testid="text-user-name">
-                        {user.name || "غير محدد"}
-                      </p>
-                    </div>
+  return (
+    <div className="container mx-auto p-6 max-w-7xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold" data-testid="text-dashboard-title">
+            مرحباً، {user.name}!
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            لوحة تحكم العميل - إدارة فحوصاتك وسياساتك
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={handleLogout}
+          data-testid="button-logout"
+        >
+          <LogOut className="ml-2 h-4 w-4" />
+          تسجيل الخروج
+        </Button>
+      </div>
+
+      {/* No Scan State */}
+      {hasNoScans && (
+        <Card className="mb-8">
+          <CardContent className="pt-6 text-center">
+            <Search className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+            <h2 className="text-2xl font-bold mb-2">لا توجد فحوصات بعد</h2>
+            <p className="text-muted-foreground mb-6">
+              ابدأ بفحص موقعك للتحقق من امتثاله لنظام حماية البيانات الشخصية
+            </p>
+            <Button 
+              size="lg" 
+              onClick={() => navigate("/")}
+              data-testid="button-start-scan"
+            >
+              <Globe className="ml-2 h-5 w-5" />
+              بدء فحص جديد
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main Dashboard Content */}
+      {!hasNoScans && latestScan && (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="scan" data-testid="tab-scan">
+              <Shield className="ml-2 h-4 w-4" />
+              نتائج الفحص
+            </TabsTrigger>
+            <TabsTrigger value="violations" data-testid="tab-violations">
+              <AlertCircle className="ml-2 h-4 w-4" />
+              المخالفات
+            </TabsTrigger>
+            <TabsTrigger value="policies" data-testid="tab-policies">
+              <FileText className="ml-2 h-4 w-4" />
+              سياساتي
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Scan Results Tab */}
+          <TabsContent value="scan" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="h-5 w-5" />
+                      {extractDomainName(latestScan.url)}
+                    </CardTitle>
+                    <CardDescription>
+                      آخر فحص: {latestScan.completedAt ? new Date(latestScan.completedAt).toLocaleDateString("ar-SA") : "جاري الفحص..."}
+                    </CardDescription>
                   </div>
+                  {getComplianceBadge(latestScan.complianceLevel)}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Compliance Score */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>نسبة الامتثال</span>
+                    <span className="font-bold">{latestScan.overallScore || 0}%</span>
+                  </div>
+                  <Progress value={latestScan.overallScore || 0} className="h-3" />
                 </div>
                 
-                {/* Email Info Box */}
-                <div className="bg-gray-50 dark:bg-muted/30 p-4 rounded-lg border border-gray-100 dark:border-border">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-primary/10 flex-shrink-0">
-                      <Mail className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground mb-1">البريد الإلكتروني</p>
-                      <p className="font-bold text-lg truncate" dir="ltr" data-testid="text-user-email">
-                        {user.email}
-                      </p>
-                    </div>
+                {/* Issue Counts */}
+                <div className="grid grid-cols-3 gap-4">
+                  <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
+                    <CardContent className="pt-4 text-center">
+                      <AlertCircle className="h-8 w-8 mx-auto text-red-500 mb-2" />
+                      <div className="text-2xl font-bold text-red-600" data-testid="count-critical">
+                        {latestScan.criticalCount || 0}
+                      </div>
+                      <p className="text-sm text-muted-foreground">مخالفات حرجة</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20">
+                    <CardContent className="pt-4 text-center">
+                      <AlertTriangle className="h-8 w-8 mx-auto text-yellow-500 mb-2" />
+                      <div className="text-2xl font-bold text-yellow-600" data-testid="count-warning">
+                        {latestScan.warningCount || 0}
+                      </div>
+                      <p className="text-sm text-muted-foreground">تحذيرات</p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                    <CardContent className="pt-4 text-center">
+                      <CheckCircle className="h-8 w-8 mx-auto text-blue-500 mb-2" />
+                      <div className="text-2xl font-bold text-blue-600" data-testid="count-suggestion">
+                        {latestScan.suggestionCount || 0}
+                      </div>
+                      <p className="text-sm text-muted-foreground">اقتراحات</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex gap-4 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate("/")}
+                    data-testid="button-new-scan"
+                  >
+                    <Globe className="ml-2 h-4 w-4" />
+                    فحص موقع آخر
+                  </Button>
+                  <Button 
+                    onClick={() => setActiveTab("violations")}
+                    data-testid="button-view-violations"
+                  >
+                    <AlertCircle className="ml-2 h-4 w-4" />
+                    عرض المخالفات
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Violations Tab */}
+          <TabsContent value="violations" className="space-y-6">
+            {/* Generate Policy CTA */}
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-1">تحسين سياسة الخصوصية</h3>
+                    <p className="text-muted-foreground text-sm">
+                      احصل على سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية
+                    </p>
                   </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Card 2: My Documents */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                وثائقي
-              </CardTitle>
-              <CardDescription>الوثائق التي تم إنشاؤها</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {policiesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                </div>
-              ) : policies.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>لا توجد وثائق بعد</p>
-                  <p className="text-sm mt-1">ابدأ بفحص موقعك لإنشاء سياسة الخصوصية</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {policies.map((policy: PolicyDocument, index: number) => (
-                    <div 
-                      key={policy.id || index} 
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover-elevate"
-                      data-testid={`row-policy-${policy.id || index}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <Shield className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{policy.companyName || "سياسة الخصوصية"}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {policy.createdAt ? formatDate(policy.createdAt.toString()) : "تاريخ غير محدد"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(policy.status || "completed")}
-                        {policy.generatedContent && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                data-testid={`button-download-${policy.id || index}`}
-                              >
-                                <Download className="h-4 w-4 ml-1" />
-                                تحميل
-                                <ChevronDown className="h-3 w-3 mr-1" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem 
-                                onClick={() => handleDownload(policy, 'html')}
-                                data-testid={`button-download-html-${policy.id || index}`}
-                              >
-                                HTML
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDownload(policy, 'pdf')}
-                                data-testid={`button-download-pdf-${policy.id || index}`}
-                              >
-                                PDF (طباعة)
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDownload(policy, 'word')}
-                                data-testid={`button-download-word-${policy.id || index}`}
-                              >
-                                Word
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Card 3: Activity Log */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
-                سجل النشاط
-              </CardTitle>
-              <CardDescription>آخر نشاطاتك على المنصة</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {activityLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                </div>
-              ) : activityLog.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>لا يوجد نشاط بعد</p>
-                  <p className="text-sm mt-1">ستظهر نشاطاتك هنا</p>
-                </div>
-              ) : (
-                <div className="relative">
-                  <div className="absolute top-0 bottom-0 right-[11px] w-0.5 bg-border"></div>
-                  <div className="space-y-4">
-                    {activityLog.slice(0, 10).map((activity: any, index: number) => (
-                      <div 
-                        key={activity.id || index} 
-                        className="flex items-start gap-4 relative"
-                        data-testid={`row-activity-${activity.id || index}`}
+                  {!showPayment && (
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => createRequestMutation.mutate()}
+                        disabled={createRequestMutation.isPending}
+                        data-testid="button-generate-policy"
                       >
-                        <div className="p-1.5 rounded-full bg-background border z-10">
-                          {getActivityIcon(activity.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">{activity.description || activity.action}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {activity.createdAt ? `${formatDate(activity.createdAt)} - ${formatTime(activity.createdAt)}` : ""}
-                          </p>
-                        </div>
-                        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-1" />
-                      </div>
+                        {createRequestMutation.isPending ? (
+                          <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <CreditCard className="ml-2 h-4 w-4" />
+                        )}
+                        توليد السياسة (99 ر.س)
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            const response = await apiRequest("POST", "/api/policy-requests", {
+                              scanId: latestScan?.id,
+                              intakeData: {
+                                companyName: extractDomainName(latestScan?.url || ""),
+                                businessType: "تجارة إلكترونية",
+                                entityType: "private",
+                                contactEmail: user.email,
+                                dataCategories: [],
+                              },
+                            });
+                            const data = await response.json();
+                            
+                            const generateResponse = await apiRequest("POST", `/api/policy-requests/${data.id}/generate`);
+                            if (!generateResponse.ok) throw new Error("فشل في بدء توليد السياسة");
+                            
+                            toast({
+                              title: "تم تجاوز الدفع",
+                              description: "جاري توليد سياسة الخصوصية...",
+                            });
+                            
+                            queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
+                            queryClient.invalidateQueries({ queryKey: ["/api/policy-requests"] });
+                            setActiveTab("policies");
+                          } catch (error: any) {
+                            toast({
+                              title: "خطأ",
+                              description: error.message || "حدث خطأ",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        data-testid="button-bypass-payment"
+                      >
+                        تجاوز الدفع (تجريبي)
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Payment Modal */}
+                {showPayment && currentRequestId && (
+                  <div className="mt-6 p-4 bg-background rounded-lg border">
+                    <h4 className="font-semibold mb-4 text-center">إتمام الدفع</h4>
+                    <MoyasarPayment
+                      amount={9900}
+                      description={`سياسة خصوصية - ${extractDomainName(latestScan.url)}`}
+                      callbackUrl={window.location.href}
+                      onCompleted={async (payment) => {
+                        await handlePaymentComplete(payment.id);
+                      }}
+                      onError={(error) => {
+                        toast({
+                          title: "فشل الدفع",
+                          description: String(error),
+                          variant: "destructive",
+                        });
+                        setShowPayment(false);
+                      }}
+                    />
+                    <Button 
+                      variant="ghost" 
+                      className="w-full mt-4"
+                      onClick={() => setShowPayment(false)}
+                    >
+                      إلغاء
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Issues List */}
+            {issues.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6 text-center">
+                  <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">لا توجد مخالفات</h3>
+                  <p className="text-muted-foreground">موقعك متوافق مع نظام حماية البيانات</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {/* Critical Issues */}
+                {criticalIssues.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold flex items-center gap-2 text-red-600">
+                      <AlertCircle className="h-5 w-5" />
+                      مخالفات حرجة ({criticalIssues.length})
+                    </h3>
+                    {criticalIssues.map((issue) => (
+                      <Card key={issue.id} className="border-red-200">
+                        <CardContent className="pt-4">
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                            <div className="flex-1">
+                              <h4 className="font-medium">{issue.title}</h4>
+                              <p className="text-sm text-muted-foreground mt-1">{issue.description}</p>
+                              {issue.regulation && (
+                                <Badge variant="outline" className="mt-2">{issue.regulation}</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                )}
+                
+                {/* Warning Issues */}
+                {warningIssues.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold flex items-center gap-2 text-yellow-600">
+                      <AlertTriangle className="h-5 w-5" />
+                      تحذيرات ({warningIssues.length})
+                    </h3>
+                    {warningIssues.map((issue) => (
+                      <Card key={issue.id} className="border-yellow-200">
+                        <CardContent className="pt-4">
+                          <div className="flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                            <div className="flex-1">
+                              <h4 className="font-medium">{issue.title}</h4>
+                              <p className="text-sm text-muted-foreground mt-1">{issue.description}</p>
+                              {issue.regulation && (
+                                <Badge variant="outline" className="mt-2">{issue.regulation}</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Suggestions */}
+                {suggestionIssues.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold flex items-center gap-2 text-blue-600">
+                      <CheckCircle className="h-5 w-5" />
+                      اقتراحات ({suggestionIssues.length})
+                    </h3>
+                    {suggestionIssues.map((issue) => (
+                      <Card key={issue.id} className="border-blue-200">
+                        <CardContent className="pt-4">
+                          <div className="flex items-start gap-3">
+                            <CheckCircle className="h-5 w-5 text-blue-500 mt-0.5" />
+                            <div className="flex-1">
+                              <h4 className="font-medium">{issue.title}</h4>
+                              <p className="text-sm text-muted-foreground mt-1">{issue.description}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Policies Tab */}
+          <TabsContent value="policies" className="space-y-6">
+            {policies.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6 text-center">
+                  <FileText className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">لا توجد سياسات بعد</h3>
+                  <p className="text-muted-foreground mb-4">
+                    احصل على سياسة خصوصية متوافقة مع نظام حماية البيانات
+                  </p>
+                  <Button onClick={() => setActiveTab("violations")}>
+                    <CreditCard className="ml-2 h-4 w-4" />
+                    توليد سياسة جديدة
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {policies.map((policy: any) => (
+                  <Card key={policy.id}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <FileCheck className="h-5 w-5 text-green-500" />
+                            {policy.companyName}
+                          </CardTitle>
+                          <CardDescription>
+                            {policy.status === "completed" ? "جاهزة للتحميل" : "جاري التوليد..."}
+                          </CardDescription>
+                        </div>
+                        <Badge variant={policy.status === "completed" ? "default" : "secondary"}>
+                          {policy.status === "completed" ? "مكتملة" : "قيد التوليد"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    {policy.status === "completed" && policy.generatedContent && (
+                      <CardContent>
+                        <div className="bg-muted/50 p-4 rounded-lg max-h-64 overflow-y-auto mb-4 text-sm">
+                          <div dangerouslySetInnerHTML={{ __html: policy.generatedContent.substring(0, 500) + "..." }} />
+                        </div>
+                        <Button className="w-full" onClick={() => {
+                          const blob = new Blob([policy.generatedContent], { type: "text/html" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `privacy-policy-${policy.companyName}.html`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}>
+                          <Download className="ml-2 h-4 w-4" />
+                          تحميل السياسة
+                        </Button>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
+
+      {/* Loading State */}
+      {scanLoading && (
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
+            <p className="text-lg font-medium">جاري تحميل البيانات...</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

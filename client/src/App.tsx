@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation, Redirect, Link } from "wouter";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,7 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { ScanProvider } from "@/contexts/ScanContext";
-import { LogIn, User } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 import { OTPModal } from "@/components/OTPModal";
 import HomePage from "@/pages/HomePage";
 import ScanResultsPage from "@/pages/ScanResultsPage";
@@ -30,8 +30,6 @@ import DsarPage from "@/pages/DsarPage";
 import DpiaPage from "@/pages/DpiaPage";
 import ComplianceWorkspacePage from "@/pages/ComplianceWorkspacePage";
 import InternalComplianceWorkspacePage from "@/pages/InternalComplianceWorkspacePage";
-import PrivacyPage from "@/pages/PrivacyPage";
-import TermsPage from "@/pages/TermsPage";
 import NotFound from "@/pages/not-found";
 import { useEffect, useState } from "react";
 
@@ -188,9 +186,9 @@ function Router() {
         <Redirect to="/" />
       </Route>
       
-      {/* Client Dashboard */}
+      {/* Client Dashboard - Redirect to home for MVP */}
       <Route path="/dashboard">
-        <ClientRoute component={DashboardPage} />
+        <Redirect to="/" />
       </Route>
       <Route path="/my-policies">
         <Redirect to="/" />
@@ -226,10 +224,6 @@ function Router() {
         <Redirect to="/" />
       </Route>
       
-      {/* Static Pages */}
-      <Route path="/privacy" component={PrivacyPage} />
-      <Route path="/terms" component={TermsPage} />
-      
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
@@ -263,8 +257,6 @@ function AppContent() {
   
   // Check if on admin pages
   const isAdminPage = location.startsWith("/admin");
-  // Check if on home page (for transparent header)
-  const isHomePage = location === "/" || location === "";
 
   const style = {
     "--sidebar-width": "20rem",
@@ -278,7 +270,7 @@ function AppContent() {
           <div className="flex flex-col flex-1 min-w-0">
             {/* Don't show main header on admin pages */}
             {!isAdminPage && (
-              <header className={`${isHomePage ? 'absolute top-0 left-0 right-0' : 'sticky top-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'} z-40 flex items-center justify-between px-4 sm:px-6 py-3 gap-4`}>
+              <header className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 gap-4">
                 {/* Sidebar trigger hidden for MVP launch - keep code for future */}
                 {/* <SidebarTrigger 
                   data-testid="button-sidebar-toggle" 
@@ -292,23 +284,31 @@ function AppContent() {
                       size="sm"
                       onClick={() => setShowOTPModal(true)}
                       data-testid="button-header-login"
-                      className="text-sm shadow-md"
+                      className="text-sm"
                     >
                       <LogIn className="w-4 h-4 ml-1.5" />
-                      <span>تسجيل الدخول</span>
+                      <span className="hidden sm:inline">تسجيل الدخول</span>
                     </Button>
                   ) : (
-                    <Link href="/dashboard">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        data-testid="button-header-my-account"
-                        className="text-sm"
-                      >
-                        <User className="w-4 h-4 ml-1.5" />
-                        <span>حسابي</span>
-                      </Button>
-                    </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await fetch("/api/auth/logout", { method: "POST" });
+                          localStorage.removeItem("user");
+                          setIsLoggedIn(false);
+                          queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+                        } catch (e) {
+                          console.error("Logout error:", e);
+                        }
+                      }}
+                      data-testid="button-header-logout"
+                      className="text-sm"
+                    >
+                      <LogOut className="w-4 h-4 ml-1.5" />
+                      <span className="hidden sm:inline">تسجيل الخروج</span>
+                    </Button>
                   )}
                 </div>
               </header>

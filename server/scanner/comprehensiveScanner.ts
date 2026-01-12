@@ -198,10 +198,6 @@ export async function runComprehensiveScan(
   const discoveredPages = discoverLegalPages(mainScanResult.html, mainScanResult.finalUrl);
   console.log(`[ComprehensiveScan] Discovered ${discoveredPages.pages.length} potential legal pages`);
   
-  // TODO: Re-enable sitemap discovery in V2 expansion plan
-  // BYPASSED: Sitemap fetching (consumes 2-5 seconds network time)
-  console.log(`[ComprehensiveScan] PERFORMANCE MODE: Sitemap discovery SKIPPED`);
-  /*
   let sitemapPages: string[] = [];
   if (fullConfig.deep_scan) {
     try {
@@ -224,12 +220,8 @@ export async function runComprehensiveScan(
       });
     }
   }
-  */
   
-  // TODO: Re-enable fallback URL probing in V2 expansion plan
-  // BYPASSED: Fallback URL probing (consumes 3-10 seconds with multiple HTTP requests)
-  console.log(`[ComprehensiveScan] PERFORMANCE MODE: Fallback URL probing SKIPPED`);
-  /*
+  // STEP 2.5: If no policy pages found, try fallback URL probing
   const hasPrivacyPage = discoveredPages.pages.some(p => p.type === 'privacy');
   const hasTermsPage = discoveredPages.pages.some(p => p.type === 'terms');
   
@@ -247,132 +239,85 @@ export async function runComprehensiveScan(
       console.log(`[Scanner] Fallback discovery failed, continuing...`);
     }
   }
-  */
   
   const parsedPolicies: ParsedPolicy[] = [];
   const legalPageAnalyses: LegalPageAnalysis[] = [];
   
   if (fullConfig.fetch_policy_content) {
-    // PERFORMANCE MODE: Only fetch PRIVACY POLICY (terms temporarily bypassed for speed)
-    // TODO V2: Re-enable terms fetching by uncommenting termsPage below
-    const privacyPage = discoveredPages.pages
-      .filter(p => p.type === 'privacy' && p.confidence >= 0.7)
-      .sort((a, b) => b.confidence - a.confidence)[0];
+    const pagesToFetch = discoveredPages.pages
+      .filter(p => p.type !== 'other' && p.confidence >= 0.7)
+      .slice(0, fullConfig.max_pages_to_crawl);
     
-    // TEMPORARILY BYPASSED: Terms page fetching (saves ~2-5 seconds)
-    // const termsPage = discoveredPages.pages
-    //   .filter(p => p.type === 'terms' && p.confidence >= 0.7)
-    //   .sort((a, b) => b.confidence - a.confidence)[0];
-    // const pagesToFetch = [privacyPage, termsPage].filter(Boolean);
+    console.log(`\n[Scanner] STEP 3: Fetching ${pagesToFetch.length} policy pages (batched, 5 concurrent)...\n`);
     
-    const pagesToFetch = [privacyPage].filter(Boolean);
+    // Fetch policy pages with controlled concurrency (5 at a time for speed)
+    const BATCH_SIZE = 5;
     
-    console.log(`\n[Scanner] STEP 3: PRIVACY-ONLY MODE - Fetching ${pagesToFetch.length} page (HTTP)...\n`);
-    console.log(`[Scanner] ⚡ Terms page fetching BYPASSED for speed optimization`);
-    
-    // Fetch policy pages using lightweight HTTP fetch (NOT Puppeteer) in parallel
-    const fetchPromises = pagesToFetch.map(async (page) => {
-      try {
-        console.log(`[Scanner] ➤ HTTP Fetching: ${page.type.toUpperCase()} at ${page.url}`);
-        
-        // Use lightweight HTTP fetch instead of Puppeteer
-        const response = await fetch(page.url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'ar,en;q=0.9',
-          },
-          signal: AbortSignal.timeout(10000), // 10 second timeout
-        });
-        
-        const html = await response.text();
-        console.log(`[Scanner]   ✓ HTTP Loaded ${page.type}: ${html.length} bytes`);
-        
-        const parsed = parsePolicy(html, page.url, page.type);
-        const completeness = analyzePolicyCompleteness(parsed);
-        
-        return {
-          success: true,
-          page,
-          parsed,
-          analysis: {
-            url: parsed.url,
-            type: parsed.type,
-            found_by: page.foundBy,
-            title: parsed.title,
-            word_count: parsed.wordCount,
-            language: parsed.language,
-            sections: parsed.sections.slice(0, 20).map(s => ({
-              title: s.title,
-              text: s.text.substring(0, 500),
-              mappings: s.pdplMappings,
-            })),
-            completeness_score: completeness.score,
-            missing_elements: completeness.missingElements,
-            present_elements: completeness.presentElements,
-          } as LegalPageAnalysis,
-        };
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`[Scanner] ✗ HTTP Failed ${page.type}: ${errorMsg}`);
-        return { success: false, page, error: errorMsg };
-      }
-    });
-    
-    // Wait for all fetches to complete in parallel
-    const results = await Promise.all(fetchPromises);
-    
-    // Process results
-    for (const result of results) {
-      if (result.success && result.parsed && result.analysis) {
-        parsedPolicies.push(result.parsed);
-        legalPageAnalyses.push(result.analysis);
-        console.log(`[Scanner]   ✓ Parsed: ${result.parsed.wordCount} words (${result.parsed.language})`);
-      } else if (!result.success) {
-        errors.push(`Failed to fetch ${result.page.type} page (${result.page.url}): ${result.error}`);
+    for (let i = 0; i < pagesToFetch.length; i += BATCH_SIZE) {
+      const batch = pagesToFetch.slice(i, i + BATCH_SIZE);
+      console.log(`[Scanner] Batch ${Math.floor(i / BATCH_SIZE) + 1}: Fetching ${batch.length} pages...`);
+      
+      const batchPromises = batch.map(async (page) => {
+        try {
+          console.log(`[Scanner] ➤ Fetching: ${page.type.toUpperCase()} at ${page.url}`);
+          const pageResult = await scanWithBrowser(page.url);
+          console.log(`[Scanner]   ✓ Loaded ${page.type}: ${pageResult.html?.length || 0} bytes`);
+          
+          const parsed = parsePolicy(pageResult.html, page.url, page.type);
+          const completeness = analyzePolicyCompleteness(parsed);
+          
+          return {
+            success: true,
+            page,
+            parsed,
+            analysis: {
+              url: parsed.url,
+              type: parsed.type,
+              found_by: page.foundBy,
+              title: parsed.title,
+              word_count: parsed.wordCount,
+              language: parsed.language,
+              sections: parsed.sections.slice(0, 20).map(s => ({
+                title: s.title,
+                text: s.text.substring(0, 500),
+                mappings: s.pdplMappings,
+              })),
+              completeness_score: completeness.score,
+              missing_elements: completeness.missingElements,
+              present_elements: completeness.presentElements,
+            } as LegalPageAnalysis,
+          };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          console.error(`[Scanner] ✗ Failed ${page.type}: ${errorMsg}`);
+          return { success: false, page, error: errorMsg };
+        }
+      });
+      
+      // Wait for batch to complete
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Process batch results
+      for (const result of batchResults) {
+        if (result.success && result.parsed && result.analysis) {
+          parsedPolicies.push(result.parsed);
+          legalPageAnalyses.push(result.analysis);
+          console.log(`[Scanner]   ✓ Parsed: ${result.parsed.wordCount} words (${result.parsed.language})`);
+        } else if (!result.success) {
+          errors.push(`Failed to fetch ${result.page.type} page (${result.page.url}): ${result.error}`);
+        }
       }
     }
     
     console.log(`[Scanner] Completed: ${parsedPolicies.length}/${pagesToFetch.length} pages fetched`);
   }
   
-  // TODO: Re-enable heavy analysis features in V2 expansion plan
-  // TEMPORARY: Bypass heavy checks for Performance Optimization
-  // These features are temporarily disabled to speed up scans.
-  // The scanner now focuses ONLY on Privacy Policy and Terms extraction.
-  console.log('[ComprehensiveScan] PERFORMANCE MODE: Bypassing heavy checks (cookies, scripts, security, trackers)');
-  
-  // BYPASSED: Script extraction (was consuming time analyzing all scripts)
-  // const scripts = extractScripts(mainScanResult.html);
-  const scripts: Array<{ src: string; type: string; content: string }> = [];
-  
-  // BYPASSED: Cookie extraction (was parsing all cookies)
-  // const cookies = extractCookies(mainScanResult.cookies, mainScanResult.finalUrl);
-  const cookies: Array<{ name: string; domain: string; httpOnly: boolean; secure: boolean; sameSite: string; expires: string }> = [];
-  
-  // BYPASSED: Tracker detection (was analyzing scripts and network requests)
-  // const tracking = detectTrackers(mainScanResult.html, scripts, cookies, mainScanResult.networkRequests);
-  const tracking: Array<{ name: string; category: string }> = [];
-  
-  // BYPASSED: Third-party service detection (was analyzing network requests)
-  // const thirdParties = detectThirdPartyServices(mainScanResult.networkRequests, mainScanResult.finalUrl);
-  const thirdParties: Array<{ name: string; category: string }> = [];
-  
-  // BYPASSED: Security header extraction (was checking response headers)
-  // const security = extractSecurityHeaders(mainScanResult.responseHeaders || {}, mainScanResult.finalUrl);
-  const security = {
-    https: mainScanResult.finalUrl.startsWith('https://'), // Quick check from URL only
-    hsts: false, // Placeholder - skipped for performance
-    csp: false,  // Placeholder - skipped for performance
-  };
-  
-  // BYPASSED: Contact info detection (was parsing entire HTML)
-  // const contactInfo = detectContactInfo(mainScanResult.html);
-  const contactInfo = {
-    found: false, // Placeholder - skipped for performance
-    email: undefined as string | undefined,
-    phone: undefined as string | undefined,
-  };
+  const scripts = extractScripts(mainScanResult.html);
+  const cookies = extractCookies(mainScanResult.cookies, mainScanResult.finalUrl);
+  const tracking = detectTrackers(mainScanResult.html, scripts, cookies, mainScanResult.networkRequests);
+  const thirdParties = detectThirdPartyServices(mainScanResult.networkRequests, mainScanResult.finalUrl);
+  const security = extractSecurityHeaders(mainScanResult.responseHeaders || {}, mainScanResult.finalUrl);
+  const contactInfo = detectContactInfo(mainScanResult.html);
   
   const evaluationContext = createEvaluationContext(
     parsedPolicies,
@@ -403,93 +348,69 @@ export async function runComprehensiveScan(
   const topRecommendations = failedChecks.slice(0, 5).map(c => c.recommendation);
   const topRecommendationsAr = failedChecks.slice(0, 5).map(c => c.recommendation_ar);
   
-  // TEMPORARILY BYPASSED: Gap Analysis (saves ~2-3 seconds)
-  // TODO V2: Re-enable by uncommenting the line below
-  // const gapAnalysisResult = analyzePolicyGaps(
-  //   tracking.map(t => ({ name: t.name })),
-  //   parsedPolicies
-  // );
-  console.log(`[Scanner] ⚡ Gap Analysis BYPASSED for speed optimization`);
-  const gapAnalysisResult: GapAnalysisResult = {
-    totalTrackersDetected: 0,
-    totalDisclosed: 0,
-    totalMissing: 0,
-    totalGenericDisclosure: 0,
-    disclosureRate: 100,
-    gaps: [],
-    summary: {
-      highRiskGaps: 0,
-      mediumRiskGaps: 0,
-      lowRiskGaps: 0,
-    },
-  };
+  // Run Gap Analysis and Compliance Audit
+  const gapAnalysisResult = analyzePolicyGaps(
+    tracking.map(t => ({ name: t.name })),
+    parsedPolicies
+  );
   
   const complianceAuditResult = auditPolicyCompliance(parsedPolicies);
   
-  // Run specialized audits in PARALLEL for speed optimization
+  // Run specialized 12-element privacy policy audit
+  // Relaxed check: run if policy exists and has any meaningful content (wordCount > 10)
   const privacyPolicy = parsedPolicies.find(p => p.type === 'privacy');
-  const termsPolicy = parsedPolicies.find(p => p.type === 'terms');
-  
-  // Create audit promises for parallel execution
-  const auditPromises: Promise<void>[] = [];
   let privacyPolicyAudit: PrivacyPolicyAudit | undefined;
-  let termsConditionsAudit: TermsConditionsAudit | undefined;
-  
-  // Privacy policy audit promise
   if (privacyPolicy && privacyPolicy.fullText && privacyPolicy.wordCount > 10) {
-    auditPromises.push((async () => {
-      console.log(`\n[PrivacyElementCheck] Running 12-element privacy policy audit...`);
-      console.log(`[PrivacyElementCheck] Policy text length: ${privacyPolicy.fullText.length} chars, words: ${privacyPolicy.wordCount}`);
-      privacyPolicyAudit = auditPrivacyPolicy(privacyPolicy.fullText);
-      console.log(`[PrivacyElementCheck] Results: Found=${privacyPolicyAudit.elementsFound}/12, Partial=${privacyPolicyAudit.elementsPartial}/12, Missing=${privacyPolicyAudit.elementsMissing}/12`);
-      console.log(`[PrivacyElementCheck] Compliance: ${privacyPolicyAudit.compliancePercentage}%`);
-    })());
+    console.log(`\n[PrivacyElementCheck] Running 12-element privacy policy audit...`);
+    console.log(`[PrivacyElementCheck] Policy text length: ${privacyPolicy.fullText.length} chars, words: ${privacyPolicy.wordCount}`);
+    privacyPolicyAudit = auditPrivacyPolicy(privacyPolicy.fullText);
+    console.log(`[PrivacyElementCheck] Results: Found=${privacyPolicyAudit.elementsFound}/12, Partial=${privacyPolicyAudit.elementsPartial}/12, Missing=${privacyPolicyAudit.elementsMissing}/12`);
+    console.log(`[PrivacyElementCheck] Compliance: ${privacyPolicyAudit.compliancePercentage}%`);
   } else {
     console.log(`\n[PrivacyElementCheck] Skipped - no valid privacy policy found (policy: ${!!privacyPolicy}, wordCount: ${privacyPolicy?.wordCount || 0})`);
   }
   
-  // TEMPORARILY BYPASSED: Terms & Conditions audit (saves ~3-5 seconds)
-  // TODO V2: Re-enable by uncommenting the block below
-  /*
+  // Run specialized 12-module Terms & Conditions audit
+  // Relaxed check: run if policy exists and has any meaningful content (wordCount > 10)
+  const termsPolicy = parsedPolicies.find(p => p.type === 'terms');
+  let termsConditionsAudit: TermsConditionsAudit | undefined;
   if (termsPolicy && termsPolicy.fullText && termsPolicy.wordCount > 10) {
-    auditPromises.push((async () => {
-      console.log(`\n[TermsConditionsCheck] Running 12-module T&C audit...`);
-      console.log(`[TermsConditionsCheck] Terms text length: ${termsPolicy.fullText.length} chars, words: ${termsPolicy.wordCount}`);
-      termsConditionsAudit = checkTermsConditions(termsPolicy.fullText);
-      console.log(`[TermsConditionsCheck] Results: Found=${termsConditionsAudit.modulesFound}/12, Partial=${termsConditionsAudit.modulesPartial}/12, Missing=${termsConditionsAudit.modulesMissing}/12`);
-      console.log(`[TermsConditionsCheck] Compliance: ${termsConditionsAudit.compliancePercentage}%`);
-    })());
+    console.log(`\n[TermsConditionsCheck] Running 12-module T&C audit...`);
+    console.log(`[TermsConditionsCheck] Terms text length: ${termsPolicy.fullText.length} chars, words: ${termsPolicy.wordCount}`);
+    termsConditionsAudit = checkTermsConditions(termsPolicy.fullText);
+    console.log(`[TermsConditionsCheck] Results: Found=${termsConditionsAudit.modulesFound}/12, Partial=${termsConditionsAudit.modulesPartial}/12, Missing=${termsConditionsAudit.modulesMissing}/12`);
+    console.log(`[TermsConditionsCheck] Compliance: ${termsConditionsAudit.compliancePercentage}%`);
   } else {
     console.log(`\n[TermsConditionsCheck] Skipped - no valid terms policy found (policy: ${!!termsPolicy}, wordCount: ${termsPolicy?.wordCount || 0})`);
   }
-  */
-  console.log(`[Scanner] ⚡ Terms & Conditions audit BYPASSED for speed optimization`);
-  
-  // Wait for all audits to complete in parallel
-  await Promise.all(auditPromises);
   
   const scanDuration = Date.now() - startTime;
   
-  // PERFORMANCE MODE: Score based on Privacy Policy ONLY (100% weight)
-  // TODO V2: Re-enable 50/50 split with Terms & Conditions
+  // CRITICAL: Calculate overall score ONLY from Privacy Policy + Terms & Conditions (50% each)
   const privacyPolicyScore = privacyPolicyAudit?.compliancePercentage || 0;
-  const termsConditionsScore = 0; // BYPASSED - terms analysis skipped for speed
+  const termsConditionsScore = termsConditionsAudit?.compliancePercentage || 0;
   
-  // Calculate score: 100% Privacy Policy (terms bypassed)
+  // Calculate combined score: 50% Privacy Policy + 50% Terms & Conditions ONLY
   let combinedScore: number;
-  if (privacyPolicyAudit) {
-    // Privacy policy exists - use it at 100% weight
+  if (privacyPolicyAudit && termsConditionsAudit) {
+    // Both policies exist - average them
+    combinedScore = Math.round((privacyPolicyScore * 0.5) + (termsConditionsScore * 0.5));
+  } else if (privacyPolicyAudit) {
+    // Only privacy policy exists - use it at 100% weight
     combinedScore = privacyPolicyScore;
+  } else if (termsConditionsAudit) {
+    // Only terms exist - use it at 100% weight
+    combinedScore = termsConditionsScore;
   } else {
-    // No privacy policy found - score is 0
+    // No policies found - score is 0
     combinedScore = 0;
   }
   combinedScore = Math.max(0, Math.min(100, combinedScore)); // Clamp 0-100
   
-  // Determine compliance level based on privacy policy score only
+  // Determine compliance level based on combined score
   const privacyPolicyMissingCount = privacyPolicyAudit?.elementsMissing || 12;
-  const termsMissingCount = 0; // BYPASSED
-  const totalMissing = privacyPolicyMissingCount;
+  const termsMissingCount = termsConditionsAudit?.modulesMissing || 12;
+  const totalMissing = privacyPolicyMissingCount + termsMissingCount;
   
   let finalComplianceLevel: 'high' | 'medium' | 'low';
   if (combinedScore >= 85) {
