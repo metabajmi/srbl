@@ -312,12 +312,43 @@ export async function runComprehensiveScan(
     console.log(`[Scanner] Completed: ${parsedPolicies.length}/${pagesToFetch.length} pages fetched`);
   }
   
-  const scripts = extractScripts(mainScanResult.html);
-  const cookies = extractCookies(mainScanResult.cookies, mainScanResult.finalUrl);
-  const tracking = detectTrackers(mainScanResult.html, scripts, cookies, mainScanResult.networkRequests);
-  const thirdParties = detectThirdPartyServices(mainScanResult.networkRequests, mainScanResult.finalUrl);
-  const security = extractSecurityHeaders(mainScanResult.responseHeaders || {}, mainScanResult.finalUrl);
-  const contactInfo = detectContactInfo(mainScanResult.html);
+  // TODO: Re-enable heavy analysis features in V2 expansion plan
+  // TEMPORARY: Bypass heavy checks for Performance Optimization
+  // These features are temporarily disabled to speed up scans.
+  // The scanner now focuses ONLY on Privacy Policy and Terms extraction.
+  console.log('[ComprehensiveScan] PERFORMANCE MODE: Bypassing heavy checks (cookies, scripts, security, trackers)');
+  
+  // BYPASSED: Script extraction (was consuming time analyzing all scripts)
+  // const scripts = extractScripts(mainScanResult.html);
+  const scripts: Array<{ src: string; type: string; content: string }> = [];
+  
+  // BYPASSED: Cookie extraction (was parsing all cookies)
+  // const cookies = extractCookies(mainScanResult.cookies, mainScanResult.finalUrl);
+  const cookies: Array<{ name: string; domain: string; httpOnly: boolean; secure: boolean; sameSite: string; expires: string }> = [];
+  
+  // BYPASSED: Tracker detection (was analyzing scripts and network requests)
+  // const tracking = detectTrackers(mainScanResult.html, scripts, cookies, mainScanResult.networkRequests);
+  const tracking: Array<{ name: string; category: string }> = [];
+  
+  // BYPASSED: Third-party service detection (was analyzing network requests)
+  // const thirdParties = detectThirdPartyServices(mainScanResult.networkRequests, mainScanResult.finalUrl);
+  const thirdParties: Array<{ name: string; category: string }> = [];
+  
+  // BYPASSED: Security header extraction (was checking response headers)
+  // const security = extractSecurityHeaders(mainScanResult.responseHeaders || {}, mainScanResult.finalUrl);
+  const security = {
+    https: mainScanResult.finalUrl.startsWith('https://'), // Quick check from URL only
+    hsts: false, // Placeholder - skipped for performance
+    csp: false,  // Placeholder - skipped for performance
+  };
+  
+  // BYPASSED: Contact info detection (was parsing entire HTML)
+  // const contactInfo = detectContactInfo(mainScanResult.html);
+  const contactInfo = {
+    found: false, // Placeholder - skipped for performance
+    email: undefined as string | undefined,
+    phone: undefined as string | undefined,
+  };
   
   const evaluationContext = createEvaluationContext(
     parsedPolicies,
