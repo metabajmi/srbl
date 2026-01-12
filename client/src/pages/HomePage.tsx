@@ -22,10 +22,8 @@ export default function HomePage() {
       return await response.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "اكتمل الفحص بنجاح",
-        description: "جاري عرض النتائج...",
-      });
+      // Navigate immediately to the loading/results page
+      // The scan runs in the background and the page will auto-refresh
       setLocation(`/scan/${data.id}`);
     },
     onError: (error: any) => {
