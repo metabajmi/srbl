@@ -198,6 +198,10 @@ export async function runComprehensiveScan(
   const discoveredPages = discoverLegalPages(mainScanResult.html, mainScanResult.finalUrl);
   console.log(`[ComprehensiveScan] Discovered ${discoveredPages.pages.length} potential legal pages`);
   
+  // TODO: Re-enable sitemap discovery in V2 expansion plan
+  // BYPASSED: Sitemap fetching (consumes 2-5 seconds network time)
+  console.log(`[ComprehensiveScan] PERFORMANCE MODE: Sitemap discovery SKIPPED`);
+  /*
   let sitemapPages: string[] = [];
   if (fullConfig.deep_scan) {
     try {
@@ -220,8 +224,12 @@ export async function runComprehensiveScan(
       });
     }
   }
+  */
   
-  // STEP 2.5: If no policy pages found, try fallback URL probing
+  // TODO: Re-enable fallback URL probing in V2 expansion plan
+  // BYPASSED: Fallback URL probing (consumes 3-10 seconds with multiple HTTP requests)
+  console.log(`[ComprehensiveScan] PERFORMANCE MODE: Fallback URL probing SKIPPED`);
+  /*
   const hasPrivacyPage = discoveredPages.pages.some(p => p.type === 'privacy');
   const hasTermsPage = discoveredPages.pages.some(p => p.type === 'terms');
   
@@ -239,73 +247,86 @@ export async function runComprehensiveScan(
       console.log(`[Scanner] Fallback discovery failed, continuing...`);
     }
   }
+  */
   
   const parsedPolicies: ParsedPolicy[] = [];
   const legalPageAnalyses: LegalPageAnalysis[] = [];
   
   if (fullConfig.fetch_policy_content) {
-    const pagesToFetch = discoveredPages.pages
-      .filter(p => p.type !== 'other' && p.confidence >= 0.7)
-      .slice(0, fullConfig.max_pages_to_crawl);
+    // PERFORMANCE MODE: Only fetch the BEST privacy policy and terms page (max 2 pages)
+    // Sort by confidence and get 1 privacy + 1 terms maximum
+    const privacyPage = discoveredPages.pages
+      .filter(p => p.type === 'privacy' && p.confidence >= 0.7)
+      .sort((a, b) => b.confidence - a.confidence)[0];
     
-    console.log(`\n[Scanner] STEP 3: Fetching ${pagesToFetch.length} policy pages (batched, 5 concurrent)...\n`);
+    const termsPage = discoveredPages.pages
+      .filter(p => p.type === 'terms' && p.confidence >= 0.7)
+      .sort((a, b) => b.confidence - a.confidence)[0];
     
-    // Fetch policy pages with controlled concurrency (5 at a time for speed)
-    const BATCH_SIZE = 5;
+    const pagesToFetch = [privacyPage, termsPage].filter(Boolean);
     
-    for (let i = 0; i < pagesToFetch.length; i += BATCH_SIZE) {
-      const batch = pagesToFetch.slice(i, i + BATCH_SIZE);
-      console.log(`[Scanner] Batch ${Math.floor(i / BATCH_SIZE) + 1}: Fetching ${batch.length} pages...`);
-      
-      const batchPromises = batch.map(async (page) => {
-        try {
-          console.log(`[Scanner] ➤ Fetching: ${page.type.toUpperCase()} at ${page.url}`);
-          const pageResult = await scanWithBrowser(page.url);
-          console.log(`[Scanner]   ✓ Loaded ${page.type}: ${pageResult.html?.length || 0} bytes`);
-          
-          const parsed = parsePolicy(pageResult.html, page.url, page.type);
-          const completeness = analyzePolicyCompleteness(parsed);
-          
-          return {
-            success: true,
-            page,
-            parsed,
-            analysis: {
-              url: parsed.url,
-              type: parsed.type,
-              found_by: page.foundBy,
-              title: parsed.title,
-              word_count: parsed.wordCount,
-              language: parsed.language,
-              sections: parsed.sections.slice(0, 20).map(s => ({
-                title: s.title,
-                text: s.text.substring(0, 500),
-                mappings: s.pdplMappings,
-              })),
-              completeness_score: completeness.score,
-              missing_elements: completeness.missingElements,
-              present_elements: completeness.presentElements,
-            } as LegalPageAnalysis,
-          };
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-          console.error(`[Scanner] ✗ Failed ${page.type}: ${errorMsg}`);
-          return { success: false, page, error: errorMsg };
-        }
-      });
-      
-      // Wait for batch to complete
-      const batchResults = await Promise.all(batchPromises);
-      
-      // Process batch results
-      for (const result of batchResults) {
-        if (result.success && result.parsed && result.analysis) {
-          parsedPolicies.push(result.parsed);
-          legalPageAnalyses.push(result.analysis);
-          console.log(`[Scanner]   ✓ Parsed: ${result.parsed.wordCount} words (${result.parsed.language})`);
-        } else if (!result.success) {
-          errors.push(`Failed to fetch ${result.page.type} page (${result.page.url}): ${result.error}`);
-        }
+    console.log(`\n[Scanner] STEP 3: FAST MODE - Fetching ${pagesToFetch.length} policy pages (HTTP + parallel)...\n`);
+    
+    // Fetch policy pages using lightweight HTTP fetch (NOT Puppeteer) in parallel
+    const fetchPromises = pagesToFetch.map(async (page) => {
+      try {
+        console.log(`[Scanner] ➤ HTTP Fetching: ${page.type.toUpperCase()} at ${page.url}`);
+        
+        // Use lightweight HTTP fetch instead of Puppeteer
+        const response = await fetch(page.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ar,en;q=0.9',
+          },
+          signal: AbortSignal.timeout(10000), // 10 second timeout
+        });
+        
+        const html = await response.text();
+        console.log(`[Scanner]   ✓ HTTP Loaded ${page.type}: ${html.length} bytes`);
+        
+        const parsed = parsePolicy(html, page.url, page.type);
+        const completeness = analyzePolicyCompleteness(parsed);
+        
+        return {
+          success: true,
+          page,
+          parsed,
+          analysis: {
+            url: parsed.url,
+            type: parsed.type,
+            found_by: page.foundBy,
+            title: parsed.title,
+            word_count: parsed.wordCount,
+            language: parsed.language,
+            sections: parsed.sections.slice(0, 20).map(s => ({
+              title: s.title,
+              text: s.text.substring(0, 500),
+              mappings: s.pdplMappings,
+            })),
+            completeness_score: completeness.score,
+            missing_elements: completeness.missingElements,
+            present_elements: completeness.presentElements,
+          } as LegalPageAnalysis,
+        };
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`[Scanner] ✗ HTTP Failed ${page.type}: ${errorMsg}`);
+        return { success: false, page, error: errorMsg };
+      }
+    });
+    
+    // Wait for all fetches to complete in parallel
+    const results = await Promise.all(fetchPromises);
+    
+    // Process results
+    for (const result of results) {
+      if (result.success && result.parsed && result.analysis) {
+        parsedPolicies.push(result.parsed);
+        legalPageAnalyses.push(result.analysis);
+        console.log(`[Scanner]   ✓ Parsed: ${result.parsed.wordCount} words (${result.parsed.language})`);
+      } else if (!result.success) {
+        errors.push(`Failed to fetch ${result.page.type} page (${result.page.url}): ${result.error}`);
       }
     }
     
