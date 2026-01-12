@@ -549,6 +549,18 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       html = html.replace('</body>', `<script id="__SPA_STATE__" type="application/json">${spaContent.spaState}</script></body>`);
     }
     
+    // TODO: Re-enable Cookie Banner detection in V2 expansion plan
+    // TEMPORARY: Bypass Cookie Banner Check for Performance Optimization
+    // The following dynamic cookie banner detection was consuming too much time
+    // waiting for JavaScript-injected popups. Returning placeholder result.
+    console.log('[Scanner] Cookie banner detection BYPASSED for performance optimization');
+    const dynamicCookieBanner = {
+      found: false,
+      selector: null as string | null,
+      text: 'Skipped for optimization'
+    };
+    
+    /* ORIGINAL CODE - COMMENTED OUT FOR PERFORMANCE:
     // Wait for JavaScript-injected cookie banners to appear
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -574,7 +586,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       for (const selector of bannerSelectors) {
         try {
           const el = document.querySelector(selector) as HTMLElement | null;
-          if (el && (el.offsetParent !== null || el.style.display !== 'none')) { // Check if visible
+          if (el && (el.offsetParent !== null || el.style.display !== 'none')) {
             return {
               found: true,
               selector,
@@ -597,7 +609,6 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       const allText = document.body?.innerText?.toLowerCase() || '';
       for (const keyword of cookieKeywords) {
         if (allText.includes(keyword.toLowerCase())) {
-          // Try to find the element containing this text
           const elements = Array.from(document.querySelectorAll('div, section, aside, dialog, [role="dialog"], [role="alertdialog"]'));
           for (let i = 0; i < elements.length; i++) {
             const el = elements[i] as HTMLElement;
@@ -620,6 +631,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     if (dynamicCookieBanner.found) {
       console.log(`[Scanner] Dynamic cookie banner detected via: ${dynamicCookieBanner.selector}`);
     }
+    END OF ORIGINAL CODE */
     
     const loadTime = Date.now() - startTime;
     console.log(`[Scanner] Scan completed in ${loadTime}ms`);
