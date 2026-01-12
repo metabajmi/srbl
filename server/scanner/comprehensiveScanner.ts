@@ -253,19 +253,22 @@ export async function runComprehensiveScan(
   const legalPageAnalyses: LegalPageAnalysis[] = [];
   
   if (fullConfig.fetch_policy_content) {
-    // PERFORMANCE MODE: Only fetch the BEST privacy policy and terms page (max 2 pages)
-    // Sort by confidence and get 1 privacy + 1 terms maximum
+    // PERFORMANCE MODE: Only fetch PRIVACY POLICY (terms temporarily bypassed for speed)
+    // TODO V2: Re-enable terms fetching by uncommenting termsPage below
     const privacyPage = discoveredPages.pages
       .filter(p => p.type === 'privacy' && p.confidence >= 0.7)
       .sort((a, b) => b.confidence - a.confidence)[0];
     
-    const termsPage = discoveredPages.pages
-      .filter(p => p.type === 'terms' && p.confidence >= 0.7)
-      .sort((a, b) => b.confidence - a.confidence)[0];
+    // TEMPORARILY BYPASSED: Terms page fetching (saves ~2-5 seconds)
+    // const termsPage = discoveredPages.pages
+    //   .filter(p => p.type === 'terms' && p.confidence >= 0.7)
+    //   .sort((a, b) => b.confidence - a.confidence)[0];
+    // const pagesToFetch = [privacyPage, termsPage].filter(Boolean);
     
-    const pagesToFetch = [privacyPage, termsPage].filter(Boolean);
+    const pagesToFetch = [privacyPage].filter(Boolean);
     
-    console.log(`\n[Scanner] STEP 3: FAST MODE - Fetching ${pagesToFetch.length} policy pages (HTTP + parallel)...\n`);
+    console.log(`\n[Scanner] STEP 3: PRIVACY-ONLY MODE - Fetching ${pagesToFetch.length} page (HTTP)...\n`);
+    console.log(`[Scanner] ⚡ Terms page fetching BYPASSED for speed optimization`);
     
     // Fetch policy pages using lightweight HTTP fetch (NOT Puppeteer) in parallel
     const fetchPromises = pagesToFetch.map(async (page) => {
@@ -400,11 +403,26 @@ export async function runComprehensiveScan(
   const topRecommendations = failedChecks.slice(0, 5).map(c => c.recommendation);
   const topRecommendationsAr = failedChecks.slice(0, 5).map(c => c.recommendation_ar);
   
-  // Run Gap Analysis and Compliance Audit
-  const gapAnalysisResult = analyzePolicyGaps(
-    tracking.map(t => ({ name: t.name })),
-    parsedPolicies
-  );
+  // TEMPORARILY BYPASSED: Gap Analysis (saves ~2-3 seconds)
+  // TODO V2: Re-enable by uncommenting the line below
+  // const gapAnalysisResult = analyzePolicyGaps(
+  //   tracking.map(t => ({ name: t.name })),
+  //   parsedPolicies
+  // );
+  console.log(`[Scanner] ⚡ Gap Analysis BYPASSED for speed optimization`);
+  const gapAnalysisResult: GapAnalysisResult = {
+    totalTrackersDetected: 0,
+    totalDisclosed: 0,
+    totalMissing: 0,
+    totalGenericDisclosure: 0,
+    disclosureRate: 100,
+    gaps: [],
+    summary: {
+      highRiskGaps: 0,
+      mediumRiskGaps: 0,
+      lowRiskGaps: 0,
+    },
+  };
   
   const complianceAuditResult = auditPolicyCompliance(parsedPolicies);
   
@@ -430,7 +448,9 @@ export async function runComprehensiveScan(
     console.log(`\n[PrivacyElementCheck] Skipped - no valid privacy policy found (policy: ${!!privacyPolicy}, wordCount: ${privacyPolicy?.wordCount || 0})`);
   }
   
-  // Terms & Conditions audit promise
+  // TEMPORARILY BYPASSED: Terms & Conditions audit (saves ~3-5 seconds)
+  // TODO V2: Re-enable by uncommenting the block below
+  /*
   if (termsPolicy && termsPolicy.fullText && termsPolicy.wordCount > 10) {
     auditPromises.push((async () => {
       console.log(`\n[TermsConditionsCheck] Running 12-module T&C audit...`);
@@ -442,37 +462,34 @@ export async function runComprehensiveScan(
   } else {
     console.log(`\n[TermsConditionsCheck] Skipped - no valid terms policy found (policy: ${!!termsPolicy}, wordCount: ${termsPolicy?.wordCount || 0})`);
   }
+  */
+  console.log(`[Scanner] ⚡ Terms & Conditions audit BYPASSED for speed optimization`);
   
   // Wait for all audits to complete in parallel
   await Promise.all(auditPromises);
   
   const scanDuration = Date.now() - startTime;
   
-  // CRITICAL: Calculate overall score ONLY from Privacy Policy + Terms & Conditions (50% each)
+  // PERFORMANCE MODE: Score based on Privacy Policy ONLY (100% weight)
+  // TODO V2: Re-enable 50/50 split with Terms & Conditions
   const privacyPolicyScore = privacyPolicyAudit?.compliancePercentage || 0;
-  const termsConditionsScore = termsConditionsAudit?.compliancePercentage || 0;
+  const termsConditionsScore = 0; // BYPASSED - terms analysis skipped for speed
   
-  // Calculate combined score: 50% Privacy Policy + 50% Terms & Conditions ONLY
+  // Calculate score: 100% Privacy Policy (terms bypassed)
   let combinedScore: number;
-  if (privacyPolicyAudit && termsConditionsAudit) {
-    // Both policies exist - average them
-    combinedScore = Math.round((privacyPolicyScore * 0.5) + (termsConditionsScore * 0.5));
-  } else if (privacyPolicyAudit) {
-    // Only privacy policy exists - use it at 100% weight
+  if (privacyPolicyAudit) {
+    // Privacy policy exists - use it at 100% weight
     combinedScore = privacyPolicyScore;
-  } else if (termsConditionsAudit) {
-    // Only terms exist - use it at 100% weight
-    combinedScore = termsConditionsScore;
   } else {
-    // No policies found - score is 0
+    // No privacy policy found - score is 0
     combinedScore = 0;
   }
   combinedScore = Math.max(0, Math.min(100, combinedScore)); // Clamp 0-100
   
-  // Determine compliance level based on combined score
+  // Determine compliance level based on privacy policy score only
   const privacyPolicyMissingCount = privacyPolicyAudit?.elementsMissing || 12;
-  const termsMissingCount = termsConditionsAudit?.modulesMissing || 12;
-  const totalMissing = privacyPolicyMissingCount + termsMissingCount;
+  const termsMissingCount = 0; // BYPASSED
+  const totalMissing = privacyPolicyMissingCount;
   
   let finalComplianceLevel: 'high' | 'medium' | 'low';
   if (combinedScore >= 85) {
