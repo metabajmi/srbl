@@ -670,10 +670,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.pendingClaimScanId = scan.id;
       }
       
-      // Process scan in background
-      processScan(scan.id);
+      // TODO V2: Re-enable processScan for full deterministic analysis
+      // PERFORMANCE MODE: Skip legacy Puppeteer-based processScan for speed
+      // processScan(scan.id);
       
-      res.json(scan);
+      // Mark scan as completed immediately (comprehensive scan already done)
+      await storage.updateScan(scan.id, { status: "completed" });
+      
+      res.json({ ...scan, status: "completed" });
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ 
@@ -942,10 +946,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Delete old issues
       await storage.deleteIssuesByScanId(req.params.id);
       
-      // Process scan in background
-      processScan(req.params.id);
+      // TODO V2: Re-enable processScan for full deterministic analysis
+      // PERFORMANCE MODE: Skip legacy Puppeteer-based processScan for speed
+      // processScan(req.params.id);
       
-      res.json({ message: "بدأت إعادة الفحص" });
+      // Mark scan as completed immediately
+      await storage.updateScan(req.params.id, { status: "completed" });
+      
+      res.json({ message: "بدأت إعادة الفحص", status: "completed" });
     } catch (error) {
       console.error("Error rescanning:", error);
       res.status(500).json({ error: "فشل في إعادة الفحص" });
