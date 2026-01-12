@@ -670,15 +670,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.pendingClaimScanId = scan.id;
       }
       
-      // Update status to scanning
-      await storage.updateScan(scan.id, { status: "scanning" });
+      // Process scan in background
+      processScan(scan.id);
       
-      // Return scan immediately so frontend can navigate to loading page
-      res.json({ ...scan, status: "scanning" });
-      
-      // Run comprehensive scan in background (non-blocking)
-      runComprehensiveScanInBackground(scan.id, validatedData.url);
-      
+      res.json(scan);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ 
@@ -691,65 +686,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
-  
-  // Background scan processor - runs comprehensive scan asynchronously
-  async function runComprehensiveScanInBackground(scanId: string, url: string) {
-    try {
-      console.log(`[Scanner] Starting background comprehensive scan for: ${url}`);
-      
-      const comprehensiveResult = await runComprehensiveScan(url, {
-        deep_scan: true,
-        fetch_policy_content: true,
-        max_pages_to_crawl: 20,
-        render_timeout_ms: 60000,
-      });
-      
-      console.log(`[Scanner] Background scan completed with score: ${comprehensiveResult.overall_score}%`);
-      
-      // Calculate issue counts from pdpl_checks
-      const violations = comprehensiveResult.pdpl_checks?.filter((c: any) => !c.compliant) || [];
-      const criticalCount = violations.filter((v: any) => v.severity === 'critical' || v.severity === 'high').length;
-      const warningCount = violations.filter((v: any) => v.severity === 'warning' || v.severity === 'medium').length;
-      const suggestionCount = violations.filter((v: any) => v.severity === 'suggestion' || v.severity === 'low' || v.severity === 'info').length;
-      
-      // Extract privacy policy and terms info from discovered pages
-      const discoveredPages = comprehensiveResult.discovered_pages || [];
-      const privacyPage = discoveredPages.find((p: any) => p.type === 'privacy');
-      const termsPage = discoveredPages.find((p: any) => p.type === 'terms');
-      
-      // Also check if privacy_policy_audit exists (means we found and analyzed a privacy policy)
-      const hasPrivacyPolicy = !!(privacyPage || comprehensiveResult.privacy_policy_audit);
-      const privacyPolicyUrl = privacyPage?.url || comprehensiveResult.legal_pages?.find((p: any) => p.type === 'privacy')?.url || null;
-      
-      const hasTermsAndConditions = !!(termsPage || comprehensiveResult.terms_conditions_audit);
-      const termsAndConditionsUrl = termsPage?.url || comprehensiveResult.legal_pages?.find((p: any) => p.type === 'terms')?.url || null;
-      
-      // Update scan with comprehensive results
-      await storage.updateScan(scanId, {
-        status: "completed",
-        completedAt: new Date(),
-        overallScore: comprehensiveResult.overall_score,
-        issuesCount: violations.length,
-        criticalCount,
-        warningCount,
-        suggestionCount,
-        hasPrivacyPolicy,
-        privacyPolicyUrl,
-        hasTermsAndConditions,
-        termsAndConditionsUrl,
-        analysisResult: comprehensiveResult as any,
-      });
-      
-      console.log(`[Scanner] Scan ${scanId} completed and saved`);
-      
-    } catch (scanError) {
-      console.error(`[Scanner] Error during background scan:`, scanError);
-      await storage.updateScan(scanId, { 
-        status: "failed",
-        analysisResult: { error: scanError instanceof Error ? scanError.message : "فشل في الفحص" } as any,
-      });
-    }
-  }
 
   // Get all scans
   app.get("/api/scans", async (req, res) => {
@@ -1006,44 +942,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Delete old issues
       await storage.deleteIssuesByScanId(req.params.id);
       
-      // PERFORMANCE MODE: Use fast runComprehensiveScan instead of legacy processScan
-      try {
-        console.log(`[Scanner] Starting rescan for: ${scan.url}`);
-        
-        const comprehensiveResult = await runComprehensiveScan(scan.url, {
-          deep_scan: true,
-          fetch_policy_content: true,
-          max_pages_to_crawl: 20,
-          render_timeout_ms: 60000,
-        });
-        
-        console.log(`[Scanner] Rescan completed with score: ${comprehensiveResult.overall_score}%`);
-        
-        // Calculate issue counts from pdpl_checks
-        const violations = comprehensiveResult.pdpl_checks?.filter((c: any) => !c.compliant) || [];
-        const criticalCount = violations.filter((v: any) => v.severity === 'critical' || v.severity === 'high').length;
-        const warningCount = violations.filter((v: any) => v.severity === 'warning' || v.severity === 'medium').length;
-        const suggestionCount = violations.filter((v: any) => v.severity === 'suggestion' || v.severity === 'low' || v.severity === 'info').length;
-        
-        // Update scan with results
-        await storage.updateScan(req.params.id, {
-          status: "completed",
-          completedAt: new Date(),
-          overallScore: comprehensiveResult.overall_score,
-          issuesCount: violations.length,
-          criticalCount,
-          warningCount,
-          suggestionCount,
-          analysisResult: comprehensiveResult as any,
-        });
-        
-        res.json({ message: "اكتمل إعادة الفحص", status: "completed" });
-        
-      } catch (scanError) {
-        console.error(`[Scanner] Error during rescan:`, scanError);
-        await storage.updateScan(req.params.id, { status: "failed" });
-        res.status(500).json({ error: "فشل في إعادة الفحص" });
-      }
+      // Process scan in background
+      processScan(req.params.id);
+      
+      res.json({ message: "بدأت إعادة الفحص" });
     } catch (error) {
       console.error("Error rescanning:", error);
       res.status(500).json({ error: "فشل في إعادة الفحص" });
@@ -1212,50 +1114,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user policies:", error);
       res.status(500).json({ error: "فشل في جلب السياسات" });
-    }
-  });
-
-  // User route: Get user's activity log
-  app.get("/api/user/activity", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ error: "غير مصرح" });
-      }
-      
-      const activities: any[] = [];
-      
-      // Get user's scans as activities
-      const scans = await storage.getScansByUserId(userId);
-      for (const scan of scans.slice(0, 10)) {
-        activities.push({
-          id: `scan-${scan.id}`,
-          type: "scan",
-          action: "فحص موقع",
-          description: `فحص الموقع: ${scan.url}`,
-          createdAt: scan.createdAt,
-        });
-      }
-      
-      // Get user's policy requests as activities
-      const requests = await storage.getPolicyGenerationRequestsByUserId(userId);
-      for (const request of requests.slice(0, 10)) {
-        activities.push({
-          id: `policy-${request.id}`,
-          type: "policy",
-          action: "إنشاء سياسة",
-          description: `إنشاء سياسة خصوصية`,
-          createdAt: request.createdAt,
-        });
-      }
-      
-      // Sort by date (newest first)
-      activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
-      res.json(activities.slice(0, 20));
-    } catch (error) {
-      console.error("Error fetching user activity:", error);
-      res.status(500).json({ error: "فشل في جلب سجل النشاط" });
     }
   });
 
@@ -1459,7 +1317,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           destruction_method: intakeData.destruction_method || "secure_deletion",
           destruction_custom: intakeData.destruction_custom,
           rights_exercise_method: intakeData.rights_exercise_method || "email",
-          rights_contact_details: intakeData.rights_contact_details || "",
           response_days: intakeData.response_days || 30,
           has_dpo: intakeData.has_dpo || false,
           dpo_name: intakeData.dpo_name,
@@ -1467,13 +1324,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dpo_phone: intakeData.dpo_phone,
           dpo_email: intakeData.dpo_email,
           complaint_contact: intakeData.complaint_contact || "خدمة العملاء",
-          complaint_contact_details: intakeData.complaint_contact_details || "",
           complaint_response_days: intakeData.complaint_response_days || 30,
         };
-        
-        // Debug: Log rights and complaints contact details
-        console.log('[Policy Generator] Rights contact details:', intakeData.rights_contact_details);
-        console.log('[Policy Generator] Complaints contact details:', intakeData.complaint_contact_details);
         
         generatedContent = generatePolicyHtml(policyData);
       } else if (isWizardFormat) {
