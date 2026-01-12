@@ -91,7 +91,7 @@ export default function HomePage() {
   const features = [
     {
       icon: <Shield className="w-6 h-6" />,
-      title: "متوافق 100%",
+      title: "امتثال كامل",
       description: "مع نظام حماية البيانات الشخصية السعودي",
     },
     {
@@ -381,7 +381,7 @@ export default function HomePage() {
             <CardContent className="pb-6 sm:pb-8">
               <div className="grid gap-6 sm:gap-8 grid-cols-1 md:grid-cols-3">
                 <div className="text-center space-y-2 sm:space-y-3">
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary">100%</div>
+                  <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary">PDPL</div>
                   <p className="text-sm sm:text-base font-semibold text-muted-foreground">متوافق مع اللوائح السعودية</p>
                 </div>
                 <div className="text-center space-y-2 sm:space-y-3">
