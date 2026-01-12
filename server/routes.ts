@@ -670,14 +670,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.pendingClaimScanId = scan.id;
       }
       
-      // TODO V2: Re-enable processScan for full deterministic analysis
-      // PERFORMANCE MODE: Skip legacy Puppeteer-based processScan for speed
-      // processScan(scan.id);
+      // Update status to scanning
+      await storage.updateScan(scan.id, { status: "scanning" });
       
-      // Mark scan as completed immediately (comprehensive scan already done)
-      await storage.updateScan(scan.id, { status: "completed" });
+      // PERFORMANCE MODE: Use fast runComprehensiveScan instead of legacy processScan
+      // TODO V2: Re-enable processScan for full deterministic analysis if needed
+      try {
+        console.log(`[Scanner] Starting comprehensive scan for: ${validatedData.url}`);
+        
+        const comprehensiveResult = await runComprehensiveScan(validatedData.url, {
+          deep_scan: true,
+          fetch_policy_content: true,
+          max_pages_to_crawl: 20,
+          render_timeout_ms: 60000,
+        });
+        
+        console.log(`[Scanner] Scan completed with score: ${comprehensiveResult.overall_score}%`);
+        
+        // Calculate issue counts from pdpl_checks (not pdpl_evaluation)
+        const violations = comprehensiveResult.pdpl_checks?.filter((c: any) => !c.compliant) || [];
+        const criticalCount = violations.filter((v: any) => v.severity === 'critical' || v.severity === 'high').length;
+        const warningCount = violations.filter((v: any) => v.severity === 'warning' || v.severity === 'medium').length;
+        const suggestionCount = violations.filter((v: any) => v.severity === 'suggestion' || v.severity === 'low' || v.severity === 'info').length;
+        
+        // Update scan with comprehensive results
+        await storage.updateScan(scan.id, {
+          status: "completed",
+          completedAt: new Date(),
+          overallScore: comprehensiveResult.overall_score,
+          issuesCount: violations.length,
+          criticalCount,
+          warningCount,
+          suggestionCount,
+          analysisResult: comprehensiveResult as any,
+        });
+        
+        // Get updated scan
+        const updatedScan = await storage.getScan(scan.id);
+        res.json(updatedScan);
+        
+      } catch (scanError) {
+        console.error(`[Scanner] Error during comprehensive scan:`, scanError);
+        await storage.updateScan(scan.id, { 
+          status: "failed",
+          analysisResult: { error: scanError instanceof Error ? scanError.message : "فشل في الفحص" } as any,
+        });
+        res.status(500).json({ error: "فشل في الفحص الشامل" });
+      }
       
-      res.json({ ...scan, status: "completed" });
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ 
@@ -946,14 +986,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Delete old issues
       await storage.deleteIssuesByScanId(req.params.id);
       
-      // TODO V2: Re-enable processScan for full deterministic analysis
-      // PERFORMANCE MODE: Skip legacy Puppeteer-based processScan for speed
-      // processScan(req.params.id);
-      
-      // Mark scan as completed immediately
-      await storage.updateScan(req.params.id, { status: "completed" });
-      
-      res.json({ message: "بدأت إعادة الفحص", status: "completed" });
+      // PERFORMANCE MODE: Use fast runComprehensiveScan instead of legacy processScan
+      try {
+        console.log(`[Scanner] Starting rescan for: ${scan.url}`);
+        
+        const comprehensiveResult = await runComprehensiveScan(scan.url, {
+          deep_scan: true,
+          fetch_policy_content: true,
+          max_pages_to_crawl: 20,
+          render_timeout_ms: 60000,
+        });
+        
+        console.log(`[Scanner] Rescan completed with score: ${comprehensiveResult.overall_score}%`);
+        
+        // Calculate issue counts from pdpl_checks
+        const violations = comprehensiveResult.pdpl_checks?.filter((c: any) => !c.compliant) || [];
+        const criticalCount = violations.filter((v: any) => v.severity === 'critical' || v.severity === 'high').length;
+        const warningCount = violations.filter((v: any) => v.severity === 'warning' || v.severity === 'medium').length;
+        const suggestionCount = violations.filter((v: any) => v.severity === 'suggestion' || v.severity === 'low' || v.severity === 'info').length;
+        
+        // Update scan with results
+        await storage.updateScan(req.params.id, {
+          status: "completed",
+          completedAt: new Date(),
+          overallScore: comprehensiveResult.overall_score,
+          issuesCount: violations.length,
+          criticalCount,
+          warningCount,
+          suggestionCount,
+          analysisResult: comprehensiveResult as any,
+        });
+        
+        res.json({ message: "اكتمل إعادة الفحص", status: "completed" });
+        
+      } catch (scanError) {
+        console.error(`[Scanner] Error during rescan:`, scanError);
+        await storage.updateScan(req.params.id, { status: "failed" });
+        res.status(500).json({ error: "فشل في إعادة الفحص" });
+      }
     } catch (error) {
       console.error("Error rescanning:", error);
       res.status(500).json({ error: "فشل في إعادة الفحص" });
