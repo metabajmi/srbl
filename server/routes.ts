@@ -673,50 +673,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update status to scanning
       await storage.updateScan(scan.id, { status: "scanning" });
       
-      // PERFORMANCE MODE: Use fast runComprehensiveScan instead of legacy processScan
-      // TODO V2: Re-enable processScan for full deterministic analysis if needed
-      try {
-        console.log(`[Scanner] Starting comprehensive scan for: ${validatedData.url}`);
-        
-        const comprehensiveResult = await runComprehensiveScan(validatedData.url, {
-          deep_scan: true,
-          fetch_policy_content: true,
-          max_pages_to_crawl: 20,
-          render_timeout_ms: 60000,
-        });
-        
-        console.log(`[Scanner] Scan completed with score: ${comprehensiveResult.overall_score}%`);
-        
-        // Calculate issue counts from pdpl_checks (not pdpl_evaluation)
-        const violations = comprehensiveResult.pdpl_checks?.filter((c: any) => !c.compliant) || [];
-        const criticalCount = violations.filter((v: any) => v.severity === 'critical' || v.severity === 'high').length;
-        const warningCount = violations.filter((v: any) => v.severity === 'warning' || v.severity === 'medium').length;
-        const suggestionCount = violations.filter((v: any) => v.severity === 'suggestion' || v.severity === 'low' || v.severity === 'info').length;
-        
-        // Update scan with comprehensive results
-        await storage.updateScan(scan.id, {
-          status: "completed",
-          completedAt: new Date(),
-          overallScore: comprehensiveResult.overall_score,
-          issuesCount: violations.length,
-          criticalCount,
-          warningCount,
-          suggestionCount,
-          analysisResult: comprehensiveResult as any,
-        });
-        
-        // Get updated scan
-        const updatedScan = await storage.getScan(scan.id);
-        res.json(updatedScan);
-        
-      } catch (scanError) {
-        console.error(`[Scanner] Error during comprehensive scan:`, scanError);
-        await storage.updateScan(scan.id, { 
-          status: "failed",
-          analysisResult: { error: scanError instanceof Error ? scanError.message : "فشل في الفحص" } as any,
-        });
-        res.status(500).json({ error: "فشل في الفحص الشامل" });
-      }
+      // Return scan immediately so frontend can navigate to loading page
+      res.json({ ...scan, status: "scanning" });
+      
+      // Run comprehensive scan in background (non-blocking)
+      runComprehensiveScanInBackground(scan.id, validatedData.url);
       
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -730,6 +691,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
+  
+  // Background scan processor - runs comprehensive scan asynchronously
+  async function runComprehensiveScanInBackground(scanId: string, url: string) {
+    try {
+      console.log(`[Scanner] Starting background comprehensive scan for: ${url}`);
+      
+      const comprehensiveResult = await runComprehensiveScan(url, {
+        deep_scan: true,
+        fetch_policy_content: true,
+        max_pages_to_crawl: 20,
+        render_timeout_ms: 60000,
+      });
+      
+      console.log(`[Scanner] Background scan completed with score: ${comprehensiveResult.overall_score}%`);
+      
+      // Calculate issue counts from pdpl_checks
+      const violations = comprehensiveResult.pdpl_checks?.filter((c: any) => !c.compliant) || [];
+      const criticalCount = violations.filter((v: any) => v.severity === 'critical' || v.severity === 'high').length;
+      const warningCount = violations.filter((v: any) => v.severity === 'warning' || v.severity === 'medium').length;
+      const suggestionCount = violations.filter((v: any) => v.severity === 'suggestion' || v.severity === 'low' || v.severity === 'info').length;
+      
+      // Update scan with comprehensive results
+      await storage.updateScan(scanId, {
+        status: "completed",
+        completedAt: new Date(),
+        overallScore: comprehensiveResult.overall_score,
+        issuesCount: violations.length,
+        criticalCount,
+        warningCount,
+        suggestionCount,
+        analysisResult: comprehensiveResult as any,
+      });
+      
+      console.log(`[Scanner] Scan ${scanId} completed and saved`);
+      
+    } catch (scanError) {
+      console.error(`[Scanner] Error during background scan:`, scanError);
+      await storage.updateScan(scanId, { 
+        status: "failed",
+        analysisResult: { error: scanError instanceof Error ? scanError.message : "فشل في الفحص" } as any,
+      });
+    }
+  }
 
   // Get all scans
   app.get("/api/scans", async (req, res) => {
