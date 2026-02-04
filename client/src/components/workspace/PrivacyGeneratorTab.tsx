@@ -521,10 +521,10 @@ ${policy.generatedContent}
         onSuccess={handleOTPSuccess}
       />
 
-      <div className="mb-8 overflow-x-auto pb-2">
-        <div className="flex items-start justify-between min-w-[600px] relative">
+      <div className="mb-8 overflow-x-auto pb-2" dir="rtl">
+        <div className="flex flex-row-reverse items-start justify-between min-w-[600px] relative">
           {/* Connecting lines - positioned behind icons */}
-          <div className="absolute top-5 left-0 right-0 flex items-center px-[calc(50%/6)] z-0">
+          <div className="absolute top-5 left-0 right-0 flex flex-row-reverse items-center px-[calc(50%/6)] z-0">
             {steps.slice(0, -1).map((step, index) => (
               <div 
                 key={`line-${index}`}
