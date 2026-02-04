@@ -522,9 +522,9 @@ ${policy.generatedContent}
       />
 
       <div className="mb-8 overflow-x-auto pb-2" dir="rtl">
-        <div className="flex flex-row-reverse items-start justify-between min-w-[600px] relative">
+        <div className="flex items-start justify-between min-w-[600px] relative">
           {/* Connecting lines - positioned behind icons */}
-          <div className="absolute top-5 left-0 right-0 flex flex-row-reverse items-center px-[calc(50%/6)] z-0">
+          <div className="absolute top-5 left-0 right-0 flex items-center px-[calc(50%/6)] z-0">
             {steps.slice(0, -1).map((step, index) => (
               <div 
                 key={`line-${index}`}
@@ -577,7 +577,7 @@ ${policy.generatedContent}
           {currentStep === 1 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
                   <Building2 className="w-5 h-5" />
                   معلومات الجهة
                 </CardTitle>
@@ -832,7 +832,7 @@ ${policy.generatedContent}
           {currentStep === 2 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
                   <Database className="w-5 h-5" />
                   البيانات المجمعة
                 </CardTitle>
@@ -895,7 +895,7 @@ ${policy.generatedContent}
           {currentStep === 3 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
                   <ClipboardList className="w-5 h-5" />
                   طرق الجمع والأغراض
                 </CardTitle>
@@ -1073,7 +1073,7 @@ ${policy.generatedContent}
           {currentStep === 4 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
                   <Scale className="w-5 h-5" />
                   المسوغات والإفصاح
                 </CardTitle>
@@ -1213,7 +1213,7 @@ ${policy.generatedContent}
           {currentStep === 5 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
                   <HardDrive className="w-5 h-5" />
                   التخزين والاحتفاظ
                 </CardTitle>
@@ -1403,7 +1403,7 @@ ${policy.generatedContent}
           {currentStep === 6 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
                   <MessageSquare className="w-5 h-5" />
                   الحقوق والشكاوى
                 </CardTitle>
@@ -1727,7 +1727,7 @@ ${policy.generatedContent}
       {isLoggedIn && policies && policies.length > 0 && (
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
               <FileText className="w-5 h-5" />
               سياساتي السابقة
             </CardTitle>
