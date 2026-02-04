@@ -577,9 +577,9 @@ ${policy.generatedContent}
           {currentStep === 1 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
-                  <Building2 className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2">
                   معلومات الجهة
+                  <Building2 className="w-5 h-5" />
                 </CardTitle>
                 <CardDescription>
                   معلومات أساسية عن جهتك وبيانات التواصل
@@ -832,9 +832,9 @@ ${policy.generatedContent}
           {currentStep === 2 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
-                  <Database className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2">
                   البيانات المجمعة
+                  <Database className="w-5 h-5" />
                 </CardTitle>
                 <CardDescription>
                   ما هي البيانات الشخصية التي يتم جمعها؟
@@ -895,9 +895,9 @@ ${policy.generatedContent}
           {currentStep === 3 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
-                  <ClipboardList className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2">
                   طرق الجمع والأغراض
+                  <ClipboardList className="w-5 h-5" />
                 </CardTitle>
                 <CardDescription>
                   كيف يتم جمع بياناتك الشخصية وما هو الغرض من جمعها؟
@@ -1073,9 +1073,9 @@ ${policy.generatedContent}
           {currentStep === 4 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
-                  <Scale className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2">
                   المسوغات والإفصاح
+                  <Scale className="w-5 h-5" />
                 </CardTitle>
                 <CardDescription>
                   المسوغات النظامية لجمع ومعالجة بياناتك الشخصية وجهات الإفصاح
@@ -1213,9 +1213,9 @@ ${policy.generatedContent}
           {currentStep === 5 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
-                  <HardDrive className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2">
                   التخزين والاحتفاظ
+                  <HardDrive className="w-5 h-5" />
                 </CardTitle>
                 <CardDescription>
                   كيف نقوم بتخزين بياناتك الشخصية والاحتفاظ بها؟
@@ -1403,9 +1403,9 @@ ${policy.generatedContent}
           {currentStep === 6 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
-                  <MessageSquare className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2">
                   الحقوق والشكاوى
+                  <MessageSquare className="w-5 h-5" />
                 </CardTitle>
                 <CardDescription>
                   حقوق صاحب البيانات وآلية تقديم الشكاوى ومسؤول حماية البيانات
@@ -1727,9 +1727,9 @@ ${policy.generatedContent}
       {isLoggedIn && policies && policies.length > 0 && (
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 flex-row-reverse justify-end">
-              <FileText className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-2">
               سياساتي السابقة
+              <FileText className="w-5 h-5" />
             </CardTitle>
           </CardHeader>
           <CardContent>
