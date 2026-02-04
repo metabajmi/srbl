@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -24,6 +25,7 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
   const [name, setName] = useState("");
   const [otp, setOtp] = useState("");
   const [countdown, setCountdown] = useState(0);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -34,6 +36,7 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
         setName("");
         setOtp("");
         setCountdown(0);
+        setAgreedToTerms(false);
       }, 300);
     }
   }, [open]);
@@ -142,13 +145,14 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
             
             <form onSubmit={handleSendOtp} className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="name">الاسم (اختياري)</Label>
+                <Label htmlFor="name">الاسم *</Label>
                 <Input
                   id="name"
                   type="text"
                   placeholder="أدخل اسمك"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  required
                   data-testid="input-otp-name"
                   dir="rtl"
                 />
@@ -169,10 +173,42 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
                 />
               </div>
               
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="terms-agreement"
+                  checked={agreedToTerms}
+                  onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                  data-testid="checkbox-terms-agreement"
+                  className="mt-1"
+                />
+                <Label htmlFor="terms-agreement" className="text-sm leading-relaxed cursor-pointer">
+                  أوافق على{" "}
+                  <a 
+                    href="/privacy" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    سياسة الخصوصية
+                  </a>
+                  {" "}و{" "}
+                  <a 
+                    href="/terms" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    الشروط والأحكام
+                  </a>
+                </Label>
+              </div>
+              
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={!email || sendOtpMutation.isPending}
+                disabled={!name.trim() || !email || !agreedToTerms || sendOtpMutation.isPending}
                 data-testid="button-send-otp"
               >
                 {sendOtpMutation.isPending ? (

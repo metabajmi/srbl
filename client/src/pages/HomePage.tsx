@@ -22,10 +22,8 @@ export default function HomePage() {
       return await response.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "اكتمل الفحص بنجاح",
-        description: "جاري عرض النتائج...",
-      });
+      // Navigate immediately to the loading/results page
+      // The scan runs in the background and the page will auto-refresh
       setLocation(`/scan/${data.id}`);
     },
     onError: (error: any) => {
@@ -91,7 +89,7 @@ export default function HomePage() {
   const features = [
     {
       icon: <Shield className="w-6 h-6" />,
-      title: "امتثال كامل",
+      title: "متوافق",
       description: "مع نظام حماية البيانات الشخصية السعودي",
     },
     {
@@ -108,9 +106,9 @@ export default function HomePage() {
 
   return (
     <div className="page-wrapper bg-background">
-      {/* Brand Header */}
-      <section className="bg-gradient-to-b from-primary/15 via-primary/8 to-primary/3 border-b backdrop-blur-sm animate-fade-in">
-        <div className="container py-12 md:py-16">
+      {/* Brand Header - extends to top behind navbar */}
+      <section className="bg-gradient-to-b from-primary/15 via-primary/8 to-primary/3 backdrop-blur-sm animate-fade-in">
+        <div className="container pt-16 pb-12 md:pt-20 md:pb-16">
           <div className="flex items-center justify-center gap-4 md:gap-5">
             <div className="flex items-center justify-center animate-scale-in shrink-0">
               <Shield className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-primary drop-shadow-sm transition-smooth hover:drop-shadow-lg" />
@@ -376,21 +374,24 @@ export default function HomePage() {
           <div className="max-w-3xl mx-auto animate-slide-up">
           <Card className="shadow-xl bg-gradient-to-br from-primary/10 via-primary/8 to-transparent border-2 border-primary/20 transition-smooth duration-300 hover:shadow-2xl">
             <CardHeader className="text-center pb-6 sm:pb-8">
-              <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold">لماذا تختار منصتنا؟</CardTitle>
+              <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold">لماذا نحن؟</CardTitle>
             </CardHeader>
             <CardContent className="pb-6 sm:pb-8">
               <div className="grid gap-6 sm:gap-8 grid-cols-1 md:grid-cols-3">
                 <div className="text-center space-y-2 sm:space-y-3">
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary">PDPL</div>
-                  <p className="text-sm sm:text-base font-semibold text-muted-foreground">متوافق مع اللوائح السعودية</p>
+                  <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
+                  <h3 className="text-lg font-bold text-foreground">امتثال محلي كامل</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">محتوى مصمم خصيصاً ليتوافق مع الأنظمة السعودية 100%.</p>
                 </div>
                 <div className="text-center space-y-2 sm:space-y-3">
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary">AI</div>
-                  <p className="text-sm sm:text-base font-semibold text-muted-foreground">تحليل ذكي بأحدث التقنيات</p>
+                  <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
+                  <h3 className="text-lg font-bold text-foreground">تقنيات ذكية</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">نستخدم الذكاء الاصطناعي لضمان دقة الوثائق وجودتها.</p>
                 </div>
                 <div className="text-center space-y-2 sm:space-y-3">
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary">دقائق</div>
-                  <p className="text-sm sm:text-base font-semibold text-muted-foreground">احصل على وثائق جاهزة فوراً</p>
+                  <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
+                  <h3 className="text-lg font-bold text-foreground">إنجاز فوري</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">لا تنتظر أياماً، احصل على مستنداتك القانونية في لحظات.</p>
                 </div>
               </div>
             </CardContent>
@@ -405,16 +406,39 @@ export default function HomePage() {
           <div className="flex flex-col items-center gap-4 sm:gap-5 text-center">
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary shrink-0" />
-              <p className="text-sm font-medium">منصة حماية البيانات الشخصية</p>
+              <p className="text-sm font-medium">منصة سربال</p>
             </div>
             <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
               هذه المنصة مصممة للمساعدة في تحقيق الامتثال لنظام حماية البيانات الشخصية السعودي
               ولا تغني عن الاستشارة القانونية المتخصصة
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+              <Link href="/privacy">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  data-testid="link-privacy-policy"
+                >
+                  سياسة الخصوصية
+                </Button>
+              </Link>
+              <span className="text-muted-foreground/50">|</span>
+              <Link href="/terms">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                  data-testid="link-terms"
+                >
+                  الشروط والأحكام
+                </Button>
+              </Link>
+              <span className="text-muted-foreground/50">|</span>
               <p className="text-xs text-muted-foreground">
-                © 2024 منصة حماية البيانات - جميع الحقوق محفوظة
+                © 2026 منصة سربال - جميع الحقوق محفوظة
               </p>
+              <span className="text-muted-foreground/50">|</span>
               <Link href="/admin/login">
                 <Button 
                   variant="ghost" 

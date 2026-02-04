@@ -24,6 +24,7 @@ export interface PolicyFormData {
   destruction_method: string;
   destruction_custom?: string;
   rights_exercise_method: string;
+  rights_contact_details?: string; // Specific contact for rights requests (email/phone)
   response_days: number;
   has_dpo: boolean;
   dpo_name?: string;
@@ -31,6 +32,7 @@ export interface PolicyFormData {
   dpo_phone?: string;
   dpo_email?: string;
   complaint_contact: string;
+  complaint_contact_details?: string; // Specific contact for complaints (email/phone)
   complaint_response_days: number;
 }
 
@@ -127,6 +129,14 @@ const RIGHTS_METHOD_LABELS: Record<string, string> = {
   written_request: 'طلب خطي',
 };
 
+const COMPLAINT_CONTACT_LABELS: Record<string, string> = {
+  customer_service: 'خدمة العملاء',
+  dpo: 'مسؤول حماية البيانات الشخصية',
+  legal: 'الإدارة القانونية',
+  compliance: 'إدارة الامتثال',
+  management: 'الإدارة العليا',
+};
+
 function formatRetentionPeriod(period: string, years?: number, purpose?: string): string {
   switch (period) {
     case 'until_purpose':
@@ -164,7 +174,7 @@ function generateLegalBasesHtml(legalBases: string[], explanations: Record<strin
     let text = '';
     switch (basis) {
       case 'explicit_consent':
-        text = `موافقتك الصريحة، ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناءً على مسوغات نظامية أخرى. وللعدول عن موافقتك، يرجى التواصل مع ${contactPerson} ${contactDetails}`;
+        text = `موافقتك الصريحة، ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناءً على مسوغات نظامية أخرى`;
         break;
       case 'contractual_obligation':
         text = `تنفيذاً لالتزام تعاقدي: ${explanations[basis] || 'تنفيذ العقد المبرم معك'}`;
@@ -344,7 +354,7 @@ ${crossBorderSection}
 <h2>حقوقك فيما يتعلق بمعالجة بياناتك الشخصية</h2>
 <p>بموجب نظام حماية البيانات الشخصية، فإن لديك الحقوق الآتية، والتي تعتمد بشكل أساسي على الغرض من جمع ومعالجة البيانات الشخصية:</p>
 <ul>
-<li><strong>الحق في العلم:</strong> يحق لك معرفة طرق جمعنا لبياناتك الشخصية والمسوغ النظامي لجمعها ومعالجتها، وكيفية معالجتها وحفظها وإتلافها ولمن سيتم الإفصاح عنها. يمكنك الاطلاع على كافة التفاصيل من خلال سياسة الخصوصية هذه، أو التواصل مع ${data.has_dpo && data.dpo_name ? `مسؤول حماية البيانات الشخصية (${data.dpo_name}) عبر البريد الإلكتروني: ${data.dpo_email || data.email}` : `${contactTeam} عبر البريد الإلكتروني: ${data.email} أو الهاتف: ${data.phone}`}.</li>
+<li><strong>الحق في العلم:</strong> يحق لك معرفة طرق جمعنا لبياناتك الشخصية والمسوغ النظامي لجمعها ومعالجتها، وكيفية معالجتها وحفظها وإتلافها ولمن سيتم الإفصاح عنها. يمكنك الاطلاع على كافة التفاصيل من خلال سياسة الخصوصية هذه.</li>
 <li><strong>الحق في الوصول إلى بياناتك الشخصية:</strong> يحق لك أن تطلب منا الاطلاع على بياناتك الشخصية، وذلك عن طريق ${rightsMethod}.</li>
 <li><strong>الحق في طلب الحصول على بياناتك الشخصية:</strong> يحق لك طلب الحصول على بياناتك الشخصية المتوفرة لدى جهة التحكم بصيغة مقروءة وواضحة متى ما كان ذلك ممكناً من الناحية التقنية، وذلك عن طريق ${rightsMethod}.</li>
 <li><strong>الحق في تصحيح بياناتك الشخصية:</strong> يحق لك أن تطلب منا تصحيح بياناتك الشخصية التي ترى أنها غير دقيقة أو غير صحيحة أو غير مكتملة، وذلك عن طريق ${rightsMethod}، وستتم مراجعتها وتحديثها خلال ${data.response_days} يوم.</li>
@@ -354,10 +364,10 @@ ${crossBorderSection}
 <p>ما عدا ما هو منصوص عليه نظاماً، لن تكون مطالباً بدفع أي رسوم مقابل ممارسة هذه الحقوق، وفي حال تم تقديم طلب لممارسة أحد هذه الحقوق، سيتم الرد عليك خلال ${data.response_days} يوم من تاريخ استلام الطلب كاملاً.</p>
 
 <h3>كيفية ممارسة حقوقك</h3>
-<p>لممارسة أي من حقوقك المذكورة أعلاه، يرجى التواصل مع ${data.has_dpo && data.dpo_name ? `<strong>مسؤول حماية البيانات الشخصية</strong> (${data.dpo_name})` : `<strong>${contactTeam}</strong>`} عبر:</p>
+<p>لممارسة أي من حقوقك المذكورة أعلاه، يرجى التواصل معنا عبر:</p>
 <ul>
-${data.has_dpo && data.dpo_email ? `<li><strong>البريد الإلكتروني:</strong> ${data.dpo_email}</li>` : `<li><strong>البريد الإلكتروني:</strong> ${data.email}</li>`}
-${data.has_dpo && data.dpo_phone ? `<li><strong>رقم الهاتف:</strong> ${data.dpo_phone}</li>` : `<li><strong>رقم الهاتف:</strong> ${data.phone}</li>`}
+${data.has_dpo && data.dpo_email ? `<li><strong>البريد الإلكتروني:</strong> ${data.dpo_email}</li>` : (data.rights_contact_details ? `<li><strong>البريد الإلكتروني:</strong> ${data.rights_contact_details}</li>` : `<li><strong>البريد الإلكتروني:</strong> ${data.email}</li>`)}
+${data.has_dpo && data.dpo_phone ? `<li><strong>رقم الهاتف:</strong> ${data.dpo_phone}</li>` : (!data.rights_contact_details ? `<li><strong>رقم الهاتف:</strong> ${data.phone}</li>` : '')}
 </ul>
 
 ${dpoSection}
@@ -366,10 +376,10 @@ ${dpoSection}
 <p>في حال وجود أي مخاوف بشأن معالجة بياناتك الشخصية أو عدم التزامنا بنظام حماية البيانات الشخصية، يمكنك تقديم شكوى عبر الخطوات التالية:</p>
 
 <h3>الخطوة الأولى: التواصل معنا</h3>
-<p>يرجى التواصل مع <strong>${data.complaint_contact || contactTeam}</strong> عبر:</p>
+<p>يرجى التواصل مع: <strong>${COMPLAINT_CONTACT_LABELS[data.complaint_contact] || data.complaint_contact}</strong></p>
 <ul>
-<li><strong>البريد الإلكتروني:</strong> ${data.email}</li>
-<li><strong>رقم الهاتف:</strong> ${data.phone}</li>
+${data.complaint_contact_details ? `<li><strong>البريد الإلكتروني:</strong> ${data.complaint_contact_details}</li>` : `<li><strong>البريد الإلكتروني:</strong> ${data.email}</li>`}
+${(!data.complaint_contact_details && data.phone) ? `<li><strong>رقم الهاتف:</strong> ${data.phone}</li>` : ''}
 </ul>
 <p>سنقوم بالرد على شكواك خلال <strong>${data.complaint_response_days} يوم</strong> من تاريخ استلامها.</p>
 
@@ -448,7 +458,7 @@ export function generatePolicyText(data: PolicyFormData): string {
   const legalBasesList = data.legal_bases.map(basis => {
     switch (basis) {
       case 'explicit_consent':
-        return `- موافقتك الصريحة، ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناءً على مسوغات نظامية أخرى، وللقيام بذلك يمكنك التواصل مع ${dpoContact}`;
+        return `- موافقتك الصريحة، ويمكنك العدول عن الموافقة في أي وقت على ألا يؤثر على عمليات المعالجة التي تتم بناءً على مسوغات نظامية أخرى`;
       case 'contractual_obligation':
         return `- تنفيذاً لالتزام تعاقدي: ${data.legal_bases_explanations[basis] || 'تنفيذ العقد المبرم معك'}`;
       case 'legal_obligation':
@@ -534,7 +544,7 @@ ${legalBasesList}
 
 بموجب نظام حماية البيانات الشخصية، فإن لديك الحقوق الآتية:
 
-- الحق في العلم: يحق لك معرفة طرق جمعنا لبياناتك الشخصية والمسوغ النظامي لجمعها ومعالجتها. يمكنك الاطلاع على كافة التفاصيل من خلال سياسة الخصوصية هذه، أو التواصل مع ${data.has_dpo && data.dpo_name ? `مسؤول حماية البيانات الشخصية (${data.dpo_name}) عبر البريد الإلكتروني: ${data.dpo_email || data.email}` : `${contactTeam} عبر البريد الإلكتروني: ${data.email} أو الهاتف: ${data.phone}`}.
+- الحق في العلم: يحق لك معرفة طرق جمعنا لبياناتك الشخصية والمسوغ النظامي لجمعها ومعالجتها. يمكنك الاطلاع على كافة التفاصيل من خلال سياسة الخصوصية هذه.
 - الحق في الوصول إلى بياناتك الشخصية: يحق لك أن تطلب منا الاطلاع على بياناتك الشخصية، وذلك عن طريق ${rightsMethod}.
 - الحق في طلب الحصول على بياناتك الشخصية: يحق لك طلب الحصول على بياناتك الشخصية بصيغة مقروءة وواضحة.
 - الحق في تصحيح بياناتك الشخصية: يحق لك أن تطلب منا تصحيح بياناتك الشخصية، وستتم مراجعتها وتحديثها خلال ${data.response_days} يوم.
@@ -542,9 +552,9 @@ ${legalBasesList}
 - الحق في الرجوع عن موافقتك: يحق لك الرجوع عن موافقتك على معالجة بياناتك الشخصية في أي وقت.
 
 كيفية ممارسة حقوقك:
-لممارسة أي من حقوقك المذكورة أعلاه، يرجى التواصل مع ${data.has_dpo && data.dpo_name ? `مسؤول حماية البيانات الشخصية (${data.dpo_name})` : contactTeam} عبر:
-- البريد الإلكتروني: ${data.has_dpo && data.dpo_email ? data.dpo_email : data.email}
-- رقم الهاتف: ${data.has_dpo && data.dpo_phone ? data.dpo_phone : data.phone}
+لممارسة أي من حقوقك المذكورة أعلاه، يرجى التواصل معنا عبر:
+${data.has_dpo && data.dpo_email ? `- البريد الإلكتروني: ${data.dpo_email}` : (data.rights_contact_details ? `- البريد الإلكتروني: ${data.rights_contact_details}` : `- البريد الإلكتروني: ${data.email}`)}
+${data.has_dpo && data.dpo_phone ? `- رقم الهاتف: ${data.dpo_phone}` : (!data.rights_contact_details ? `- رقم الهاتف: ${data.phone}` : '')}
 
 لن تكون مطالباً بدفع أي رسوم مقابل ممارسة هذه الحقوق، وسيتم الرد عليك خلال ${data.response_days} يوم من تاريخ استلام الطلب.
 ${dpoSection}
@@ -553,9 +563,9 @@ ${dpoSection}
 في حال وجود أي مخاوف بشأن معالجة بياناتك الشخصية، يمكنك تقديم شكوى عبر الخطوات التالية:
 
 الخطوة الأولى - التواصل معنا:
-يرجى التواصل مع ${data.complaint_contact || contactTeam} عبر:
-- البريد الإلكتروني: ${data.email}
-- رقم الهاتف: ${data.phone}
+يرجى التواصل مع: ${COMPLAINT_CONTACT_LABELS[data.complaint_contact] || data.complaint_contact}
+${data.complaint_contact_details ? `- البريد الإلكتروني: ${data.complaint_contact_details}` : `- البريد الإلكتروني: ${data.email}`}
+${(!data.complaint_contact_details && data.phone) ? `- رقم الهاتف: ${data.phone}` : ''}
 سنقوم بالرد على شكواك خلال ${data.complaint_response_days} يوم من تاريخ استلامها.
 
 الخطوة الثانية - التصعيد للجهة المختصة:
