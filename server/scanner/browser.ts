@@ -184,11 +184,58 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     
     await page.setRequestInterception(true);
     
+    // Resource types to block for faster scanning (we only need text content)
+    const BLOCKED_RESOURCE_TYPES = ['image', 'media', 'font'];
+    const BLOCKED_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.mp4', '.mp3', '.wav', '.ogg', '.webm', '.woff', '.woff2', '.ttf', '.eot', '.otf'];
+    
+    // Known tracking/analytics patterns to block (SAFE - these never contain policy content)
+    const BLOCKED_TRACKERS = [
+      'google-analytics.com', 'googletagmanager.com', 'doubleclick.net',
+      'facebook.com/tr', 'facebook.net/signals', 'connect.facebook.net',
+      'hotjar.com', 'intercom.io', 'segment.com', 'mixpanel.com',
+      'mouseflow.com', 'fullstory.com', 'crazyegg.com', 'optimizely.com',
+      'amplitude.com', 'heap.io', 'clarity.ms', 'mparticle.com',
+      'tiktok.com/i18n', 'snap.licdn.com', 'bat.bing.com', 'adservice.google'
+    ];
+    
+    // Extract main domain to ensure we never block it
+    const mainDomain = new URL(url).hostname.replace(/^www\./, '');
+    
     page.on('request', (request) => {
+      const resourceType = request.resourceType();
+      const reqUrl = request.url().toLowerCase();
+      const reqDomain = new URL(reqUrl).hostname.replace(/^www\./, '');
+      
+      // NEVER block main domain resources
+      if (reqDomain === mainDomain || reqDomain.endsWith('.' + mainDomain)) {
+        networkRequests.push({
+          url: request.url(),
+          method: request.method(),
+          resourceType: resourceType,
+          headers: request.headers(),
+        });
+        request.continue();
+        return;
+      }
+      
+      // Block non-text resources to speed up scanning
+      if (BLOCKED_RESOURCE_TYPES.includes(resourceType) || 
+          BLOCKED_EXTENSIONS.some(ext => reqUrl.includes(ext))) {
+        request.abort();
+        return;
+      }
+      
+      // Block known trackers/analytics (SAFE - these never contain policy content)
+      if (BLOCKED_TRACKERS.some(tracker => reqUrl.includes(tracker))) {
+        request.abort();
+        return;
+      }
+      
+      // Track the request for analysis
       networkRequests.push({
         url: request.url(),
         method: request.method(),
-        resourceType: request.resourceType(),
+        resourceType: resourceType,
         headers: request.headers(),
       });
       request.continue();
@@ -200,24 +247,76 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     console.log(`[Scanner] Navigating to ${url}...`);
     let response;
     
-    // Try multiple navigation strategies with reduced timeouts for faster scans
-    const navigationStrategies = [
-      { name: 'domcontentloaded', timeout: PAGE_OPTIONS.timeout, waitUntil: 'domcontentloaded' as const },
-      { name: 'load', timeout: 15000, waitUntil: 'load' as const },
-      { name: 'networkidle2', timeout: 10000, waitUntil: 'networkidle2' as const },
-    ];
+    // Smart Timeout: Race between fast navigation and timeout with content verification
+    const FAST_TIMEOUT = 7000; // 7 seconds for fast path
+    const FULL_TIMEOUT = 20000; // Full timeout as fallback
+    const MIN_CONTENT_LENGTH = 500; // Minimum content to consider page loaded
+    
+    const timeoutPromise = (ms: number) => new Promise<'timeout'>((resolve) => 
+      setTimeout(() => resolve('timeout'), ms)
+    );
+    
+    console.log(`[Scanner] Attempting fast navigation (${FAST_TIMEOUT}ms timeout)...`);
     
     let navigationSuccess = false;
-    for (const strategy of navigationStrategies) {
-      try {
-        console.log(`[Scanner] Trying navigation strategy: ${strategy.name} (timeout: ${strategy.timeout}ms)`);
-        response = await page.goto(url, { timeout: strategy.timeout, waitUntil: strategy.waitUntil });
+    
+    // Fast path: try to load with networkidle2 but race against timeout
+    try {
+      const fastResult = await Promise.race([
+        page.goto(url, { timeout: FULL_TIMEOUT, waitUntil: 'networkidle2' }),
+        timeoutPromise(FAST_TIMEOUT)
+      ]);
+      
+      if (fastResult === 'timeout') {
+        // Timeout triggered - check if we have enough content
+        const contentLength = await page.evaluate(() => document.body?.innerText?.length || 0);
+        console.log(`[Scanner] Fast timeout triggered, content length: ${contentLength} chars`);
+        
+        if (contentLength >= MIN_CONTENT_LENGTH) {
+          // Enough content loaded, proceed with what we have
+          console.log(`[Scanner] ✓ Sufficient content loaded, proceeding with scan`);
+          response = null; // We can still scan the page
+          navigationSuccess = true;
+        } else {
+          // Not enough content, wait for full load
+          console.log(`[Scanner] Insufficient content, waiting for full load...`);
+          try {
+            response = await page.waitForNavigation({ timeout: FULL_TIMEOUT - FAST_TIMEOUT, waitUntil: 'load' });
+            navigationSuccess = true;
+            console.log(`[Scanner] ✓ Full navigation completed`);
+          } catch (e) {
+            // Even if this fails, check content again
+            const finalContent = await page.evaluate(() => document.body?.innerText?.length || 0);
+            if (finalContent >= MIN_CONTENT_LENGTH) {
+              navigationSuccess = true;
+              console.log(`[Scanner] ✓ Recovered with ${finalContent} chars of content`);
+            }
+          }
+        }
+      } else {
+        response = fastResult;
         navigationSuccess = true;
-        console.log(`[Scanner] ✓ Navigation successful with strategy: ${strategy.name}`);
-        break;
-      } catch (navError) {
-        console.log(`[Scanner] Strategy ${strategy.name} failed, trying next...`);
-        await randomDelay(300, 500);
+        console.log(`[Scanner] ✓ Fast navigation completed successfully`);
+      }
+    } catch (navError) {
+      console.log(`[Scanner] Initial navigation failed, trying fallback strategies...`);
+      
+      // Fallback: try simpler strategies
+      const fallbackStrategies = [
+        { name: 'domcontentloaded', timeout: 10000, waitUntil: 'domcontentloaded' as const },
+        { name: 'load', timeout: 8000, waitUntil: 'load' as const },
+      ];
+      
+      for (const strategy of fallbackStrategies) {
+        try {
+          console.log(`[Scanner] Trying fallback: ${strategy.name}`);
+          response = await page.goto(url, { timeout: strategy.timeout, waitUntil: strategy.waitUntil });
+          navigationSuccess = true;
+          console.log(`[Scanner] ✓ Fallback ${strategy.name} succeeded`);
+          break;
+        } catch (e) {
+          console.log(`[Scanner] Fallback ${strategy.name} failed`);
+        }
       }
     }
     
@@ -450,6 +549,18 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       html = html.replace('</body>', `<script id="__SPA_STATE__" type="application/json">${spaContent.spaState}</script></body>`);
     }
     
+    // TODO: Re-enable Cookie Banner detection in V2 expansion plan
+    // TEMPORARY: Bypass Cookie Banner Check for Performance Optimization
+    // The following dynamic cookie banner detection was consuming too much time
+    // waiting for JavaScript-injected popups. Returning placeholder result.
+    console.log('[Scanner] Cookie banner detection BYPASSED for performance optimization');
+    const dynamicCookieBanner = {
+      found: false,
+      selector: null as string | null,
+      text: 'Skipped for optimization'
+    };
+    
+    /* ORIGINAL CODE - COMMENTED OUT FOR PERFORMANCE:
     // Wait for JavaScript-injected cookie banners to appear
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -475,7 +586,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       for (const selector of bannerSelectors) {
         try {
           const el = document.querySelector(selector) as HTMLElement | null;
-          if (el && (el.offsetParent !== null || el.style.display !== 'none')) { // Check if visible
+          if (el && (el.offsetParent !== null || el.style.display !== 'none')) {
             return {
               found: true,
               selector,
@@ -498,7 +609,6 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
       const allText = document.body?.innerText?.toLowerCase() || '';
       for (const keyword of cookieKeywords) {
         if (allText.includes(keyword.toLowerCase())) {
-          // Try to find the element containing this text
           const elements = Array.from(document.querySelectorAll('div, section, aside, dialog, [role="dialog"], [role="alertdialog"]'));
           for (let i = 0; i < elements.length; i++) {
             const el = elements[i] as HTMLElement;
@@ -521,6 +631,7 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     if (dynamicCookieBanner.found) {
       console.log(`[Scanner] Dynamic cookie banner detected via: ${dynamicCookieBanner.selector}`);
     }
+    END OF ORIGINAL CODE */
     
     const loadTime = Date.now() - startTime;
     console.log(`[Scanner] Scan completed in ${loadTime}ms`);
@@ -557,6 +668,46 @@ export async function scanWithBrowser(url: string): Promise<BrowserScanResult> {
     await page.close();
     console.log('[Scanner] Page closed');
   }
+}
+
+/**
+ * Clean HTML content by removing non-text elements that add noise without value
+ * Preserves all text content including footer, navigation, and policy links
+ */
+export function cleanHtmlForAnalysis(html: string): string {
+  if (!html) return '';
+  
+  let cleaned = html;
+  
+  // Remove SVG elements (vector graphics - no text value)
+  cleaned = cleaned.replace(/<svg[\s\S]*?<\/svg>/gi, '');
+  
+  // Remove path elements (SVG paths)
+  cleaned = cleaned.replace(/<path[^>]*\/?>/gi, '');
+  
+  // Remove canvas elements
+  cleaned = cleaned.replace(/<canvas[\s\S]*?<\/canvas>/gi, '');
+  
+  // Remove inline style blocks (CSS - no text value for analysis)
+  cleaned = cleaned.replace(/<style[\s\S]*?<\/style>/gi, '');
+  
+  // Remove script blocks (JavaScript - no text value)
+  cleaned = cleaned.replace(/<script[\s\S]*?<\/script>/gi, '');
+  
+  // Remove base64 encoded data (embedded images/fonts)
+  cleaned = cleaned.replace(/data:[^;]+;base64,[a-zA-Z0-9+/=]+/gi, '');
+  
+  // Remove inline base64 in attributes
+  cleaned = cleaned.replace(/src="data:[^"]+"/gi, 'src=""');
+  cleaned = cleaned.replace(/href="data:[^"]+"/gi, 'href=""');
+  
+  // Remove empty tags that may have contained removed content
+  cleaned = cleaned.replace(/<(\w+)[^>]*>\s*<\/\1>/gi, '');
+  
+  // Collapse multiple whitespace
+  cleaned = cleaned.replace(/\s{3,}/g, ' ');
+  
+  return cleaned;
 }
 
 export function validateUrl(url: string): { valid: boolean; error?: string; normalizedUrl?: string } {

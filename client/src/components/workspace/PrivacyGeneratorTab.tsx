@@ -521,13 +521,30 @@ ${policy.generatedContent}
         onSuccess={handleOTPSuccess}
       />
 
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          {steps.map((step, index) => (
-            <div key={step.number} className="flex items-center flex-1">
+      <div className="mb-8 overflow-x-auto pb-2">
+        <div className="flex items-start justify-between min-w-[600px] relative">
+          {/* Connecting lines - positioned behind icons */}
+          <div className="absolute top-5 left-0 right-0 flex items-center px-[calc(50%/6)] z-0">
+            {steps.slice(0, -1).map((step, index) => (
+              <div 
+                key={`line-${index}`}
+                className={cn(
+                  "flex-1 h-0.5 mx-0",
+                  currentStep > step.number ? "bg-green-500" : "bg-muted"
+                )}
+              />
+            ))}
+          </div>
+          
+          {/* Step items */}
+          {steps.map((step) => (
+            <div 
+              key={step.number} 
+              className="flex flex-col items-center flex-1 min-w-[80px] z-10"
+            >
               <div 
                 className={cn(
-                  "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all cursor-pointer",
+                  "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all cursor-pointer bg-background",
                   currentStep === step.number 
                     ? "bg-primary text-primary-foreground border-primary" 
                     : currentStep > step.number
@@ -543,23 +560,10 @@ ${policy.generatedContent}
                   <step.icon className="w-4 h-4" />
                 )}
               </div>
-              {index < steps.length - 1 && (
-                <div 
-                  className={cn(
-                    "flex-1 h-1 mx-1",
-                    currentStep > step.number ? "bg-green-500" : "bg-muted"
-                  )}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-between">
-          {steps.map((step) => (
-            <div key={step.number} className="text-center flex-1">
               <span className={cn(
-                "text-xs font-medium",
-                currentStep === step.number ? "text-primary" : "text-muted-foreground"
+                "text-xs font-medium mt-2 text-center px-1 leading-tight max-w-[100px]",
+                currentStep === step.number ? "text-primary" : "text-muted-foreground",
+                currentStep !== step.number && "hidden sm:block"
               )}>
                 {step.title}
               </span>
