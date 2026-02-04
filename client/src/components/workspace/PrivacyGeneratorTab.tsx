@@ -576,12 +576,12 @@ ${policy.generatedContent}
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {currentStep === 1 && (
             <Card>
-              <CardHeader className="flex flex-col items-start">
+              <CardHeader dir="rtl">
                 <CardTitle className="flex items-center gap-2">
-                  معلومات الجهة
                   <Building2 className="w-5 h-5" />
+                  معلومات الجهة
                 </CardTitle>
-                <CardDescription className="text-start">
+                <CardDescription>
                   معلومات أساسية عن جهتك وبيانات التواصل
                 </CardDescription>
               </CardHeader>
@@ -831,12 +831,12 @@ ${policy.generatedContent}
 
           {currentStep === 2 && (
             <Card>
-              <CardHeader className="flex flex-col items-start">
+              <CardHeader dir="rtl">
                 <CardTitle className="flex items-center gap-2">
-                  البيانات المجمعة
                   <Database className="w-5 h-5" />
+                  البيانات المجمعة
                 </CardTitle>
-                <CardDescription className="text-start">
+                <CardDescription>
                   ما هي البيانات الشخصية التي يتم جمعها؟
                 </CardDescription>
               </CardHeader>
@@ -894,12 +894,12 @@ ${policy.generatedContent}
 
           {currentStep === 3 && (
             <Card>
-              <CardHeader className="flex flex-col items-start">
+              <CardHeader dir="rtl">
                 <CardTitle className="flex items-center gap-2">
-                  طرق الجمع والأغراض
                   <ClipboardList className="w-5 h-5" />
+                  طرق الجمع والأغراض
                 </CardTitle>
-                <CardDescription className="text-start">
+                <CardDescription>
                   كيف يتم جمع بياناتك الشخصية وما هو الغرض من جمعها؟
                 </CardDescription>
               </CardHeader>
@@ -1072,12 +1072,12 @@ ${policy.generatedContent}
 
           {currentStep === 4 && (
             <Card>
-              <CardHeader className="flex flex-col items-start">
+              <CardHeader dir="rtl">
                 <CardTitle className="flex items-center gap-2">
-                  المسوغات والإفصاح
                   <Scale className="w-5 h-5" />
+                  المسوغات والإفصاح
                 </CardTitle>
-                <CardDescription className="text-start">
+                <CardDescription>
                   المسوغات النظامية لجمع ومعالجة بياناتك الشخصية وجهات الإفصاح
                 </CardDescription>
               </CardHeader>
@@ -1212,12 +1212,12 @@ ${policy.generatedContent}
 
           {currentStep === 5 && (
             <Card>
-              <CardHeader className="flex flex-col items-start">
+              <CardHeader dir="rtl">
                 <CardTitle className="flex items-center gap-2">
-                  التخزين والاحتفاظ
                   <HardDrive className="w-5 h-5" />
+                  التخزين والاحتفاظ
                 </CardTitle>
-                <CardDescription className="text-start">
+                <CardDescription>
                   كيف نقوم بتخزين بياناتك الشخصية والاحتفاظ بها؟
                 </CardDescription>
               </CardHeader>
@@ -1402,12 +1402,12 @@ ${policy.generatedContent}
 
           {currentStep === 6 && (
             <Card>
-              <CardHeader className="flex flex-col items-start">
+              <CardHeader dir="rtl">
                 <CardTitle className="flex items-center gap-2">
-                  الحقوق والشكاوى
                   <MessageSquare className="w-5 h-5" />
+                  الحقوق والشكاوى
                 </CardTitle>
-                <CardDescription className="text-start">
+                <CardDescription>
                   حقوق صاحب البيانات وآلية تقديم الشكاوى ومسؤول حماية البيانات
                 </CardDescription>
               </CardHeader>
@@ -1726,10 +1726,10 @@ ${policy.generatedContent}
 
       {isLoggedIn && policies && policies.length > 0 && (
         <Card className="mt-8">
-          <CardHeader className="flex flex-col items-start">
+          <CardHeader dir="rtl">
             <CardTitle className="flex items-center gap-2">
-              سياساتي السابقة
               <FileText className="w-5 h-5" />
+              سياساتي السابقة
             </CardTitle>
           </CardHeader>
           <CardContent>
