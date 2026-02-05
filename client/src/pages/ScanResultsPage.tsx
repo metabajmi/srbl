@@ -46,6 +46,13 @@ const formatMissingItems = (count: number): string => {
   return `${count} عنصر مفقود`;
 };
 
+// Display custom domain instead of replit.app subdomain
+const formatDisplayUrl = (url: string): string => {
+  if (!url) return url;
+  // Replace sirbal.replit.app with sirbal.co for display
+  return url.replace(/sirbal\.replit\.app/gi, 'sirbal.co');
+};
+
 const formatDeficiencies = (count: number): string => {
   if (count === 0) return 'لا يوجد نقص';
   if (count === 1) return 'نقص واحد';
@@ -312,7 +319,7 @@ export default function ScanResultsPage() {
         
         {/* Scanning Progress with animated progress bar - Compact & Centered */}
         {(scan.status === "pending" || scan.status === "scanning") && (
-          <ScanLoadingState url={scan.url} progress={scanProgress} />
+          <ScanLoadingState url={formatDisplayUrl(scan.url)} progress={scanProgress} />
         )}
 
         {/* Results */}
@@ -354,7 +361,7 @@ export default function ScanResultsPage() {
                       {/* Info - Compliance level label is the SAME before and after login */}
                       <div className="flex-1 text-center sm:text-right">
                         <h2 className="text-2xl font-bold mb-1">{complianceLabel}</h2>
-                        <p className="text-muted-foreground text-sm" dir="ltr">{scan.url}</p>
+                        <p className="text-muted-foreground text-sm" dir="ltr">{formatDisplayUrl(scan.url)}</p>
                       </div>
                     </div>
                   </CardContent>
