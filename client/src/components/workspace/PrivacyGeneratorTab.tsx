@@ -23,7 +23,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { useScanContext } from "@/contexts/ScanContext";
 import { useLocation } from "wouter";
-import MoyasarPayment from "@/components/MoyasarPayment";
+import GeideaPayment from "@/components/GeideaPayment";
 import { OTPModal } from "@/components/OTPModal";
 import {
   DATA_TYPES,
@@ -260,6 +260,9 @@ export default function PrivacyGeneratorTab() {
     },
   });
 
+  const [showPaymentStep, setShowPaymentStep] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<FormValues | null>(null);
+
   const createPolicyRequestMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       const response = await apiRequest("POST", "/api/policy-requests", {
@@ -270,38 +273,7 @@ export default function PrivacyGeneratorTab() {
     },
     onSuccess: async (result) => {
       setPaymentRequestId(result.id);
-      
-      setIsGenerating(true);
-      try {
-        const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
-          paymentId: "BYPASS_TEST",
-          requestId: result.id,
-        });
-        
-        if (verifyResponse.ok) {
-          const generateResponse = await apiRequest("POST", `/api/policy-requests/${result.id}/generate`, {});
-          
-          if (generateResponse.ok) {
-            toast({
-              title: "جاري توليد السياسة",
-              description: "سيتم توليد سياسة الخصوصية خلال لحظات...",
-            });
-            queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
-            form.reset();
-            setCurrentStep(1);
-          } else {
-            throw new Error("فشل في بدء توليد السياسة");
-          }
-        }
-      } catch (error: any) {
-        toast({
-          title: "خطأ",
-          description: error.message || "حدث خطأ أثناء معالجة الطلب",
-          variant: "destructive",
-        });
-      } finally {
-        setIsGenerating(false);
-      }
+      setShowPaymentStep(true);
     },
     onError: (error: any) => {
       toast({
@@ -311,6 +283,36 @@ export default function PrivacyGeneratorTab() {
       });
     },
   });
+
+  const handlePaymentCompleted = async () => {
+    if (!paymentRequestId) return;
+    setIsGenerating(true);
+    setShowPaymentStep(false);
+    try {
+      const generateResponse = await apiRequest("POST", `/api/policy-requests/${paymentRequestId}/generate`, {});
+      if (generateResponse.ok) {
+        toast({
+          title: "جاري توليد السياسة",
+          description: "سيتم توليد سياسة الخصوصية خلال لحظات...",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
+        form.reset();
+        setCurrentStep(1);
+        setPaymentRequestId(null);
+        setPendingFormData(null);
+      } else {
+        throw new Error("فشل في بدء توليد السياسة");
+      }
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: error.message || "حدث خطأ أثناء توليد السياسة",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const onSubmit = (values: FormValues) => {
     if (!isLoggedIn) {
@@ -1723,6 +1725,24 @@ ${policy.generatedContent}
           </div>
         </form>
       </Form>
+
+      {showPaymentStep && paymentRequestId && (
+        <div className="mt-6">
+          <GeideaPayment
+            amount={9900}
+            description="توليد سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية"
+            requestId={paymentRequestId}
+            onCompleted={handlePaymentCompleted}
+            onError={(error) => {
+              toast({
+                title: "خطأ في الدفع",
+                description: error?.message || "فشل في عملية الدفع. يرجى المحاولة مرة أخرى",
+                variant: "destructive",
+              });
+            }}
+          />
+        </div>
+      )}
 
       {isLoggedIn && policies && policies.length > 0 && (
         <Card className="mt-8">
