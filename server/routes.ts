@@ -347,12 +347,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Explicitly save session to ensure it persists to DB before responding
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       
       res.status(201).json({ 
         user: userWithoutPassword,
-        claimedScanId, // Include claimed scan ID so frontend can redirect
+        claimedScanId,
       });
     } catch (error) {
       console.error("Error registering user:", error);
@@ -400,11 +408,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Explicitly save session to ensure it persists to DB before responding
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       res.json({ 
         user: userWithoutPassword,
-        claimedScanId, // Include claimed scan ID so frontend can redirect
+        claimedScanId,
       });
     } catch (error) {
       console.error("Error logging in:", error);
@@ -571,6 +587,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Failed to auto-claim scan:", err);
         }
       }
+      
+      // Explicitly save session to ensure it persists to DB before responding
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
       
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
@@ -3004,6 +3028,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: JSON.stringify({ email: admin.email, role: admin.role }),
         ipAddress: req.ip,
         userAgent: req.headers['user-agent'],
+      });
+
+      // Explicitly save session to ensure it persists to DB before responding
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
       });
 
       const { password: _, ...adminWithoutPassword } = admin;
