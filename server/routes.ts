@@ -1699,7 +1699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payment = await storage.createPayment({
         requestId,
         userId,
-        amount: amount || 9900, // Default 99 SAR in halalas
+        amount: amount || 34900, // Default 349 SAR in halalas
         currency,
         provider: "paypal",
       });
@@ -1786,10 +1786,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "غير مصرح" });
       }
 
-      const { amount, currency = "SAR", description, requestId } = req.body;
+      const { currency = "SAR", description, requestId } = req.body;
 
-      if (!amount || !requestId) {
-        return res.status(400).json({ error: "المبلغ ومعرف الطلب مطلوبان" });
+      if (!requestId) {
+        return res.status(400).json({ error: "معرف الطلب مطلوب" });
       }
 
       const apiKey = process.env.GEIDEA_API_KEY;
@@ -1801,11 +1801,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
-      const amountInRiyals = (amount / 100).toFixed(2);
+      const amountStr = "349.00";
+      const timestamp = new Date().toISOString();
+
+      const { createHmac } = await import("crypto");
+      const signatureData = `${apiKey}${amountStr}${currency}${requestId}${timestamp}`;
+      const signature = createHmac("sha256", apiPassword)
+        .update(signatureData)
+        .digest("base64");
 
       const callbackUrl = `${req.protocol}://${req.get("host")}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
 
-      console.log("Geidea session request:", { amount: amountInRiyals, currency, requestId, callbackUrl });
+      console.log("Geidea session request:", { amount: amountStr, currency, requestId, timestamp });
 
       const sessionResponse = await fetch(
         "https://api.ksamerchant.geidea.net/payment-intent/api/v2/direct/session",
@@ -1816,11 +1823,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            amount: amountInRiyals,
+            amount: amountStr,
             currency,
+            timestamp,
+            signature,
             callbackUrl,
             merchantReferenceId: requestId,
             language: "ar",
+            paymentOperation: "Pay",
           }),
         }
       );
@@ -1839,7 +1849,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "فشل في إنشاء جلسة الدفع" });
       }
 
-      // Update request status to awaiting payment
       await storage.updatePolicyGenerationRequest(requestId, {
         workflowStatus: "awaiting_payment",
         paymentStatus: "processing",
@@ -1938,7 +1947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Validate amount in fallback path too
-        const expectedAmountFallback = 99;
+        const expectedAmountFallback = 349;
         if (paidOrder.amount && Math.abs(paidOrder.amount - expectedAmountFallback) > 0.01) {
           console.error(`Geidea fallback amount mismatch: expected ${expectedAmountFallback}, got ${paidOrder.amount}`);
           return res.status(400).json({ error: "مبلغ الدفع غير صحيح" });
@@ -1964,8 +1973,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "معرف الطلب لا يتطابق مع عملية الدفع" });
       }
 
-      // Validate amount matches expected price (99 SAR)
-      const expectedAmountSAR = 99;
+      // Validate amount matches expected price (349 SAR)
+      const expectedAmountSAR = 349;
       if (order.amount && Math.abs(order.amount - expectedAmountSAR) > 0.01) {
         console.error(`Geidea payment amount mismatch: expected ${expectedAmountSAR}, got ${order.amount}`);
         return res.status(400).json({ error: "مبلغ الدفع غير صحيح" });
@@ -2989,7 +2998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success = await sendPaymentConfirmationEmail({
           to,
           companyName: "شركة اختبار",
-          amount: 9900,
+          amount: 34900,
           paymentId: "test-payment-123"
         });
       } else {
