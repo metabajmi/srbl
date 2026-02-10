@@ -1803,7 +1803,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
       const orderAmount = 349.00;
       const amountStr = orderAmount.toFixed(2);
-      const timestamp = new Date().toISOString();
+
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const day = now.getDate();
+      const year = now.getFullYear();
+      let hours = now.getHours();
+      const minutes = now.getMinutes().toString().padStart(2, "0");
+      const seconds = now.getSeconds().toString().padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12 || 12;
+      const timestamp = `${month}/${day}/${year} ${hours}:${minutes}:${seconds} ${ampm}`;
 
       const { createHmac } = await import("crypto");
       const signatureData = `${apiKey}${amountStr}${currency}${requestId}${timestamp}`;
@@ -1812,22 +1822,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .digest("base64");
 
       const host = req.get("host") || "";
-      const callbackUrl = `https://${host}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
+      const callbackUrl = `https://${host}/api/geidea/callback`;
+      const returnUrl = `https://${host}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
 
-      console.log("Geidea session request:", { amount: orderAmount, amountStr, currency, requestId, timestamp, callbackUrl });
+      console.log("Geidea session request:", { amount: orderAmount, amountStr, currency, requestId, timestamp, callbackUrl, returnUrl });
 
       const requestBody = {
-        amount: amountStr,
+        amount: "__AMOUNT_PLACEHOLDER__",
         currency,
         timestamp,
         signature,
         callbackUrl,
+        returnUrl,
         merchantReferenceId: requestId,
         language: "ar",
         paymentOperation: "Pay",
       };
 
-      console.log("Geidea request body:", JSON.stringify(requestBody));
+      const bodyStr = JSON.stringify(requestBody).replace('"__AMOUNT_PLACEHOLDER__"', amountStr);
+
+      console.log("Geidea request body:", bodyStr);
 
       const sessionResponse = await fetch(
         "https://api.ksamerchant.geidea.net/payment-intent/api/v2/direct/session",
@@ -1837,7 +1851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             "Authorization": `Basic ${credentials}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(requestBody),
+          body: bodyStr,
         }
       );
 
@@ -1864,6 +1878,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating Geidea session:", error);
       res.status(500).json({ error: "فشل في إنشاء جلسة الدفع" });
+    }
+  });
+
+  // Geidea server-side callback (receives POST from Geidea after payment)
+  app.post("/api/geidea/callback", async (req, res) => {
+    try {
+      console.log("Geidea callback received:", JSON.stringify(req.body));
+      const order = req.body?.order || req.body;
+      const status = order?.status || order?.detailedStatus;
+      const merchantReferenceId = order?.merchantReferenceId;
+      const orderId = order?.orderId;
+
+      if (!merchantReferenceId || !orderId) {
+        console.warn("Geidea callback: missing merchantReferenceId or orderId");
+        return res.status(200).json({ success: true });
+      }
+
+      if (status === "Paid" || status === "Success") {
+        const policyRequest = await storage.getPolicyGenerationRequest(merchantReferenceId);
+        if (!policyRequest) {
+          console.warn(`Geidea callback: unknown merchantReferenceId ${merchantReferenceId}`);
+          return res.status(200).json({ success: true });
+        }
+
+        if (policyRequest.paymentStatus === "paid") {
+          return res.status(200).json({ success: true });
+        }
+
+        const apiKey = process.env.GEIDEA_API_KEY;
+        const apiPassword = process.env.GEIDEA_API_PASSWORD;
+        if (apiKey && apiPassword) {
+          try {
+            const credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
+            const orderCheck = await fetch(
+              `https://api.ksamerchant.geidea.net/pgw/api/v1/direct/order/${orderId}`,
+              {
+                headers: {
+                  "Authorization": `Basic ${credentials}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+            if (orderCheck.ok) {
+              const orderData = await orderCheck.json();
+              const verifiedStatus = orderData?.order?.detailedStatus || orderData?.order?.status;
+              if (verifiedStatus !== "Paid" && verifiedStatus !== "Success") {
+                console.warn(`Geidea callback: order ${orderId} verification failed, status: ${verifiedStatus}`);
+                return res.status(200).json({ success: true });
+              }
+            }
+          } catch (verifyErr) {
+            console.error("Geidea callback: order verification error:", verifyErr);
+          }
+        }
+
+        await storage.updatePolicyGenerationRequest(merchantReferenceId, {
+          workflowStatus: "paid",
+          paymentStatus: "paid",
+        });
+        console.log(`Geidea callback: marked request ${merchantReferenceId} as paid (orderId: ${orderId})`);
+      }
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Error processing Geidea callback:", error);
+      res.status(200).json({ success: true });
     }
   });
 
