@@ -147,7 +147,7 @@ export default function ScanResultsPage() {
   const { data: scan, isLoading: scanLoading, refetch } = useQuery({
     queryKey: ["/api/scans", scanId],
     queryFn: async () => {
-      const response = await fetch(`/api/scans/${scanId}`);
+      const response = await fetch(`/api/scans/${scanId}`, { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch scan");
       return response.json() as Promise<ComplianceScan>;
     },
@@ -165,7 +165,7 @@ export default function ScanResultsPage() {
   const { data: issues = [], refetch: refetchIssues, isError: issuesError } = useQuery({
     queryKey: ["/api/scans", scanId, "issues"],
     queryFn: async () => {
-      const response = await fetch(`/api/scans/${scanId}/issues`);
+      const response = await fetch(`/api/scans/${scanId}/issues`, { credentials: "include" });
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error("Unauthorized");

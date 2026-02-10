@@ -61,7 +61,7 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
       localStorage.removeItem("user");
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
