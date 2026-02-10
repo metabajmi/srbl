@@ -7,7 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { ScanProvider } from "@/contexts/ScanContext";
-import { LogIn, User } from "lucide-react";
+import { LogIn, User, Shield } from "lucide-react";
 import { OTPModal } from "@/components/OTPModal";
 import HomePage from "@/pages/HomePage";
 import ScanResultsPage from "@/pages/ScanResultsPage";
@@ -279,12 +279,13 @@ function AppContent() {
             {/* Don't show main header on admin pages */}
             {!isAdminPage && (
               <header className={`${isHomePage ? 'absolute top-0 left-0 right-0' : 'sticky top-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'} z-40 flex items-center justify-between px-4 sm:px-6 py-3 gap-4`}>
-                {/* Sidebar trigger hidden for MVP launch - keep code for future */}
-                {/* <SidebarTrigger 
-                  data-testid="button-sidebar-toggle" 
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-md p-2.5 shrink-0"
-                /> */}
-                <div className="flex-1" /> {/* Spacer to push login button to the left */}
+                <Link href="/">
+                  <span className="flex items-center gap-1.5 cursor-pointer" data-testid="link-home-logo">
+                    <Shield className="w-5 h-5 text-primary" />
+                    <span className="font-bold text-lg text-primary" style={{ fontFamily: "'Cairo', sans-serif" }}>سِرْبَال</span>
+                  </span>
+                </Link>
+                <div className="flex-1" />
                 <div className="flex items-center gap-2 sm:gap-3">
                   {!isLoggedIn ? (
                     <Button
