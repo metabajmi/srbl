@@ -1801,7 +1801,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
-      const amountStr = "349.00";
+      const orderAmount = 349.00;
+      const amountStr = orderAmount.toFixed(2);
       const timestamp = new Date().toISOString();
 
       const { createHmac } = await import("crypto");
@@ -1810,9 +1811,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .update(signatureData)
         .digest("base64");
 
-      const callbackUrl = `${req.protocol}://${req.get("host")}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
+      const host = req.get("host") || "";
+      const callbackUrl = `https://${host}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
 
-      console.log("Geidea session request:", { amount: amountStr, currency, requestId, timestamp });
+      console.log("Geidea session request:", { amount: orderAmount, amountStr, currency, requestId, timestamp, callbackUrl });
+
+      const requestBody = {
+        amount: amountStr,
+        currency,
+        timestamp,
+        signature,
+        callbackUrl,
+        merchantReferenceId: requestId,
+        language: "ar",
+        paymentOperation: "Pay",
+      };
+
+      console.log("Geidea request body:", JSON.stringify(requestBody));
 
       const sessionResponse = await fetch(
         "https://api.ksamerchant.geidea.net/payment-intent/api/v2/direct/session",
@@ -1822,23 +1837,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             "Authorization": `Basic ${credentials}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            amount: amountStr,
-            currency,
-            timestamp,
-            signature,
-            callbackUrl,
-            merchantReferenceId: requestId,
-            language: "ar",
-            paymentOperation: "Pay",
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
       if (!sessionResponse.ok) {
         const errText = await sessionResponse.text();
         console.error("Geidea session creation failed:", sessionResponse.status, errText);
-        return res.status(400).json({ error: "فشل في إنشاء جلسة الدفع" });
+        return res.status(400).json({ error: "فشل في إنشاء جلسة الدفع", details: errText });
       }
 
       const sessionData = await sessionResponse.json();
