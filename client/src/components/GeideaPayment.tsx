@@ -36,7 +36,7 @@ export default function GeideaPayment({
     if (!document.getElementById("geidea-checkout-js")) {
       const script = document.createElement("script");
       script.id = "geidea-checkout-js";
-      script.src = "https://www.merchant.geidea.net/hpp/geideaCheckout.min.js";
+      script.src = "https://www.ksamerchant.geidea.net/hpp/geideaCheckout.min.js";
       script.async = true;
       document.head.appendChild(script);
     }

@@ -1806,7 +1806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const callbackUrl = `${req.protocol}://${req.get("host")}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
 
       const sessionResponse = await fetch(
-        "https://api.merchant.geidea.net/payment-intent/api/v2/direct/session",
+        "https://api.ksamerchant.geidea.net/payment-intent/api/v2/direct/session",
         {
           method: "POST",
           headers: {
@@ -1898,7 +1898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify order with Geidea using orderId
       const verifyResponse = await fetch(
-        `https://api.merchant.geidea.net/pgw/api/v1/direct/order/${paymentId}`,
+        `https://api.ksamerchant.geidea.net/pgw/api/v1/direct/order/${paymentId}`,
         {
           headers: {
             "accept": "application/json",
@@ -1910,7 +1910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!verifyResponse.ok) {
         // Try by merchant reference ID if orderId lookup fails
         const refResponse = await fetch(
-          `https://api.merchant.geidea.net/pgw/api/v1/direct/order?MerchantReferenceId=${requestId}`,
+          `https://api.ksamerchant.geidea.net/pgw/api/v1/direct/order?MerchantReferenceId=${requestId}`,
           {
             headers: {
               "accept": "application/json",
