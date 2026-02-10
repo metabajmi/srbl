@@ -769,7 +769,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!scan) {
         return res.status(404).json({ error: "الفحص غير موجود" });
       }
-      res.json(scan);
+
+      const userId = req.session?.userId;
+      const scanData = { ...scan } as any;
+      const ppAudit = scanData.analysisResult?.privacy_policy_audit;
+
+      if (ppAudit?.elements && Array.isArray(ppAudit.elements)) {
+        if (!userId) {
+          ppAudit.elements = [];
+          ppAudit.lockedCount = 0;
+        } else {
+          let hasPaid = false;
+          try {
+            const policyReq = await storage.getPolicyGenerationRequestByScanId(scan.id);
+            if (policyReq && policyReq.paymentStatus === "paid") {
+              hasPaid = true;
+            }
+          } catch {}
+
+          if (!hasPaid) {
+            const previewCount = 3;
+            const totalElements = ppAudit.elements.length;
+            ppAudit.elements = ppAudit.elements.slice(0, previewCount);
+            ppAudit.lockedCount = Math.max(0, totalElements - previewCount);
+          } else {
+            ppAudit.lockedCount = 0;
+          }
+        }
+      }
+
+      res.json(scanData);
     } catch (error) {
       console.error("Error fetching scan:", error);
       res.status(500).json({ error: "فشل في جلب الفحص" });
