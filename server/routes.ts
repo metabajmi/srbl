@@ -1801,9 +1801,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
-      const amountInRiyals = amount / 100;
+      const amountInRiyals = (amount / 100).toFixed(2);
 
       const callbackUrl = `${req.protocol}://${req.get("host")}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
+
+      console.log("Geidea session request:", { amount: amountInRiyals, currency, requestId, callbackUrl });
 
       const sessionResponse = await fetch(
         "https://api.ksamerchant.geidea.net/payment-intent/api/v2/direct/session",
