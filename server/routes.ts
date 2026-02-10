@@ -1415,6 +1415,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.get("/api/policy-requests/:id/status", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const request = await storage.getPolicyGenerationRequest(req.params.id);
+      if (!request || request.userId !== userId) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      res.json({ paymentStatus: request.paymentStatus, workflowStatus: request.workflowStatus });
+    } catch (error) {
+      console.error("Error fetching policy request status:", error);
+      res.status(500).json({ error: "خطأ في جلب حالة الطلب" });
+    }
+  });
+
   // Trigger policy generation after payment verification
   // Updated to support new 4-step wizard format
   app.post("/api/policy-requests/:id/generate", requireAuth, async (req, res) => {
