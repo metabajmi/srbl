@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CreditCard, Smartphone } from "lucide-react";
+import { Loader2, CreditCard, Smartphone, ExternalLink } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 declare global {
@@ -18,6 +18,9 @@ interface GeideaPaymentProps {
   onError?: (error: any) => void;
 }
 
+const GEIDEA_HPP_BASE = "https://www.ksamerchant.geidea.net/hpp/checkout/?";
+const GEIDEA_SDK_URL = "https://www.ksamerchant.geidea.net/hpp/geideaCheckout.min.js";
+
 export default function GeideaPayment({
   amount,
   description,
@@ -27,60 +30,71 @@ export default function GeideaPayment({
 }: GeideaPaymentProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const sdkLoaded = useRef(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sdkReady, setSdkReady] = useState(false);
+  const sdkLoadAttempted = useRef(false);
 
   useEffect(() => {
-    if (sdkLoaded.current) return;
-    sdkLoaded.current = true;
+    if (sdkLoadAttempted.current) return;
+    sdkLoadAttempted.current = true;
+
+    if (window.GeideaCheckout) {
+      setSdkReady(true);
+      return;
+    }
 
     if (!document.getElementById("geidea-checkout-js")) {
       const script = document.createElement("script");
       script.id = "geidea-checkout-js";
-      script.src = "https://www.ksamerchant.geidea.net/hpp/geideaCheckout.min.js";
+      script.src = GEIDEA_SDK_URL;
       script.async = true;
+      script.onload = () => {
+        console.log("Geidea SDK loaded successfully");
+        setSdkReady(true);
+      };
+      script.onerror = () => {
+        console.warn("Geidea SDK failed to load, will use redirect checkout");
+      };
       document.head.appendChild(script);
     }
   }, []);
 
-  const handlePayment = async () => {
-    setIsLoading(true);
-    setError(null);
+  const createSession = useCallback(async () => {
+    const sessionResponse = await apiRequest("POST", "/api/geidea/session", {
+      amount,
+      currency: "SAR",
+      description,
+      requestId,
+    });
+
+    if (!sessionResponse.ok) {
+      const errData = await sessionResponse.json();
+      throw new Error(errData.error || "فشل في إنشاء جلسة الدفع");
+    }
+
+    const data = await sessionResponse.json();
+    return data.sessionId;
+  }, [amount, description, requestId]);
+
+  const openRedirectCheckout = useCallback((sid: string) => {
+    const checkoutUrl = GEIDEA_HPP_BASE + sid;
+    console.log("Opening Geidea redirect checkout:", checkoutUrl);
+    window.location.href = checkoutUrl;
+  }, []);
+
+  const trySDKCheckout = useCallback((sid: string): boolean => {
+    if (!window.GeideaCheckout) {
+      console.warn("GeideaCheckout not available on window");
+      return false;
+    }
 
     try {
-      const sessionResponse = await apiRequest("POST", "/api/geidea/session", {
-        amount,
-        currency: "SAR",
-        description,
-        requestId,
-      });
-
-      if (!sessionResponse.ok) {
-        const errData = await sessionResponse.json();
-        throw new Error(errData.error || "فشل في إنشاء جلسة الدفع");
-      }
-
-      const { sessionId } = await sessionResponse.json();
-
-      if (!window.GeideaCheckout) {
-        await new Promise<void>((resolve, reject) => {
-          const checkInterval = setInterval(() => {
-            if (window.GeideaCheckout) {
-              clearInterval(checkInterval);
-              resolve();
-            }
-          }, 200);
-          setTimeout(() => {
-            clearInterval(checkInterval);
-            reject(new Error("فشل في تحميل بوابة الدفع"));
-          }, 10000);
-        });
-      }
-
       const onSuccess = async (response: any) => {
+        console.log("Geidea payment success:", response);
         setIsLoading(false);
         try {
           const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
-            paymentId: response?.order?.orderId || response?.orderId || sessionId,
+            paymentId: response?.order?.orderId || response?.orderId || sid,
             requestId,
             provider: "geidea",
             rawPayload: response,
@@ -93,12 +107,14 @@ export default function GeideaPayment({
             throw new Error(errData.error || "فشل التحقق من الدفع");
           }
         } catch (e: any) {
+          console.error("Payment verification error:", e);
           setError(e.message);
           if (onError) onError(e);
         }
       };
 
       const onPaymentError = (err: any) => {
+        console.error("Geidea payment error:", err);
         setIsLoading(false);
         const message = err?.responseMessage || err?.detailedResponseMessage || "فشل في عملية الدفع";
         setError(message);
@@ -106,15 +122,49 @@ export default function GeideaPayment({
       };
 
       const onCancel = () => {
+        console.log("Geidea payment cancelled");
         setIsLoading(false);
       };
 
       const payment = new window.GeideaCheckout(onSuccess, onPaymentError, onCancel);
-      payment.startPayment(sessionId);
+      payment.startPayment(sid);
+      return true;
+    } catch (sdkErr) {
+      console.error("Geidea SDK startPayment failed:", sdkErr);
+      return false;
+    }
+  }, [requestId, onCompleted, onError]);
+
+  const handlePayment = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const sid = await createSession();
+      setSessionId(sid);
+      console.log("Session created:", sid);
+
+      if (sdkReady) {
+        const sdkWorked = trySDKCheckout(sid);
+        if (!sdkWorked) {
+          console.log("SDK failed, falling back to redirect checkout");
+          openRedirectCheckout(sid);
+        }
+      } else {
+        console.log("SDK not ready, using redirect checkout");
+        openRedirectCheckout(sid);
+      }
     } catch (e: any) {
+      console.error("Payment initiation error:", e);
       setIsLoading(false);
       setError(e.message || "فشل في تحميل بوابة الدفع");
       if (onError) onError(e);
+    }
+  };
+
+  const handleRedirectFallback = () => {
+    if (sessionId) {
+      openRedirectCheckout(sessionId);
     }
   };
 
@@ -123,9 +173,17 @@ export default function GeideaPayment({
       <Card className="border-destructive">
         <CardContent className="pt-6 text-center space-y-3">
           <p className="text-destructive">{error}</p>
-          <Button variant="outline" onClick={() => { setError(null); handlePayment(); }} data-testid="button-retry-payment">
-            إعادة المحاولة
-          </Button>
+          <div className="flex flex-col gap-2 items-center">
+            <Button variant="outline" onClick={() => { setError(null); handlePayment(); }} data-testid="button-retry-payment">
+              إعادة المحاولة
+            </Button>
+            {sessionId && (
+              <Button variant="ghost" size="sm" onClick={handleRedirectFallback} data-testid="button-redirect-payment">
+                <ExternalLink className="w-4 h-4 ml-1" />
+                فتح صفحة الدفع مباشرة
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -145,7 +203,7 @@ export default function GeideaPayment({
       <CardContent className="space-y-4">
         <div className="text-center space-y-2">
           <p className="text-2xl font-bold" data-testid="text-payment-amount">
-            {(amount / 100).toFixed(2)} ر.س
+            {(amount / 100).toFixed(0)} ر.س
           </p>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>

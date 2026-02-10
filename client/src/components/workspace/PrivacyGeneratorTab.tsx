@@ -155,6 +155,52 @@ export default function PrivacyGeneratorTab() {
     };
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    const returnRequestId = params.get("requestId");
+    if (paymentStatus === "success" && returnRequestId) {
+      window.history.replaceState({}, "", window.location.pathname + "?tab=privacy");
+      setPaymentRequestId(returnRequestId);
+      const pollPaymentStatus = async () => {
+        setIsGenerating(true);
+        const maxAttempts = 15;
+        let attempt = 0;
+        while (attempt < maxAttempts) {
+          attempt++;
+          try {
+            const res = await fetch(`/api/policy-requests/${returnRequestId}/status`, { credentials: "include" });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.paymentStatus === "paid") {
+                const generateResponse = await apiRequest("POST", `/api/policy-requests/${returnRequestId}/generate`, {});
+                if (generateResponse.ok) {
+                  toast({
+                    title: "تم الدفع بنجاح",
+                    description: "جاري توليد سياسة الخصوصية...",
+                  });
+                  queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
+                  setIsPaymentComplete(true);
+                }
+                setIsGenerating(false);
+                return;
+              }
+            }
+          } catch (e) {
+            console.error("Payment status poll error:", e);
+          }
+          await new Promise(r => setTimeout(r, 2000));
+        }
+        setIsGenerating(false);
+        toast({
+          title: "في انتظار تأكيد الدفع",
+          description: "قد يستغرق التأكيد بضع دقائق. يرجى تحديث الصفحة لاحقاً",
+        });
+      };
+      pollPaymentStatus();
+    }
+  }, []);
+
   const handleOTPSuccess = () => {
     setIsLoggedIn(true);
     toast({
