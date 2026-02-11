@@ -347,20 +347,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Explicitly save session to ensure it persists to DB before responding
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-      
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       
       res.status(201).json({ 
         user: userWithoutPassword,
-        claimedScanId,
+        claimedScanId, // Include claimed scan ID so frontend can redirect
       });
     } catch (error) {
       console.error("Error registering user:", error);
@@ -408,19 +400,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Explicitly save session to ensure it persists to DB before responding
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-      
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       res.json({ 
         user: userWithoutPassword,
-        claimedScanId,
+        claimedScanId, // Include claimed scan ID so frontend can redirect
       });
     } catch (error) {
       console.error("Error logging in:", error);
@@ -587,14 +571,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error("Failed to auto-claim scan:", err);
         }
       }
-      
-      // Explicitly save session to ensure it persists to DB before responding
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
       
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
@@ -1439,20 +1415,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/policy-requests/:id/status", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId;
-      const request = await storage.getPolicyGenerationRequest(req.params.id);
-      if (!request || request.userId !== userId) {
-        return res.status(404).json({ error: "الطلب غير موجود" });
-      }
-      res.json({ paymentStatus: request.paymentStatus, workflowStatus: request.workflowStatus });
-    } catch (error) {
-      console.error("Error fetching policy request status:", error);
-      res.status(500).json({ error: "خطأ في جلب حالة الطلب" });
-    }
-  });
-
   // Trigger policy generation after payment verification
   // Updated to support new 4-step wizard format
   app.post("/api/policy-requests/:id/generate", requireAuth, async (req, res) => {
@@ -1737,7 +1699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payment = await storage.createPayment({
         requestId,
         userId,
-        amount: amount || 34900, // Default 349 SAR in halalas
+        amount: amount || 9900, // Default 99 SAR in halalas
         currency,
         provider: "paypal",
       });
@@ -1824,10 +1786,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "غير مصرح" });
       }
 
-      const { currency = "SAR", description, requestId } = req.body;
+      const { amount, currency = "SAR", description, requestId } = req.body;
 
-      if (!requestId) {
-        return res.status(400).json({ error: "معرف الطلب مطلوب" });
+      if (!amount || !requestId) {
+        return res.status(400).json({ error: "المبلغ ومعرف الطلب مطلوبان" });
       }
 
       const apiKey = process.env.GEIDEA_API_KEY;
@@ -1839,64 +1801,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
-      const orderAmount = 349.00;
-      const amountStr = orderAmount.toFixed(2);
+      const amountInRiyals = amount / 100;
 
-      const now = new Date();
-      const month = now.getMonth() + 1;
-      const day = now.getDate();
-      const year = now.getFullYear();
-      let hours = now.getHours();
-      const minutes = now.getMinutes().toString().padStart(2, "0");
-      const seconds = now.getSeconds().toString().padStart(2, "0");
-      const ampm = hours >= 12 ? "PM" : "AM";
-      hours = hours % 12 || 12;
-      const timestamp = `${month}/${day}/${year} ${hours}:${minutes}:${seconds} ${ampm}`;
-
-      const { createHmac } = await import("crypto");
-      const signatureData = `${apiKey}${amountStr}${currency}${requestId}${timestamp}`;
-      const signature = createHmac("sha256", apiPassword)
-        .update(signatureData)
-        .digest("base64");
-
-      const host = req.get("host") || "";
-      const callbackUrl = `https://${host}/api/geidea/callback`;
-      const returnUrl = `https://${host}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
-
-      console.log("Geidea session request:", { amount: orderAmount, amountStr, currency, requestId, timestamp, callbackUrl, returnUrl });
-
-      const requestBody = {
-        amount: "__AMOUNT_PLACEHOLDER__",
-        currency,
-        timestamp,
-        signature,
-        callbackUrl,
-        returnUrl,
-        merchantReferenceId: requestId,
-        language: "ar",
-        paymentOperation: "Pay",
-      };
-
-      const bodyStr = JSON.stringify(requestBody).replace('"__AMOUNT_PLACEHOLDER__"', amountStr);
-
-      console.log("Geidea request body:", bodyStr);
+      const callbackUrl = `${req.protocol}://${req.get("host")}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
 
       const sessionResponse = await fetch(
-        "https://api.ksamerchant.geidea.net/payment-intent/api/v2/direct/session",
+        "https://api.merchant.geidea.net/payment-intent/api/v2/direct/session",
         {
           method: "POST",
           headers: {
             "Authorization": `Basic ${credentials}`,
             "Content-Type": "application/json",
           },
-          body: bodyStr,
+          body: JSON.stringify({
+            amount: amountInRiyals,
+            currency,
+            callbackUrl,
+            merchantReferenceId: requestId,
+            language: "ar",
+          }),
         }
       );
 
       if (!sessionResponse.ok) {
         const errText = await sessionResponse.text();
         console.error("Geidea session creation failed:", sessionResponse.status, errText);
-        return res.status(400).json({ error: "فشل في إنشاء جلسة الدفع", details: errText });
+        return res.status(400).json({ error: "فشل في إنشاء جلسة الدفع" });
       }
 
       const sessionData = await sessionResponse.json();
@@ -1907,6 +1837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "فشل في إنشاء جلسة الدفع" });
       }
 
+      // Update request status to awaiting payment
       await storage.updatePolicyGenerationRequest(requestId, {
         workflowStatus: "awaiting_payment",
         paymentStatus: "processing",
@@ -1916,72 +1847,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating Geidea session:", error);
       res.status(500).json({ error: "فشل في إنشاء جلسة الدفع" });
-    }
-  });
-
-  // Geidea server-side callback (receives POST from Geidea after payment)
-  app.post("/api/geidea/callback", async (req, res) => {
-    try {
-      console.log("Geidea callback received:", JSON.stringify(req.body));
-      const order = req.body?.order || req.body;
-      const status = order?.status || order?.detailedStatus;
-      const merchantReferenceId = order?.merchantReferenceId;
-      const orderId = order?.orderId;
-
-      if (!merchantReferenceId || !orderId) {
-        console.warn("Geidea callback: missing merchantReferenceId or orderId");
-        return res.status(200).json({ success: true });
-      }
-
-      if (status === "Paid" || status === "Success") {
-        const policyRequest = await storage.getPolicyGenerationRequest(merchantReferenceId);
-        if (!policyRequest) {
-          console.warn(`Geidea callback: unknown merchantReferenceId ${merchantReferenceId}`);
-          return res.status(200).json({ success: true });
-        }
-
-        if (policyRequest.paymentStatus === "paid") {
-          return res.status(200).json({ success: true });
-        }
-
-        const apiKey = process.env.GEIDEA_API_KEY;
-        const apiPassword = process.env.GEIDEA_API_PASSWORD;
-        if (apiKey && apiPassword) {
-          try {
-            const credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
-            const orderCheck = await fetch(
-              `https://api.ksamerchant.geidea.net/pgw/api/v1/direct/order/${orderId}`,
-              {
-                headers: {
-                  "Authorization": `Basic ${credentials}`,
-                  "Content-Type": "application/json",
-                },
-              }
-            );
-            if (orderCheck.ok) {
-              const orderData = await orderCheck.json();
-              const verifiedStatus = orderData?.order?.detailedStatus || orderData?.order?.status;
-              if (verifiedStatus !== "Paid" && verifiedStatus !== "Success") {
-                console.warn(`Geidea callback: order ${orderId} verification failed, status: ${verifiedStatus}`);
-                return res.status(200).json({ success: true });
-              }
-            }
-          } catch (verifyErr) {
-            console.error("Geidea callback: order verification error:", verifyErr);
-          }
-        }
-
-        await storage.updatePolicyGenerationRequest(merchantReferenceId, {
-          workflowStatus: "paid",
-          paymentStatus: "paid",
-        });
-        console.log(`Geidea callback: marked request ${merchantReferenceId} as paid (orderId: ${orderId})`);
-      }
-
-      res.status(200).json({ success: true });
-    } catch (error) {
-      console.error("Error processing Geidea callback:", error);
-      res.status(200).json({ success: true });
     }
   });
 
@@ -2033,7 +1898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify order with Geidea using orderId
       const verifyResponse = await fetch(
-        `https://api.ksamerchant.geidea.net/pgw/api/v1/direct/order/${paymentId}`,
+        `https://api.merchant.geidea.net/pgw/api/v1/direct/order/${paymentId}`,
         {
           headers: {
             "accept": "application/json",
@@ -2045,7 +1910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!verifyResponse.ok) {
         // Try by merchant reference ID if orderId lookup fails
         const refResponse = await fetch(
-          `https://api.ksamerchant.geidea.net/pgw/api/v1/direct/order?MerchantReferenceId=${requestId}`,
+          `https://api.merchant.geidea.net/pgw/api/v1/direct/order?MerchantReferenceId=${requestId}`,
           {
             headers: {
               "accept": "application/json",
@@ -2071,7 +1936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Validate amount in fallback path too
-        const expectedAmountFallback = 349;
+        const expectedAmountFallback = 99;
         if (paidOrder.amount && Math.abs(paidOrder.amount - expectedAmountFallback) > 0.01) {
           console.error(`Geidea fallback amount mismatch: expected ${expectedAmountFallback}, got ${paidOrder.amount}`);
           return res.status(400).json({ error: "مبلغ الدفع غير صحيح" });
@@ -2097,8 +1962,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "معرف الطلب لا يتطابق مع عملية الدفع" });
       }
 
-      // Validate amount matches expected price (349 SAR)
-      const expectedAmountSAR = 349;
+      // Validate amount matches expected price (99 SAR)
+      const expectedAmountSAR = 99;
       if (order.amount && Math.abs(order.amount - expectedAmountSAR) > 0.01) {
         console.error(`Geidea payment amount mismatch: expected ${expectedAmountSAR}, got ${order.amount}`);
         return res.status(400).json({ error: "مبلغ الدفع غير صحيح" });
@@ -3030,14 +2895,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userAgent: req.headers['user-agent'],
       });
 
-      // Explicitly save session to ensure it persists to DB before responding
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-
       const { password: _, ...adminWithoutPassword } = admin;
       res.json(adminWithoutPassword);
     } catch (error) {
@@ -3130,7 +2987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success = await sendPaymentConfirmationEmail({
           to,
           companyName: "شركة اختبار",
-          amount: 34900,
+          amount: 9900,
           paymentId: "test-payment-123"
         });
       } else {
