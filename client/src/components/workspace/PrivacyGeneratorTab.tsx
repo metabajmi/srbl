@@ -53,7 +53,7 @@ const isAuthenticated = (): boolean => {
   return false;
 };
 
-const POLICY_PRICE_SAR = 99;
+const POLICY_PRICE_SAR = 349;
 const POLICY_PRICE_HALALAS = POLICY_PRICE_SAR * 100;
 
 const ACTIVITY_TYPES = [
@@ -1729,7 +1729,7 @@ ${policy.generatedContent}
       {showPaymentStep && paymentRequestId && (
         <div className="mt-6">
           <GeideaPayment
-            amount={9900}
+            amount={POLICY_PRICE_HALALAS}
             description="توليد سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية"
             requestId={paymentRequestId}
             onCompleted={handlePaymentCompleted}
