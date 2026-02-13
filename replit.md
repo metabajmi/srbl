@@ -27,7 +27,7 @@ Key features include:
 - **Smart Customer Assistant:** A RAG-based chatbot leveraging PostgreSQL with `pgvector` for semantic search, using OpenAI's `text-embedding-3-small` model. The knowledge base includes PDPL articles, FAQs, and service guides.
 - **Client Authentication System (Passwordless OTP):** Users authenticate via email OTPs. Implements rate limiting and secures session management. Anonymous scans are automatically linked to user accounts upon registration/login.
 - **Admin & Client Portal Separation:** Distinct, secure portals with route protection and role-based access control. The client dashboard displays scan results, violations, and generated policies.
-- **Payment Integration (Geidea):** Integrated with Geidea payment gateway using Hosted Checkout SDK for processing payments via Mada, Visa, Mastercard, and Apple Pay. Server-side session creation and payment verification. Session duration is 1 hour.
+- **Payment Integration (Moyasar):** Integrated for processing payments using Mada, Visa, Mastercard, and Apple Pay, with server-side verification.
 - **Compliance Requirements Knowledge Base:** A comprehensive internal knowledge base (`server/knowledge/pdpl/compliance-requirements.json`) containing 21 sections of regulatory requirements extracted from 22+ official Saudi regulatory documents, including e-commerce, privacy policy, data minimization, data subject rights, cookie consent, DPO, and cross-border data transfer guidelines, with Arabic/English keywords.
 
 ## External Dependencies

@@ -410,7 +410,7 @@ export default function ScanResultsPage() {
               const ppAudit = (scan as any).analysisResult?.privacy_policy_audit || 
                               (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
               return ppAudit && ppAudit.elements && ppAudit.elements.length > 0 ? (
-                <PrivacyPolicyAuditCard audit={ppAudit} onUpgrade={() => navigateToTool("privacy")} />
+                <PrivacyPolicyAuditCard audit={ppAudit} />
               ) : null;
             })()}
             
@@ -850,7 +850,6 @@ interface PrivacyPolicyAuditProps {
     compliancePercentage: number;
     isComplete: boolean;
     summary: string;
-    lockedCount?: number;
     elements: Array<{
       id: string;
       number: number;
@@ -864,12 +863,10 @@ interface PrivacyPolicyAuditProps {
       matchedKeywords: string[];
     }>;
   };
-  onUpgrade?: () => void;
 }
 
-function PrivacyPolicyAuditCard({ audit, onUpgrade }: PrivacyPolicyAuditProps) {
+function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
   const [expanded, setExpanded] = useState(false);
-  const lockedCount = audit.lockedCount ?? 0;
 
   const getStatusIcon = (statusEn: string) => {
     switch (statusEn) {
@@ -942,9 +939,9 @@ function PrivacyPolicyAuditCard({ audit, onUpgrade }: PrivacyPolicyAuditProps) {
           )}
         </Button>
 
-        {/* Detailed Elements */}
+        {/* Detailed Elements Table */}
         {expanded && (
-          <div className="space-y-2 max-h-[500px] overflow-y-auto">
+          <div className="space-y-2 max-h-96 overflow-y-auto">
             {audit.elements.map((element) => (
               <div
                 key={element.id}
@@ -980,52 +977,6 @@ function PrivacyPolicyAuditCard({ audit, onUpgrade }: PrivacyPolicyAuditProps) {
                 </div>
               </div>
             ))}
-
-            {/* Blurred locked placeholders for unpaid users */}
-            {lockedCount > 0 && (
-              <div className="relative mt-2">
-                <div className="space-y-2 select-none" aria-hidden="true">
-                  {Array.from({ length: lockedCount }).map((_, i) => (
-                    <div
-                      key={`locked-${i}`}
-                      className="p-3 rounded-lg border border-muted bg-muted/30 blur-[6px]"
-                      data-testid={`audit-element-locked-${i}`}
-                    >
-                      <div className="flex items-start gap-2">
-                        <div className="w-4 h-4 rounded-full bg-muted-foreground/20 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-sm text-muted-foreground/50">
-                              {audit.elements.length + i + 1}. عنصر محمي
-                            </span>
-                            <Badge variant="outline" className="text-xs border-muted-foreground/20 text-muted-foreground/40">محمي</Badge>
-                          </div>
-                          <div className="h-3 bg-muted-foreground/10 rounded w-3/4 mt-2" />
-                          <div className="h-3 bg-muted-foreground/10 rounded w-1/2 mt-1" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Overlay CTA */}
-                <div className="absolute inset-0 flex items-center justify-center bg-background/60 rounded-lg backdrop-blur-[1px]">
-                  <div className="text-center p-6">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                      <Lock className="w-6 h-6 text-primary" />
-                    </div>
-                    <p className="font-semibold mb-1">{lockedCount} عناصر إضافية مخفية</p>
-                    <p className="text-sm text-muted-foreground mb-4">أنشئ سياسة خصوصية متوافقة لعرض جميع التفاصيل</p>
-                    {onUpgrade && (
-                      <Button onClick={onUpgrade} data-testid="button-upgrade-audit">
-                        <FileText className="w-4 h-4 ml-2" />
-                        تحسين سياسة الخصوصية
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
