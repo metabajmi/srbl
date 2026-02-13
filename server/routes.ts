@@ -1865,11 +1865,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`[Geidea] Session created: ${sessionId} for request: ${requestId}`);
 
+      const geideaCheckoutBase = process.env.GEIDEA_CHECKOUT_URL || "https://www.ksamerchant.geidea.net/hpp/checkout/";
+      const normalizedBase = geideaCheckoutBase.endsWith("/") ? geideaCheckoutBase : geideaCheckoutBase + "/";
+      const checkoutUrl = `${normalizedBase}?${sessionId}`;
+
+      console.log(`[Geidea] Checkout URL: ${checkoutUrl}`);
+
       res.json({
         sessionId,
         merchantPublicKey: publicKey,
         amount: paymentAmount,
         currency,
+        checkoutUrl,
       });
     } catch (error) {
       console.error("Error creating Geidea session:", error);
