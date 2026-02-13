@@ -252,12 +252,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }),
       secret: process.env.SESSION_SECRET || "pdpl-compliance-secret-key-change-in-production",
       resave: false,
-      saveUninitialized: false,
+      saveUninitialized: true,
       cookie: {
         maxAge: 1 * 60 * 60 * 1000, // 1 hour
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        secure: true,
+        sameSite: "none",
       },
     })
   );
@@ -268,6 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Middleware to check if user is authenticated
   const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+    console.log(`[Auth] ${req.method} ${req.path} | sessionID: ${req.sessionID?.substring(0, 8)}... | userId: ${req.session.userId || 'NONE'} | cookie: ${req.headers.cookie ? 'YES' : 'NO'}`);
     if (!req.session.userId) {
       return res.status(401).json({ message: "غير مصرح. يرجى تسجيل الدخول" });
     }
@@ -571,6 +572,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           else resolve();
         });
       });
+      
+      console.log(`[OTP Verify] Session saved. sessionID: ${req.sessionID?.substring(0, 8)}... | userId: ${req.session.userId} | cookie sent: ${req.headers.cookie ? 'YES' : 'NO'}`);
       
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
