@@ -23,7 +23,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { useScanContext } from "@/contexts/ScanContext";
 import { useLocation } from "wouter";
-import MoyasarPayment from "@/components/MoyasarPayment";
+import GeideaPayment from "@/components/GeideaPayment";
 import { OTPModal } from "@/components/OTPModal";
 import {
   DATA_TYPES,
@@ -155,6 +155,38 @@ export default function PrivacyGeneratorTab() {
     };
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    const returnRequestId = params.get("requestId");
+    if (paymentStatus === "success" && returnRequestId && isLoggedIn) {
+      setPaymentRequestId(returnRequestId);
+      setIsGenerating(true);
+      const verifyAndGenerate = async () => {
+        try {
+          const verifyRes = await apiRequest("POST", "/api/geidea/verify", { requestId: returnRequestId });
+          const verifyData = await verifyRes.json();
+          if (verifyData.success && verifyData.status === "paid") {
+            const genRes = await apiRequest("POST", `/api/policy-requests/${returnRequestId}/generate`, {});
+            if (genRes.ok) {
+              toast({ title: "جاري توليد السياسة", description: "تم الدفع بنجاح!" });
+              queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
+            }
+          } else {
+            toast({ title: "تحقق من الدفع", description: "لم يتم تأكيد الدفع بعد. يرجى المحاولة مرة أخرى.", variant: "destructive" });
+          }
+        } catch (err) {
+          console.error("Return URL payment verify error:", err);
+          toast({ title: "خطأ", description: "حدث خطأ أثناء التحقق من الدفع", variant: "destructive" });
+        } finally {
+          setIsGenerating(false);
+          window.history.replaceState({}, "", window.location.pathname);
+        }
+      };
+      verifyAndGenerate();
+    }
+  }, [isLoggedIn, toast]);
+
   const handleOTPSuccess = () => {
     setIsLoggedIn(true);
     toast({
@@ -260,6 +292,9 @@ export default function PrivacyGeneratorTab() {
     },
   });
 
+  const [showPaymentStep, setShowPaymentStep] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<FormValues | null>(null);
+
   const createPolicyRequestMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       const response = await apiRequest("POST", "/api/policy-requests", {
@@ -268,40 +303,9 @@ export default function PrivacyGeneratorTab() {
       });
       return await response.json();
     },
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       setPaymentRequestId(result.id);
-      
-      setIsGenerating(true);
-      try {
-        const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
-          paymentId: "BYPASS_TEST",
-          requestId: result.id,
-        });
-        
-        if (verifyResponse.ok) {
-          const generateResponse = await apiRequest("POST", `/api/policy-requests/${result.id}/generate`, {});
-          
-          if (generateResponse.ok) {
-            toast({
-              title: "جاري توليد السياسة",
-              description: "سيتم توليد سياسة الخصوصية خلال لحظات...",
-            });
-            queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
-            form.reset();
-            setCurrentStep(1);
-          } else {
-            throw new Error("فشل في بدء توليد السياسة");
-          }
-        }
-      } catch (error: any) {
-        toast({
-          title: "خطأ",
-          description: error.message || "حدث خطأ أثناء معالجة الطلب",
-          variant: "destructive",
-        });
-      } finally {
-        setIsGenerating(false);
-      }
+      setShowPaymentStep(true);
     },
     onError: (error: any) => {
       toast({
@@ -312,12 +316,52 @@ export default function PrivacyGeneratorTab() {
     },
   });
 
+  const handlePaymentSuccess = async () => {
+    if (!paymentRequestId) return;
+    
+    setIsGenerating(true);
+    setShowPaymentStep(false);
+    try {
+      const verifyRes = await apiRequest("POST", "/api/geidea/verify", { requestId: paymentRequestId });
+      const verifyData = await verifyRes.json();
+      
+      if (!verifyRes.ok || verifyData.status !== "paid") {
+        throw new Error("لم يتم تأكيد الدفع من الخادم. يرجى المحاولة مرة أخرى.");
+      }
+
+      const generateResponse = await apiRequest("POST", `/api/policy-requests/${paymentRequestId}/generate`, {});
+      
+      if (generateResponse.ok) {
+        toast({
+          title: "جاري توليد السياسة",
+          description: "تم الدفع بنجاح! سيتم توليد سياسة الخصوصية خلال لحظات...",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
+        form.reset();
+        setCurrentStep(1);
+        setPaymentRequestId(null);
+        setPendingFormData(null);
+      } else {
+        throw new Error("فشل في بدء توليد السياسة");
+      }
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: error.message || "حدث خطأ أثناء توليد السياسة بعد الدفع",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const onSubmit = (values: FormValues) => {
     if (!isLoggedIn) {
       setShowOTPModal(true);
       return;
     }
     
+    setPendingFormData(values);
     createPolicyRequestMutation.mutate(values);
   };
 
@@ -521,7 +565,65 @@ ${policy.generatedContent}
         onSuccess={handleOTPSuccess}
       />
 
-      <div className="mb-8 overflow-x-auto pb-2" dir="rtl">
+      {showPaymentStep && paymentRequestId && (
+        <Card className="mb-6 border-primary/30">
+          <CardContent className="pt-6">
+            <div className="text-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <CreditCard className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">أكمل الدفع لتوليد سياسة الخصوصية</h3>
+              <p className="text-muted-foreground">
+                بعد الدفع سيتم توليد سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية
+              </p>
+            </div>
+            <GeideaPayment
+              requestId={paymentRequestId}
+              amount={POLICY_PRICE_SAR}
+              customerEmail={pendingFormData?.email}
+              customerName={pendingFormData?.company_name}
+              onSuccess={handlePaymentSuccess}
+              onError={(err) => {
+                toast({
+                  title: "خطأ في الدفع",
+                  description: err,
+                  variant: "destructive",
+                });
+              }}
+              onCancel={() => {
+                setShowPaymentStep(false);
+                toast({
+                  title: "تم إلغاء الدفع",
+                  description: "يمكنك المحاولة مرة أخرى في أي وقت",
+                });
+              }}
+            />
+            <div className="text-center mt-4">
+              <Button
+                variant="ghost"
+                onClick={() => setShowPaymentStep(false)}
+                data-testid="button-cancel-payment"
+              >
+                العودة للنموذج
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isGenerating && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-8 gap-4">
+              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              <h3 className="text-lg font-bold">جاري توليد سياسة الخصوصية...</h3>
+              <p className="text-muted-foreground text-center">تم الدفع بنجاح. يتم الآن توليد السياسة بالذكاء الاصطناعي</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className={cn("mb-8 overflow-x-auto pb-2", (showPaymentStep || isGenerating) && "hidden")} dir="rtl">
         <div className="flex items-start justify-between min-w-[600px] relative">
           {/* Connecting lines - positioned behind icons */}
           <div className="absolute top-5 left-0 right-0 flex items-center px-[calc(50%/6)] z-0">
@@ -573,7 +675,7 @@ ${policy.generatedContent}
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className={cn("space-y-6", (showPaymentStep || isGenerating) && "hidden")}>
           {currentStep === 1 && (
             <Card>
               <CardHeader dir="rtl">
@@ -1707,15 +1809,15 @@ ${policy.generatedContent}
                 disabled={createPolicyRequestMutation.isPending || isGenerating}
                 data-testid="button-generate-policy"
               >
-                {(createPolicyRequestMutation.isPending || isGenerating) ? (
+                {createPolicyRequestMutation.isPending ? (
                   <>
                     <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                    جاري التوليد...
+                    جاري إعداد الطلب...
                   </>
                 ) : (
                   <>
-                    <FileText className="ml-2 h-4 w-4" />
-                    توليد سياسة الخصوصية
+                    <CreditCard className="ml-2 h-4 w-4" />
+                    المتابعة للدفع - {POLICY_PRICE_SAR} ر.س
                   </>
                 )}
               </Button>

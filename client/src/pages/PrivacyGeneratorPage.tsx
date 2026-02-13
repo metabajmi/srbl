@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, Plus, Trash2, AlertCircle } from "lucide-react";
+import { FileText, Loader2, Download, Plus, Trash2, AlertCircle, CreditCard } from "lucide-react";
 import { insertPolicyDocumentSchema, type PolicyDocument, type PolicyGenerationRequest } from "@shared/schema";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { BackButton } from "@/components/BackButton";
 import { OTPModal } from "@/components/OTPModal";
+import GeideaPayment from "@/components/GeideaPayment";
 import { useEffect } from "react";
 
 const isAuthenticated = (): boolean => {
@@ -254,6 +255,9 @@ export default function PrivacyGeneratorPage() {
     },
   });
 
+  const [showPaymentStep, setShowPaymentStep] = useState(false);
+  const [paymentRequestId, setPaymentRequestId] = useState<string | null>(null);
+
   const createPolicyRequestMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       const response = await apiRequest("POST", "/api/policy-requests", {
@@ -262,41 +266,9 @@ export default function PrivacyGeneratorPage() {
       });
       return await response.json();
     },
-    onSuccess: async (result) => {
-      // ========== BYPASS MODE FOR TESTING ==========
-      // Skip payment and generate directly
-      setIsGenerating(true);
-      try {
-        const verifyResponse = await apiRequest("POST", "/api/payments/verify", {
-          paymentId: "BYPASS_TEST",
-          requestId: result.id,
-        });
-        
-        if (verifyResponse.ok) {
-          const generateResponse = await apiRequest("POST", `/api/policy-requests/${result.id}/generate`, {});
-          
-          if (generateResponse.ok) {
-            toast({
-              title: "جاري توليد السياسة",
-              description: "سيتم توليد سياسة الخصوصية خلال لحظات...",
-            });
-            queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
-            form.reset();
-            setCurrentSection(1);
-          } else {
-            throw new Error("فشل في بدء توليد السياسة");
-          }
-        }
-      } catch (error: any) {
-        toast({
-          title: "خطأ",
-          description: error.message || "حدث خطأ أثناء معالجة الطلب",
-          variant: "destructive",
-        });
-      } finally {
-        setIsGenerating(false);
-      }
-      // ========== END BYPASS MODE ==========
+    onSuccess: (result) => {
+      setPaymentRequestId(result.id);
+      setShowPaymentStep(true);
     },
     onError: (error: any) => {
       toast({
@@ -306,6 +278,42 @@ export default function PrivacyGeneratorPage() {
       });
     },
   });
+
+  const handlePaymentSuccess = async () => {
+    if (!paymentRequestId) return;
+    setIsGenerating(true);
+    setShowPaymentStep(false);
+    try {
+      const verifyRes = await apiRequest("POST", "/api/geidea/verify", { requestId: paymentRequestId });
+      const verifyData = await verifyRes.json();
+      
+      if (!verifyRes.ok || verifyData.status !== "paid") {
+        throw new Error("لم يتم تأكيد الدفع من الخادم. يرجى المحاولة مرة أخرى.");
+      }
+
+      const generateResponse = await apiRequest("POST", `/api/policy-requests/${paymentRequestId}/generate`, {});
+      if (generateResponse.ok) {
+        toast({
+          title: "جاري توليد السياسة",
+          description: "تم الدفع بنجاح! سيتم توليد سياسة الخصوصية خلال لحظات...",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
+        form.reset();
+        setCurrentSection(1);
+        setPaymentRequestId(null);
+      } else {
+        throw new Error("فشل في بدء توليد السياسة");
+      }
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: error.message || "حدث خطأ أثناء توليد السياسة",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const onSubmitError = (errors: any) => {
     console.log("Form validation errors:", errors);
@@ -678,8 +686,57 @@ export default function PrivacyGeneratorPage() {
           </Badge>
         </div>
 
+        {showPaymentStep && paymentRequestId && (
+          <Card className="mb-6 border-primary/30">
+            <CardContent className="pt-6">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <CreditCard className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">أكمل الدفع لتوليد سياسة الخصوصية</h3>
+                <p className="text-muted-foreground">
+                  بعد الدفع سيتم توليد سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية
+                </p>
+              </div>
+              <GeideaPayment
+                requestId={paymentRequestId}
+                amount={99}
+                onSuccess={handlePaymentSuccess}
+                onError={(err) => {
+                  toast({
+                    title: "خطأ في الدفع",
+                    description: err,
+                    variant: "destructive",
+                  });
+                }}
+                onCancel={() => {
+                  setShowPaymentStep(false);
+                  toast({ title: "تم إلغاء الدفع", description: "يمكنك المحاولة مرة أخرى في أي وقت" });
+                }}
+              />
+              <div className="text-center mt-4">
+                <Button variant="ghost" onClick={() => setShowPaymentStep(false)} data-testid="button-cancel-payment">
+                  العودة للنموذج
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {isGenerating && (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-8 gap-4">
+                <Loader2 className="w-12 h-12 animate-spin text-primary" />
+                <h3 className="text-lg font-bold">جاري توليد سياسة الخصوصية...</h3>
+                <p className="text-muted-foreground text-center">تم الدفع بنجاح. يتم الآن توليد السياسة بالذكاء الاصطناعي</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit, onSubmitError)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit, onSubmitError)} className={cn("space-y-6", (showPaymentStep || isGenerating) && "hidden")}>
             {/* القسم الأول: هوية الجهة والمسؤولية */}
             {currentSection === 1 && (
               <Card>
@@ -2390,15 +2447,15 @@ export default function PrivacyGeneratorPage() {
                       disabled={createPolicyRequestMutation.isPending || isGenerating}
                       data-testid="button-submit-form"
                     >
-                      {(createPolicyRequestMutation.isPending || isGenerating) ? (
+                      {createPolicyRequestMutation.isPending ? (
                         <>
                           <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                          جاري التوليد...
+                          جاري إعداد الطلب...
                         </>
                       ) : (
                         <>
-                          <FileText className="ml-2 h-4 w-4" />
-                          توليد سياسة الخصوصية
+                          <CreditCard className="ml-2 h-4 w-4" />
+                          المتابعة للدفع - 99 ر.س
                         </>
                       )}
                     </Button>
