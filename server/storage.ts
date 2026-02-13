@@ -81,7 +81,10 @@ import {
   clientRequests,
   adminUsers,
   auditLogs,
-  otpTokens
+  otpTokens,
+  type DiscountCode,
+  type InsertDiscountCode,
+  discountCodes
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql as drizzleSql } from "drizzle-orm";
@@ -299,6 +302,12 @@ export interface IStorage {
   // Scan Claiming - ربط الفحوصات بالمستخدمين
   claimScan(scanId: string, userId: string): Promise<ComplianceScan | undefined>;
   getScansByUserId(userId: string): Promise<ComplianceScan[]>;
+
+  // Discount Codes - أكواد الخصم
+  getDiscountCodeByCode(code: string): Promise<DiscountCode | undefined>;
+  incrementDiscountCodeUsage(id: string): Promise<void>;
+  createDiscountCode(code: InsertDiscountCode): Promise<DiscountCode>;
+  getAllDiscountCodes(): Promise<DiscountCode[]>;
 }
 
 // Database storage implementation using Drizzle ORM
@@ -1818,6 +1827,39 @@ export class DatabaseStorage implements IStorage {
       .from(complianceScans)
       .where(eq(complianceScans.userId, userId))
       .orderBy(desc(complianceScans.scanDate));
+  }
+  // ============================================
+  // Discount Codes - أكواد الخصم
+  // ============================================
+
+  async getDiscountCodeByCode(code: string): Promise<DiscountCode | undefined> {
+    const [discountCode] = await db
+      .select()
+      .from(discountCodes)
+      .where(eq(discountCodes.code, code.toUpperCase()));
+    return discountCode || undefined;
+  }
+
+  async incrementDiscountCodeUsage(id: string): Promise<void> {
+    await db
+      .update(discountCodes)
+      .set({ currentUses: drizzleSql`${discountCodes.currentUses} + 1` })
+      .where(eq(discountCodes.id, id));
+  }
+
+  async createDiscountCode(code: InsertDiscountCode): Promise<DiscountCode> {
+    const [created] = await db
+      .insert(discountCodes)
+      .values({ ...code, code: code.code.toUpperCase() })
+      .returning();
+    return created;
+  }
+
+  async getAllDiscountCodes(): Promise<DiscountCode[]> {
+    return await db
+      .select()
+      .from(discountCodes)
+      .orderBy(desc(discountCodes.createdAt));
   }
 }
 

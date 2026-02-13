@@ -460,6 +460,28 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type Payment = typeof payments.$inferSelect;
 
+// Discount Codes - أكواد الخصم
+export const discountCodes = pgTable("discount_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: text("code").notNull().unique(),
+  discountType: text("discount_type").notNull().default("percentage"), // percentage, fixed
+  discountValue: integer("discount_value").notNull(), // percentage (e.g. 20 = 20%) or fixed amount in SAR
+  maxUses: integer("max_uses"), // null = unlimited
+  currentUses: integer("current_uses").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDiscountCodeSchema = createInsertSchema(discountCodes).omit({
+  id: true,
+  currentUses: true,
+  createdAt: true,
+});
+
+export type InsertDiscountCode = z.infer<typeof insertDiscountCodeSchema>;
+export type DiscountCode = typeof discountCodes.$inferSelect;
+
 // Consent Records - سجلات الموافقة (CMP)
 export const consentRecords = pgTable("consent_records", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

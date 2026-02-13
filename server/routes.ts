@@ -1673,7 +1673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payment = await storage.createPayment({
         requestId,
         userId,
-        amount: amount || 9900, // Default 99 SAR in halalas
+        amount: amount || 34900, // Default 349 SAR in halalas
         currency,
         provider: "paypal",
       });
@@ -1750,6 +1750,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ========== Discount Code Validation ==========
+
+  app.post("/api/discount/validate", async (req, res) => {
+    try {
+      const { code } = req.body;
+      if (!code || typeof code !== "string") {
+        return res.status(400).json({ error: "كود الخصم مطلوب" });
+      }
+
+      const discountCode = await storage.getDiscountCodeByCode(code.trim());
+
+      if (!discountCode) {
+        return res.status(404).json({ error: "كود الخصم غير صالح" });
+      }
+
+      if (!discountCode.isActive) {
+        return res.status(400).json({ error: "كود الخصم غير مفعّل" });
+      }
+
+      if (discountCode.expiresAt && new Date(discountCode.expiresAt) < new Date()) {
+        return res.status(400).json({ error: "كود الخصم منتهي الصلاحية" });
+      }
+
+      if (discountCode.maxUses && discountCode.currentUses >= discountCode.maxUses) {
+        return res.status(400).json({ error: "تم استنفاد كود الخصم" });
+      }
+
+      const originalPrice = 349;
+      let discountedPrice = originalPrice;
+      let discountAmount = 0;
+
+      if (discountCode.discountType === "percentage") {
+        discountAmount = Math.round(originalPrice * discountCode.discountValue / 100);
+        discountedPrice = originalPrice - discountAmount;
+      } else {
+        discountAmount = discountCode.discountValue;
+        discountedPrice = Math.max(0, originalPrice - discountAmount);
+      }
+
+      res.json({
+        valid: true,
+        code: discountCode.code,
+        discountType: discountCode.discountType,
+        discountValue: discountCode.discountValue,
+        discountAmount,
+        originalPrice,
+        finalPrice: discountedPrice,
+      });
+    } catch (error) {
+      console.error("Error validating discount code:", error);
+      res.status(500).json({ error: "فشل في التحقق من كود الخصم" });
+    }
+  });
+
   // ========== Geidea Payment Integration ==========
 
   app.post("/api/geidea/session", requireAuth, async (req, res) => {
@@ -1767,7 +1821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ error: "بوابة الدفع غير مُهيأة" });
       }
 
-      const { requestId, amount, currency = "SAR", customerEmail, customerName } = req.body;
+      const { requestId, amount, currency = "SAR", customerEmail, customerName, discountCode: discountCodeStr } = req.body;
 
       if (!requestId) {
         return res.status(400).json({ error: "معرف الطلب مطلوب" });
@@ -1784,7 +1838,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "هذا الطلب مدفوع بالفعل" });
       }
 
-      const paymentAmount = amount || 99.00;
+      const BASE_PRICE = 349.00;
+      let paymentAmount = BASE_PRICE;
+      let appliedDiscountCodeId: string | null = null;
+      let appliedDiscountCodeStr: string | null = null;
+
+      if (discountCodeStr && typeof discountCodeStr === "string") {
+        const dc = await storage.getDiscountCodeByCode(discountCodeStr.trim());
+        if (dc && dc.isActive && (!dc.expiresAt || new Date(dc.expiresAt) >= new Date()) && (!dc.maxUses || dc.currentUses < dc.maxUses)) {
+          if (dc.discountType === "percentage") {
+            paymentAmount = BASE_PRICE - Math.round(BASE_PRICE * dc.discountValue / 100);
+          } else {
+            paymentAmount = Math.max(1, BASE_PRICE - dc.discountValue);
+          }
+          appliedDiscountCodeId = dc.id;
+          appliedDiscountCodeStr = dc.code;
+          console.log(`[Geidea] Discount code ${dc.code} applied: ${dc.discountValue}${dc.discountType === "percentage" ? "%" : " SAR"} off -> ${paymentAmount} SAR`);
+        }
+      }
       const merchantRefId = `SIRBAL-${requestId}-${Date.now()}`;
       const timestamp = new Date().toISOString();
 
@@ -1861,6 +1932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currency,
         provider: "geidea",
         providerPaymentId: merchantRefId,
+        rawPayload: appliedDiscountCodeId ? { discountCodeId: appliedDiscountCodeId, discountCode: appliedDiscountCodeStr } : undefined,
       });
 
       console.log(`[Geidea] Session created: ${sessionId} for request: ${requestId}`);
@@ -1918,6 +1990,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const existingPayment = await storage.getPaymentByRequestId(requestId);
           if (existingPayment) {
+            if (existingPayment.rawPayload && typeof existingPayment.rawPayload === "object" && (existingPayment.rawPayload as any).discountCodeId) {
+              try {
+                await storage.incrementDiscountCodeUsage((existingPayment.rawPayload as any).discountCodeId);
+                console.log(`[Geidea Callback] Discount code usage incremented for: ${(existingPayment.rawPayload as any).discountCode}`);
+              } catch (e) {
+                console.error("[Geidea Callback] Failed to increment discount code usage:", e);
+              }
+            }
+
             await storage.updatePayment(existingPayment.id, {
               providerPaymentId: orderId || merchantRefId,
               status: "succeeded",
@@ -1933,7 +2014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             sendPaymentConfirmationEmail({
               to: contactEmail,
               companyName,
-              amount: amount || 99,
+              amount: amount || 349,
               paymentId: orderId || merchantRefId,
             }).catch(err => console.error("Failed to send payment email:", err));
           }

@@ -700,7 +700,7 @@ export default function PrivacyGeneratorPage() {
               </div>
               <GeideaPayment
                 requestId={paymentRequestId}
-                amount={99}
+                amount={349}
                 onSuccess={handlePaymentSuccess}
                 onError={(err) => {
                   toast({
@@ -2455,7 +2455,7 @@ export default function PrivacyGeneratorPage() {
                       ) : (
                         <>
                           <CreditCard className="ml-2 h-4 w-4" />
-                          المتابعة للدفع - 99 ر.س
+                          المتابعة للدفع - 349 ر.س
                         </>
                       )}
                     </Button>
