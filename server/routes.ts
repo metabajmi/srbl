@@ -769,36 +769,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!scan) {
         return res.status(404).json({ error: "الفحص غير موجود" });
       }
-
-      const userId = req.session?.userId;
-      const scanData = { ...scan } as any;
-      const ppAudit = scanData.analysisResult?.privacy_policy_audit;
-
-      if (ppAudit?.elements && Array.isArray(ppAudit.elements)) {
-        if (!userId) {
-          ppAudit.elements = [];
-          ppAudit.lockedCount = 0;
-        } else {
-          let hasPaid = false;
-          try {
-            const policyReq = await storage.getPolicyGenerationRequestByScanId(scan.id);
-            if (policyReq && policyReq.paymentStatus === "paid") {
-              hasPaid = true;
-            }
-          } catch {}
-
-          if (!hasPaid) {
-            const previewCount = 3;
-            const totalElements = ppAudit.elements.length;
-            ppAudit.elements = ppAudit.elements.slice(0, previewCount);
-            ppAudit.lockedCount = Math.max(0, totalElements - previewCount);
-          } else {
-            ppAudit.lockedCount = 0;
-          }
-        }
-      }
-
-      res.json(scanData);
+      res.json(scan);
     } catch (error) {
       console.error("Error fetching scan:", error);
       res.status(500).json({ error: "فشل في جلب الفحص" });
@@ -1699,7 +1670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payment = await storage.createPayment({
         requestId,
         userId,
-        amount: amount || 34900, // Default 349 SAR in halalas
+        amount: amount || 9900, // Default 99 SAR in halalas
         currency,
         provider: "paypal",
       });
@@ -1776,92 +1747,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ========== Geidea Payment Integration ==========
-
-  // Create Geidea payment session
-  app.post("/api/geidea/session", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session.userId;
-      if (!userId) {
-        return res.status(401).json({ error: "غير مصرح" });
-      }
-
-      const { currency = "SAR", description, requestId } = req.body;
-
-      if (!requestId) {
-        return res.status(400).json({ error: "معرف الطلب مطلوب" });
-      }
-
-      const apiKey = process.env.GEIDEA_API_KEY;
-      const apiPassword = process.env.GEIDEA_API_PASSWORD;
-
-      if (!apiKey || !apiPassword) {
-        console.error("Geidea API credentials not configured");
-        return res.status(503).json({ error: "بوابة الدفع غير مُهيأة" });
-      }
-
-      const credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
-      const amountStr = "349.00";
-      const timestamp = new Date().toISOString();
-
-      const { createHmac } = await import("crypto");
-      const signatureData = `${apiKey}${amountStr}${currency}${requestId}${timestamp}`;
-      const signature = createHmac("sha256", apiPassword)
-        .update(signatureData)
-        .digest("base64");
-
-      const callbackUrl = `${req.protocol}://${req.get("host")}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
-
-      console.log("Geidea session request:", { amount: amountStr, currency, requestId, timestamp });
-
-      const sessionResponse = await fetch(
-        "https://api.ksamerchant.geidea.net/payment-intent/api/v2/direct/session",
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Basic ${credentials}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            amount: amountStr,
-            currency,
-            timestamp,
-            signature,
-            callbackUrl,
-            merchantReferenceId: requestId,
-            language: "ar",
-            paymentOperation: "Pay",
-          }),
-        }
-      );
-
-      if (!sessionResponse.ok) {
-        const errText = await sessionResponse.text();
-        console.error("Geidea session creation failed:", sessionResponse.status, errText);
-        return res.status(400).json({ error: "فشل في إنشاء جلسة الدفع" });
-      }
-
-      const sessionData = await sessionResponse.json();
-      const sessionId = sessionData?.session?.id;
-
-      if (!sessionId) {
-        console.error("No session ID returned from Geidea:", sessionData);
-        return res.status(400).json({ error: "فشل في إنشاء جلسة الدفع" });
-      }
-
-      await storage.updatePolicyGenerationRequest(requestId, {
-        workflowStatus: "awaiting_payment",
-        paymentStatus: "processing",
-      });
-
-      res.json({ sessionId });
-    } catch (error) {
-      console.error("Error creating Geidea session:", error);
-      res.status(500).json({ error: "فشل في إنشاء جلسة الدفع" });
-    }
-  });
-
-  // Verify payment (Geidea - server-side verification)
+  // ========== Moyasar Payment Verification ==========
+  
   app.post("/api/payments/verify", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId;
@@ -1874,10 +1761,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!paymentId) {
         return res.status(400).json({ error: "معرف الدفع مطلوب" });
       }
-
-      // ========== BYPASS MODE FOR TESTING (development only) ==========
-      if (paymentId === "BYPASS_TEST" && process.env.NODE_ENV !== "production") {
-        console.log("[BYPASS] Payment verification bypassed for testing (dev mode)");
+      
+      // ========== BYPASS MODE FOR TESTING ==========
+      // Accept "BYPASS_TEST" as a dummy payment ID to skip Moyasar verification
+      if (paymentId === "BYPASS_TEST") {
+        console.log("[BYPASS] Payment verification bypassed for testing");
+        const payment = { 
+          id: "BYPASS_TEST", 
+          status: "paid", 
+          amount: 9900, 
+          currency: "SAR" 
+        };
+        
+        // Handle request update for bypass mode
         if (requestId) {
           const policyRequest = await storage.getPolicyGenerationRequest(requestId);
           if (policyRequest && policyRequest.userId === userId) {
@@ -1887,6 +1783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
+        
         return res.json({ 
           success: true, 
           status: "paid",
@@ -1895,162 +1792,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       // ========== END BYPASS MODE ==========
-
-      // Server-side verification with Geidea API
-      const apiKey = process.env.GEIDEA_API_KEY;
-      const apiPassword = process.env.GEIDEA_API_PASSWORD;
-
-      if (!apiKey || !apiPassword) {
-        console.error("Geidea API credentials not configured");
+      
+      const secretKey = process.env.MOYASAR_SECRET_KEY;
+      if (!secretKey) {
+        console.error("MOYASAR_SECRET_KEY not configured");
         return res.status(503).json({ error: "بوابة الدفع غير مُهيأة" });
       }
-
-      const credentials = Buffer.from(`${apiKey}:${apiPassword}`).toString("base64");
-
-      // Verify order with Geidea using orderId
-      const verifyResponse = await fetch(
-        `https://api.ksamerchant.geidea.net/pgw/api/v1/direct/order/${paymentId}`,
-        {
-          headers: {
-            "accept": "application/json",
-            "authorization": `Basic ${credentials}`,
-          },
-        }
-      );
-
+      
+      const verifyResponse = await fetch(`https://api.moyasar.com/v1/payments/${paymentId}`, {
+        headers: {
+          "Authorization": "Basic " + Buffer.from(`${secretKey}:`).toString("base64"),
+        },
+      });
+      
       if (!verifyResponse.ok) {
-        // Try by merchant reference ID if orderId lookup fails
-        const refResponse = await fetch(
-          `https://api.ksamerchant.geidea.net/pgw/api/v1/direct/order?MerchantReferenceId=${requestId}`,
-          {
-            headers: {
-              "accept": "application/json",
-              "authorization": `Basic ${credentials}`,
-            },
+        console.error("Moyasar verification failed:", verifyResponse.status);
+        return res.status(400).json({ error: "فشل التحقق من الدفع" });
+      }
+      
+      const payment = await verifyResponse.json();
+      
+      if (payment.status !== "paid") {
+        return res.status(400).json({ error: "الدفع غير مكتمل", status: payment.status });
+      }
+      
+      let companyName = "طلب جديد";
+      let contactEmail = "";
+      
+      if (requestId) {
+        const policyRequest = await storage.getPolicyGenerationRequest(requestId);
+        if (policyRequest && policyRequest.userId === userId) {
+          const intakeData = policyRequest.intakeData as Record<string, any> | null;
+          companyName = intakeData?.companyName || companyName;
+          contactEmail = intakeData?.contactEmail || "";
+          
+          await storage.updatePolicyGenerationRequest(requestId, {
+            workflowStatus: "paid",
+            paymentStatus: "paid",
+          });
+          
+          const existingPayment = await storage.getPaymentByRequestId(requestId);
+          if (existingPayment) {
+            await storage.updatePayment(existingPayment.id, {
+              providerPaymentId: paymentId,
+              status: "succeeded",
+              rawPayload: payment,
+            });
+          } else {
+            await storage.createPayment({
+              requestId,
+              userId,
+              amount: payment.amount,
+              currency: payment.currency,
+              provider: "moyasar",
+              providerPaymentId: paymentId,
+            });
           }
-        );
-        
-        if (!refResponse.ok) {
-          console.error("Geidea verification failed:", verifyResponse.status);
-          return res.status(400).json({ error: "فشل التحقق من الدفع" });
+          
+          if (contactEmail) {
+            sendPaymentConfirmationEmail({
+              to: contactEmail,
+              companyName,
+              amount: payment.amount,
+              paymentId,
+            }).catch(err => console.error("Failed to send payment email:", err));
+          }
         }
-        
-        const refData = await refResponse.json();
-        const orders = refData?.orders || [];
-        const paidOrder = orders.find((o: any) => 
-          (o.detailedStatus === "Paid" || o.status === "Success") &&
-          o.merchantReferenceId === requestId
-        );
-        
-        if (!paidOrder) {
-          return res.status(400).json({ error: "الدفع غير مكتمل" });
-        }
-
-        // Validate amount in fallback path too
-        const expectedAmountFallback = 349;
-        if (paidOrder.amount && Math.abs(paidOrder.amount - expectedAmountFallback) > 0.01) {
-          console.error(`Geidea fallback amount mismatch: expected ${expectedAmountFallback}, got ${paidOrder.amount}`);
-          return res.status(400).json({ error: "مبلغ الدفع غير صحيح" });
-        }
-        
-        return await processVerifiedPayment(res, paidOrder, requestId, userId);
       }
-
-      const orderData = await verifyResponse.json();
-      const order = orderData?.order;
-
-      if (!order) {
-        return res.status(400).json({ error: "بيانات الطلب غير متوفرة" });
-      }
-
-      if (order.detailedStatus !== "Paid" && order.status !== "Success") {
-        return res.status(400).json({ error: "الدفع غير مكتمل", status: order.detailedStatus || order.status });
-      }
-
-      // Validate order belongs to this request (merchantReferenceId must match)
-      if (requestId && order.merchantReferenceId && order.merchantReferenceId !== requestId) {
-        console.error(`Geidea order merchantReferenceId mismatch: expected ${requestId}, got ${order.merchantReferenceId}`);
-        return res.status(400).json({ error: "معرف الطلب لا يتطابق مع عملية الدفع" });
-      }
-
-      // Validate amount matches expected price (349 SAR)
-      const expectedAmountSAR = 349;
-      if (order.amount && Math.abs(order.amount - expectedAmountSAR) > 0.01) {
-        console.error(`Geidea payment amount mismatch: expected ${expectedAmountSAR}, got ${order.amount}`);
-        return res.status(400).json({ error: "مبلغ الدفع غير صحيح" });
-      }
-
-      return await processVerifiedPayment(res, order, requestId, userId);
+      
+      res.json({ 
+        success: true, 
+        status: payment.status,
+        amount: payment.amount,
+        currency: payment.currency,
+      });
     } catch (error) {
       console.error("Error verifying payment:", error);
       res.status(500).json({ error: "فشل في التحقق من الدفع" });
     }
   });
-
-  // Helper function for processing verified Geidea payments
-  async function processVerifiedPayment(res: Response, order: any, requestId: string | undefined, userId: string) {
-    const paymentAmount = order.amount || 0;
-    const paymentCurrency = order.currency || "SAR";
-    const orderId = order.orderId || "unknown";
-    
-    let companyName = "طلب جديد";
-    let contactEmail = "";
-
-    if (requestId) {
-      const policyRequest = await storage.getPolicyGenerationRequest(requestId);
-      if (policyRequest && policyRequest.userId === userId) {
-        const intakeData = policyRequest.intakeData as Record<string, any> | null;
-        companyName = intakeData?.companyName || companyName;
-        contactEmail = intakeData?.contactEmail || "";
-
-        await storage.updatePolicyGenerationRequest(requestId, {
-          workflowStatus: "paid",
-          paymentStatus: "paid",
-        });
-
-        const existingPayment = await storage.getPaymentByRequestId(requestId);
-        if (existingPayment) {
-          await storage.updatePayment(existingPayment.id, {
-            providerPaymentId: orderId,
-            status: "succeeded",
-            rawPayload: order,
-          });
-        } else {
-          await storage.createPayment({
-            requestId,
-            userId,
-            amount: Math.round(paymentAmount * 100),
-            currency: paymentCurrency,
-            provider: "geidea",
-            providerPaymentId: orderId,
-          });
-        }
-
-        if (contactEmail) {
-          sendPaymentConfirmationEmail({
-            to: contactEmail,
-            companyName,
-            amount: Math.round(paymentAmount * 100),
-            paymentId: orderId,
-          }).catch(err => console.error("Failed to send payment email:", err));
-        }
-      }
-    }
-
-    return res.json({
-      success: true,
-      status: "paid",
-      amount: paymentAmount,
-      currency: paymentCurrency,
-    });
-  }
-
-  app.get("/api/geidea/config", (req, res) => {
-    const apiKey = process.env.GEIDEA_API_KEY;
-    if (!apiKey) {
+  
+  app.get("/api/moyasar/config", (req, res) => {
+    const publishableKey = process.env.MOYASAR_PUBLISHABLE_KEY;
+    if (!publishableKey) {
       return res.status(503).json({ error: "بوابة الدفع غير مُهيأة" });
     }
-    res.json({ configured: true });
+    res.json({ publishableKey });
   });
 
   // ========== Terms Generator Endpoints ==========
@@ -2998,7 +2825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success = await sendPaymentConfirmationEmail({
           to,
           companyName: "شركة اختبار",
-          amount: 34900,
+          amount: 9900,
           paymentId: "test-payment-123"
         });
       } else {
