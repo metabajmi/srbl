@@ -1799,13 +1799,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .update(signatureData)
         .digest("base64");
 
-      const sessionPayload = {
+      const callbackUrl = process.env.GEIDEA_CALLBACK_URL || `${appUrl}/api/geidea/callback`;
+
+      const returnUrl = `${appUrl}/workspace?tab=privacy&payment=success&requestId=${requestId}`;
+
+      const sessionPayload: Record<string, any> = {
         amount: paymentAmount,
         currency,
         timestamp,
         signature,
-        callbackUrl: `${appUrl}/api/geidea/callback`,
-        returnUrl: `${appUrl}/workspace?tab=privacy&payment=success&requestId=${requestId}`,
         merchantReferenceId: merchantRefId,
         paymentOperation: "Pay",
         language: "ar",
@@ -1813,6 +1815,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: customerEmail || "",
         },
       };
+
+      if (returnUrl.startsWith("https://") && !returnUrl.includes(".replit.dev")) {
+        sessionPayload.returnUrl = returnUrl;
+      }
+
+      if (callbackUrl.startsWith("https://") && !callbackUrl.includes(".replit.dev")) {
+        sessionPayload.callbackUrl = callbackUrl;
+      }
+
+      console.log("[Geidea] Session payload:", JSON.stringify({ ...sessionPayload, signature: "***" }));
 
       const credentials = Buffer.from(`${publicKey}:${apiPassword}`).toString("base64");
 
