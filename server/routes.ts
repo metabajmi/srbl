@@ -1750,137 +1750,277 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ========== Moyasar Payment Verification ==========
-  
-  app.post("/api/payments/verify", requireAuth, async (req, res) => {
+  // ========== Geidea Payment Integration ==========
+
+  app.post("/api/geidea/session", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId;
       if (!userId) {
         return res.status(401).json({ error: "غير مصرح" });
       }
-      
-      const { paymentId, requestId } = req.body;
-      
-      if (!paymentId) {
-        return res.status(400).json({ error: "معرف الدفع مطلوب" });
-      }
-      
-      // ========== BYPASS MODE FOR TESTING ==========
-      // Accept "BYPASS_TEST" as a dummy payment ID to skip Moyasar verification
-      if (paymentId === "BYPASS_TEST") {
-        console.log("[BYPASS] Payment verification bypassed for testing");
-        const payment = { 
-          id: "BYPASS_TEST", 
-          status: "paid", 
-          amount: 9900, 
-          currency: "SAR" 
-        };
-        
-        // Handle request update for bypass mode
-        if (requestId) {
-          const policyRequest = await storage.getPolicyGenerationRequest(requestId);
-          if (policyRequest && policyRequest.userId === userId) {
-            await storage.updatePolicyGenerationRequest(requestId, {
-              workflowStatus: "paid",
-              paymentStatus: "paid",
-            });
-          }
-        }
-        
-        return res.json({ 
-          success: true, 
-          status: "paid",
-          message: "تم تجاوز الدفع للاختبار",
-          bypassed: true,
-        });
-      }
-      // ========== END BYPASS MODE ==========
-      
-      const secretKey = process.env.MOYASAR_SECRET_KEY;
-      if (!secretKey) {
-        console.error("MOYASAR_SECRET_KEY not configured");
+
+      const publicKey = process.env.GEIDEA_PUBLIC_KEY;
+      const apiPassword = process.env.GEIDEA_API_PASSWORD;
+
+      if (!publicKey || !apiPassword) {
+        console.error("Geidea credentials not configured");
         return res.status(503).json({ error: "بوابة الدفع غير مُهيأة" });
       }
+
+      const { requestId, amount, currency = "SAR", customerEmail, customerName } = req.body;
+
+      if (!requestId) {
+        return res.status(400).json({ error: "معرف الطلب مطلوب" });
+      }
+
+      const policyRequest = await storage.getPolicyGenerationRequest(requestId);
+      if (!policyRequest) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      if (policyRequest.userId !== userId) {
+        return res.status(403).json({ error: "غير مصرح" });
+      }
+      if (policyRequest.paymentStatus === "paid") {
+        return res.status(400).json({ error: "هذا الطلب مدفوع بالفعل" });
+      }
+
+      const paymentAmount = amount || 99.00;
+      const merchantRefId = `SIRBAL-${requestId}-${Date.now()}`;
+
+      const appUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : "https://sirbal.co";
       
-      const verifyResponse = await fetch(`https://api.moyasar.com/v1/payments/${paymentId}`, {
-        headers: {
-          "Authorization": "Basic " + Buffer.from(`${secretKey}:`).toString("base64"),
+      const sessionPayload = {
+        amount: paymentAmount,
+        currency,
+        callbackUrl: `${appUrl}/api/geidea/callback`,
+        returnUrl: `${appUrl}/workspace?tab=privacy&payment=success&requestId=${requestId}`,
+        merchantReferenceId: merchantRefId,
+        language: "ar",
+        customer: {
+          email: customerEmail || "",
+          name: customerName || "",
         },
+      };
+
+      const credentials = Buffer.from(`${publicKey}:${apiPassword}`).toString("base64");
+
+      const sessionResponse = await fetch(
+        "https://api.merchant.geidea.net/payment-intent/api/v2/direct/session",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Basic ${credentials}`,
+          },
+          body: JSON.stringify(sessionPayload),
+        }
+      );
+
+      if (!sessionResponse.ok) {
+        const errorBody = await sessionResponse.text();
+        console.error("Geidea session creation failed:", sessionResponse.status, errorBody);
+        return res.status(400).json({ error: "فشل في إنشاء جلسة الدفع" });
+      }
+
+      const sessionData = await sessionResponse.json();
+      const sessionId = sessionData?.session?.id;
+
+      if (!sessionId) {
+        console.error("Geidea session response missing session ID:", sessionData);
+        return res.status(500).json({ error: "استجابة غير صالحة من بوابة الدفع" });
+      }
+
+      await storage.updatePolicyGenerationRequest(requestId, {
+        workflowStatus: "awaiting_payment",
+        paymentStatus: "processing",
       });
-      
-      if (!verifyResponse.ok) {
-        console.error("Moyasar verification failed:", verifyResponse.status);
-        return res.status(400).json({ error: "فشل التحقق من الدفع" });
+
+      await storage.createPayment({
+        requestId,
+        userId,
+        amount: Math.round(paymentAmount * 100),
+        currency,
+        provider: "geidea",
+        providerPaymentId: merchantRefId,
+      });
+
+      console.log(`[Geidea] Session created: ${sessionId} for request: ${requestId}`);
+
+      res.json({
+        sessionId,
+        merchantPublicKey: publicKey,
+        amount: paymentAmount,
+        currency,
+      });
+    } catch (error) {
+      console.error("Error creating Geidea session:", error);
+      res.status(500).json({ error: "فشل في إنشاء جلسة الدفع" });
+    }
+  });
+
+  app.post("/api/geidea/callback", async (req, res) => {
+    try {
+      const orderData = req.body?.order || req.body;
+      const orderId = orderData?.orderId;
+      const status = orderData?.status;
+      const merchantRefId = orderData?.merchantReferenceId;
+      const amount = orderData?.amount;
+      const currency = orderData?.currency;
+
+      console.log(`[Geidea Callback] orderId: ${orderId}, status: ${status}, merchantRef: ${merchantRefId}`);
+
+      if (!merchantRefId) {
+        console.error("[Geidea Callback] Missing merchantReferenceId");
+        return res.status(400).json({ error: "Missing merchantReferenceId" });
       }
-      
-      const payment = await verifyResponse.json();
-      
-      if (payment.status !== "paid") {
-        return res.status(400).json({ error: "الدفع غير مكتمل", status: payment.status });
+
+      const requestIdMatch = merchantRefId.match(/^SIRBAL-(.+?)-\d+$/);
+      const requestId = requestIdMatch ? requestIdMatch[1] : null;
+
+      if (!requestId) {
+        console.error("[Geidea Callback] Could not extract requestId from:", merchantRefId);
+        return res.status(400).json({ error: "Invalid merchantReferenceId" });
       }
-      
-      let companyName = "طلب جديد";
-      let contactEmail = "";
-      
-      if (requestId) {
+
+      if (status === "Success") {
         const policyRequest = await storage.getPolicyGenerationRequest(requestId);
-        if (policyRequest && policyRequest.userId === userId) {
-          const intakeData = policyRequest.intakeData as Record<string, any> | null;
-          companyName = intakeData?.companyName || companyName;
-          contactEmail = intakeData?.contactEmail || "";
-          
+        if (policyRequest) {
           await storage.updatePolicyGenerationRequest(requestId, {
             workflowStatus: "paid",
             paymentStatus: "paid",
           });
-          
+
           const existingPayment = await storage.getPaymentByRequestId(requestId);
           if (existingPayment) {
             await storage.updatePayment(existingPayment.id, {
-              providerPaymentId: paymentId,
+              providerPaymentId: orderId || merchantRefId,
               status: "succeeded",
-              rawPayload: payment,
-            });
-          } else {
-            await storage.createPayment({
-              requestId,
-              userId,
-              amount: payment.amount,
-              currency: payment.currency,
-              provider: "moyasar",
-              providerPaymentId: paymentId,
+              rawPayload: orderData,
             });
           }
-          
+
+          const intakeData = policyRequest.intakeData as Record<string, any> | null;
+          const contactEmail = intakeData?.email || "";
+          const companyName = intakeData?.company_name || "طلب جديد";
+
           if (contactEmail) {
             sendPaymentConfirmationEmail({
               to: contactEmail,
               companyName,
-              amount: payment.amount,
-              paymentId,
+              amount: amount || 99,
+              paymentId: orderId || merchantRefId,
             }).catch(err => console.error("Failed to send payment email:", err));
           }
         }
+      } else {
+        console.log(`[Geidea Callback] Payment not successful. Status: ${status}`);
+        const existingPayment = await storage.getPaymentByRequestId(requestId);
+        if (existingPayment) {
+          await storage.updatePayment(existingPayment.id, {
+            status: "failed",
+            rawPayload: orderData,
+          });
+        }
       }
-      
-      res.json({ 
-        success: true, 
-        status: payment.status,
-        amount: payment.amount,
-        currency: payment.currency,
-      });
+
+      res.json({ success: true });
     } catch (error) {
-      console.error("Error verifying payment:", error);
-      res.status(500).json({ error: "فشل في التحقق من الدفع" });
+      console.error("Error processing Geidea callback:", error);
+      res.status(500).json({ error: "Callback processing failed" });
     }
   });
-  
-  app.get("/api/moyasar/config", (req, res) => {
-    const publishableKey = process.env.MOYASAR_PUBLISHABLE_KEY;
-    if (!publishableKey) {
-      return res.status(503).json({ error: "بوابة الدفع غير مُهيأة" });
+
+  app.post("/api/geidea/verify", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "غير مصرح" });
+      }
+
+      const { requestId } = req.body;
+      if (!requestId) {
+        return res.status(400).json({ error: "معرف الطلب مطلوب" });
+      }
+
+      const policyRequest = await storage.getPolicyGenerationRequest(requestId);
+      if (!policyRequest) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      if (policyRequest.userId !== userId) {
+        return res.status(403).json({ error: "غير مصرح" });
+      }
+
+      if (policyRequest.paymentStatus === "paid") {
+        return res.json({
+          success: true,
+          status: "paid",
+          message: "تم تأكيد الدفع",
+        });
+      }
+
+      const existingPayment = await storage.getPaymentByRequestId(requestId);
+      if (existingPayment && existingPayment.providerPaymentId) {
+        const publicKey = process.env.GEIDEA_PUBLIC_KEY;
+        const apiPassword = process.env.GEIDEA_API_PASSWORD;
+
+        if (publicKey && apiPassword) {
+          try {
+            const credentials = Buffer.from(`${publicKey}:${apiPassword}`).toString("base64");
+            const merchantRefId = existingPayment.providerPaymentId;
+            
+            const ordersResponse = await fetch(
+              `https://api.merchant.geidea.net/pgw/api/v1/direct/order?merchantReferenceId=${encodeURIComponent(merchantRefId)}`,
+              {
+                headers: {
+                  "Authorization": `Basic ${credentials}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            if (ordersResponse.ok) {
+              const ordersData = await ordersResponse.json();
+              const orders = ordersData?.orders || [];
+              const successOrder = orders.find((o: any) => o.status === "Success");
+
+              if (successOrder) {
+                console.log(`[Geidea Verify] Payment confirmed via API for request: ${requestId}`);
+                
+                await storage.updatePolicyGenerationRequest(requestId, {
+                  workflowStatus: "paid",
+                  paymentStatus: "paid",
+                });
+
+                await storage.updatePayment(existingPayment.id, {
+                  providerPaymentId: successOrder.orderId || merchantRefId,
+                  status: "succeeded",
+                  rawPayload: successOrder,
+                });
+
+                return res.json({
+                  success: true,
+                  status: "paid",
+                  message: "تم تأكيد الدفع",
+                });
+              }
+            }
+          } catch (apiErr) {
+            console.error("[Geidea Verify] API check failed:", apiErr);
+          }
+        }
+      }
+
+      return res.status(402).json({
+        success: false,
+        status: policyRequest.paymentStatus,
+        message: "لم يتم تأكيد الدفع بعد",
+      });
+    } catch (error) {
+      console.error("Error verifying Geidea payment:", error);
+      res.status(500).json({ error: "فشل في التحقق من حالة الدفع" });
     }
-    res.json({ publishableKey });
   });
 
   // ========== Terms Generator Endpoints ==========
