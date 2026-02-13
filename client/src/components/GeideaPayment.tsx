@@ -4,13 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard, ShieldCheck } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
-declare global {
-  interface Window {
-    onGeideaSuccess?: (data: any) => void;
-    onGeideaError?: (data: any) => void;
-    onGeideaCancel?: () => void;
-  }
-}
 
 interface GeideaPaymentProps {
   requestId: string;
@@ -75,31 +68,28 @@ export default function GeideaPayment({
         throw new Error("بيانات جلسة الدفع غير مكتملة");
       }
 
-      window.onGeideaSuccess = (data: any) => {
+      const onPaymentSuccess = (data: any) => {
         console.log("[Geidea] Payment success:", data);
         if (onSuccess) onSuccess(data);
       };
-      window.onGeideaError = (data: any) => {
+      const onPaymentError = (data: any) => {
         console.error("[Geidea] Payment error:", data);
         const msg = data?.responseMessage || data?.detailedResponseMessage || "فشل في عملية الدفع";
         setError(msg);
         if (onError) onError(msg);
       };
-      window.onGeideaCancel = () => {
+      const onPaymentCancel = () => {
         console.log("[Geidea] Payment cancelled");
         if (onCancel) onCancel();
       };
 
-      const GeideaCheckout = (window as any).GeideaCheckout;
-      if (!GeideaCheckout) {
+      const GeideaCheckoutClass = (window as any).GeideaCheckout;
+      if (!GeideaCheckoutClass) {
         throw new Error("Geidea checkout library not loaded");
       }
 
-      GeideaCheckout.onSuccess = window.onGeideaSuccess;
-      GeideaCheckout.onError = window.onGeideaError;
-      GeideaCheckout.onCancel = window.onGeideaCancel;
-
-      GeideaCheckout.startPayment(sessionId, {});
+      const payment = new GeideaCheckoutClass(onPaymentSuccess, onPaymentError, onPaymentCancel);
+      payment.startPayment(sessionId);
 
       setIsLoading(false);
     } catch (e: any) {
