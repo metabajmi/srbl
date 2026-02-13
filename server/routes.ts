@@ -237,12 +237,20 @@ async function processScan(scanId: string) {
 export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/.well-known/apple-developer-merchantid-domain-association", (_req, res) => {
-    const filePath = path.resolve("client/public/.well-known/apple-developer-merchantid-domain-association");
-    if (fs.existsSync(filePath)) {
-      res.type("text/plain").sendFile(filePath);
-    } else {
-      res.status(404).send("Not found");
+    const possiblePaths = [
+      path.resolve("client/public/.well-known/apple-developer-merchantid-domain-association"),
+      path.resolve("dist/public/.well-known/apple-developer-merchantid-domain-association"),
+      path.resolve(".well-known/apple-developer-merchantid-domain-association"),
+      path.join(import.meta.dirname, "public/.well-known/apple-developer-merchantid-domain-association"),
+    ];
+    
+    for (const filePath of possiblePaths) {
+      if (fs.existsSync(filePath)) {
+        return res.type("text/plain").sendFile(filePath);
+      }
     }
+    
+    res.status(404).send("Not found");
   });
   
   // ============================================
