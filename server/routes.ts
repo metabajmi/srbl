@@ -572,6 +572,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Explicitly save session to PostgreSQL before responding
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       
