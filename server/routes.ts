@@ -547,18 +547,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createOrGetUserByEmail(email, pendingName);
       delete (req.session as any).pendingUserName;
       
-      // Save pending scan ID before session regeneration
+      // Save pending scan ID
       const pendingClaimScanId = req.session.pendingClaimScanId;
       
-      // Regenerate session to prevent session fixation
-      await new Promise<void>((resolve, reject) => {
-        req.session.regenerate((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-      
-      // Create session
+      // Set userId on existing session (avoid regenerate which breaks cookie delivery)
       req.session.userId = user.id.toString();
       
       // Auto-claim any pending scan
