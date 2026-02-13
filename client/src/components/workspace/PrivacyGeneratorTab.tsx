@@ -53,7 +53,7 @@ const isAuthenticated = (): boolean => {
   return false;
 };
 
-const POLICY_PRICE_SAR = 99;
+const POLICY_PRICE_SAR = 349;
 const POLICY_PRICE_HALALAS = POLICY_PRICE_SAR * 100;
 
 const ACTIVITY_TYPES = [
