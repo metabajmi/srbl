@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CreditCard, ShieldCheck } from "lucide-react";
+import { Loader2, CreditCard, ShieldCheck, ExternalLink } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 
@@ -27,29 +27,11 @@ export default function GeideaPayment({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadGeideaScript = useCallback((): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (document.getElementById("geidea-checkout-js")) {
-        resolve();
-        return;
-      }
-      const script = document.createElement("script");
-      script.id = "geidea-checkout-js";
-      script.src = "https://www.ksamerchant.geidea.net/hpp/geideaCheckout.min.js";
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Failed to load Geidea checkout"));
-      document.head.appendChild(script);
-    });
-  }, []);
-
   const startPayment = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      await loadGeideaScript();
-
       const response = await apiRequest("POST", "/api/geidea/session", {
         requestId,
         amount,
@@ -62,36 +44,13 @@ export default function GeideaPayment({
         throw new Error(errData.error || "فشل في إنشاء جلسة الدفع");
       }
 
-      const { sessionId, merchantPublicKey } = await response.json();
+      const { sessionId, checkoutUrl } = await response.json();
 
-      if (!sessionId || !merchantPublicKey) {
+      if (!sessionId || !checkoutUrl) {
         throw new Error("بيانات جلسة الدفع غير مكتملة");
       }
 
-      const onPaymentSuccess = (data: any) => {
-        console.log("[Geidea] Payment success:", data);
-        if (onSuccess) onSuccess(data);
-      };
-      const onPaymentError = (data: any) => {
-        console.error("[Geidea] Payment error:", data);
-        const msg = data?.responseMessage || data?.detailedResponseMessage || "فشل في عملية الدفع";
-        setError(msg);
-        if (onError) onError(msg);
-      };
-      const onPaymentCancel = () => {
-        console.log("[Geidea] Payment cancelled");
-        if (onCancel) onCancel();
-      };
-
-      const GeideaCheckoutClass = (window as any).GeideaCheckout;
-      if (!GeideaCheckoutClass) {
-        throw new Error("Geidea checkout library not loaded");
-      }
-
-      const payment = new GeideaCheckoutClass(onPaymentSuccess, onPaymentError, onPaymentCancel);
-      payment.startPayment(sessionId);
-
-      setIsLoading(false);
+      window.location.href = checkoutUrl;
     } catch (e: any) {
       console.error("Geidea payment error:", e);
       const msg = e.message || "فشل في بدء عملية الدفع";
@@ -99,7 +58,7 @@ export default function GeideaPayment({
       setIsLoading(false);
       if (onError) onError(msg);
     }
-  }, [requestId, amount, customerEmail, customerName, loadGeideaScript, onSuccess, onError, onCancel]);
+  }, [requestId, amount, customerEmail, customerName, onError]);
 
   if (error) {
     return (
@@ -154,9 +113,14 @@ export default function GeideaPayment({
             <>
               <ShieldCheck className="w-5 h-5 ml-2" />
               ادفع الآن - {amount} ر.س
+              <ExternalLink className="w-4 h-4 mr-2" />
             </>
           )}
         </Button>
+
+        <p className="text-xs text-center text-muted-foreground">
+          سيتم توجيهك إلى صفحة الدفع الآمنة من Geidea
+        </p>
 
         <div className="flex items-center justify-center gap-3 pt-2">
           <img
