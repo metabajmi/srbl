@@ -1786,28 +1786,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const paymentAmount = amount || 99.00;
       const merchantRefId = `SIRBAL-${requestId}-${Date.now()}`;
+      const timestamp = new Date().toISOString();
 
       const appUrl = process.env.REPLIT_DEV_DOMAIN 
         ? `https://${process.env.REPLIT_DEV_DOMAIN}`
         : "https://sirbal.co";
       
+      const amountStr = paymentAmount.toFixed(2);
+      const crypto = await import("crypto");
+      const signatureData = `${publicKey}${amountStr}${currency}${merchantRefId}${timestamp}`;
+      const signature = crypto.createHmac("sha256", apiPassword)
+        .update(signatureData)
+        .digest("base64");
+
       const sessionPayload = {
         amount: paymentAmount,
         currency,
+        timestamp,
+        signature,
         callbackUrl: `${appUrl}/api/geidea/callback`,
         returnUrl: `${appUrl}/workspace?tab=privacy&payment=success&requestId=${requestId}`,
         merchantReferenceId: merchantRefId,
+        paymentOperation: "Pay",
         language: "ar",
         customer: {
           email: customerEmail || "",
-          name: customerName || "",
         },
       };
 
       const credentials = Buffer.from(`${publicKey}:${apiPassword}`).toString("base64");
 
+      const geideaBaseUrl = process.env.GEIDEA_API_BASE_URL || "https://api.ksamerchant.geidea.net";
       const sessionResponse = await fetch(
-        "https://api.merchant.geidea.net/payment-intent/api/v2/direct/session",
+        `${geideaBaseUrl}/payment-intent/api/v2/direct/session`,
         {
           method: "POST",
           headers: {
@@ -1970,8 +1981,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const credentials = Buffer.from(`${publicKey}:${apiPassword}`).toString("base64");
             const merchantRefId = existingPayment.providerPaymentId;
             
+            const geideaBaseUrl = process.env.GEIDEA_API_BASE_URL || "https://api.ksamerchant.geidea.net";
             const ordersResponse = await fetch(
-              `https://api.merchant.geidea.net/pgw/api/v1/direct/order?merchantReferenceId=${encodeURIComponent(merchantRefId)}`,
+              `${geideaBaseUrl}/pgw/api/v1/direct/order?merchantReferenceId=${encodeURIComponent(merchantRefId)}`,
               {
                 headers: {
                   "Authorization": `Basic ${credentials}`,

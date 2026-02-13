@@ -47,3 +47,9 @@ integrations = ["javascript_mem_db:1.0.0", "javascript_openai:1.0.0", "javascrip
 [userenv.shared]
 VITE_MOYASAR_PUBLISHABLE_KEY = "${MOYASAR_PUBLISHABLE_KEY}"
 EMAIL_FROM = "Sirbal <postmaster@sirbal.co>"
+
+[userenv.production]
+GEIDEA_API_BASE_URL = "https://api.ksamerchant.geidea.net"
+
+[userenv.development]
+GEIDEA_API_BASE_URL = "https://api.ksamerchant.geidea.net"
