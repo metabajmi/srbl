@@ -1,5 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import path from "path";
+import fs from "fs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
@@ -233,6 +235,15 @@ async function processScan(scanId: string) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  app.get("/.well-known/apple-developer-merchantid-domain-association", (_req, res) => {
+    const filePath = path.resolve("client/public/.well-known/apple-developer-merchantid-domain-association");
+    if (fs.existsSync(filePath)) {
+      res.type("text/plain").sendFile(filePath);
+    } else {
+      res.status(404).send("Not found");
+    }
+  });
   
   // ============================================
   // Session Configuration
