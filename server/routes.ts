@@ -1809,20 +1809,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp,
         signature,
         merchantReferenceId: merchantRefId,
+        callbackUrl,
+        returnUrl,
         paymentOperation: "Pay",
         language: "ar",
         customer: {
           email: customerEmail || "",
         },
       };
-
-      if (returnUrl.startsWith("https://") && !returnUrl.includes(".replit.dev")) {
-        sessionPayload.returnUrl = returnUrl;
-      }
-
-      if (callbackUrl.startsWith("https://") && !callbackUrl.includes(".replit.dev")) {
-        sessionPayload.callbackUrl = callbackUrl;
-      }
 
       console.log("[Geidea] Session payload:", JSON.stringify({ ...sessionPayload, signature: "***" }));
 
