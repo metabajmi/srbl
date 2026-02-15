@@ -10,6 +10,7 @@ packages = ["glib", "nss", "nspr", "at-spi2-atk", "cups", "libdrm", "libxkbcommo
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
+publicDir = "dist/public"
 
 [[ports]]
 localPort = 5000
