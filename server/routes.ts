@@ -1875,7 +1875,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[Geidea] Discount code ${dc.code} applied: ${dc.discountValue}${dc.discountType === "percentage" ? "%" : " SAR"} off -> ${paymentAmount} SAR`);
         }
       }
-      const merchantRefId = `SIRBAL-${requestId}-${Date.now()}`;
+      const shortTs = Date.now().toString(36).slice(-4);
+      const merchantRefId = `SRB${requestId.replace(/-/g, '')}${shortTs}`;
       const timestamp = new Date().toISOString();
 
       const appUrl = process.env.REPLIT_DEV_DOMAIN 
@@ -1991,8 +1992,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing merchantReferenceId" });
       }
 
-      const requestIdMatch = merchantRefId.match(/^SIRBAL-(.+?)-\d+$/);
-      const requestId = requestIdMatch ? requestIdMatch[1] : null;
+      let requestId: string | null = null;
+      if (merchantRefId.startsWith("SRB") && merchantRefId.length >= 35) {
+        const hex = merchantRefId.slice(3, 35);
+        requestId = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+      } else {
+        const requestIdMatch = merchantRefId.match(/^SIRBAL-(.+?)-\d+$/);
+        requestId = requestIdMatch ? requestIdMatch[1] : null;
+      }
 
       if (!requestId) {
         console.error("[Geidea Callback] Could not extract requestId from:", merchantRefId);
