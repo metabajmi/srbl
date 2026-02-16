@@ -1879,9 +1879,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const merchantRefId = `SRB${requestId.replace(/-/g, '')}${shortTs}`;
       const timestamp = new Date().toISOString();
 
-      const appUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : "https://sirbal.co";
+      const appUrl = process.env.NODE_ENV === "production"
+        ? "https://sirbal.co"
+        : (process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : "https://sirbal.co");
       
       const amountStr = paymentAmount.toFixed(2);
       const crypto = await import("crypto");
