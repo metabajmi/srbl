@@ -1840,11 +1840,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ error: "بوابة الدفع غير مُهيأة" });
       }
 
-      const { requestId, amount, currency = "SAR", customerEmail, customerName, discountCode: discountCodeStr } = req.body;
+      const { requestId, amount, currency = "SAR", customerEmail: frontendEmail, customerName, discountCode: discountCodeStr } = req.body;
 
       if (!requestId) {
         return res.status(400).json({ error: "معرف الطلب مطلوب" });
       }
+
+      const user = await storage.getUser(userId);
+      const customerEmail = user?.email || frontendEmail || "";
 
       const policyRequest = await storage.getPolicyGenerationRequest(requestId);
       if (!policyRequest) {
