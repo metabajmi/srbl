@@ -1849,6 +1849,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       const customerEmail = user?.email || frontendEmail || "";
 
+      console.log(`[Geidea] Email resolution: userId=${userId}, dbEmail=${user?.email || "NONE"}, frontendEmail=${frontendEmail || "NONE"}, resolved=${customerEmail || "EMPTY"}`);
+
+      if (!customerEmail) {
+        console.error("[Geidea] Cannot create session: customer email is empty");
+        return res.status(400).json({ error: "البريد الإلكتروني مطلوب لإتمام عملية الدفع" });
+      }
+
       const policyRequest = await storage.getPolicyGenerationRequest(requestId);
       if (!policyRequest) {
         return res.status(404).json({ error: "الطلب غير موجود" });
@@ -1909,8 +1916,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         returnUrl,
         paymentOperation: "Pay",
         language: "ar",
+        customerEmail: customerEmail,
         customer: {
-          email: customerEmail || "",
+          email: customerEmail,
         },
       };
 
@@ -1950,6 +1958,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentStatus: "processing",
       });
 
+      const rawPayloadData: Record<string, any> = { geideaSessionId: sessionId };
+      if (appliedDiscountCodeId) {
+        rawPayloadData.discountCodeId = appliedDiscountCodeId;
+        rawPayloadData.discountCode = appliedDiscountCodeStr;
+      }
+
       await storage.createPayment({
         requestId,
         userId,
@@ -1957,10 +1971,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currency,
         provider: "geidea",
         providerPaymentId: merchantRefId,
-        rawPayload: appliedDiscountCodeId ? { discountCodeId: appliedDiscountCodeId, discountCode: appliedDiscountCodeStr } : undefined,
+        rawPayload: rawPayloadData,
       });
 
-      console.log(`[Geidea] Session created: ${sessionId} for request: ${requestId}`);
+      console.log(`[Geidea] Session created: sessionId=${sessionId}, requestId=${requestId}, email=${customerEmail}`);
 
       const geideaCheckoutBase = process.env.GEIDEA_CHECKOUT_URL || "https://www.ksamerchant.geidea.net/hpp/checkout/";
       const normalizedBase = geideaCheckoutBase.endsWith("/") ? geideaCheckoutBase : geideaCheckoutBase + "/";
