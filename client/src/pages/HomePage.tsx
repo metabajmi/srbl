@@ -93,9 +93,9 @@ export default function HomePage() {
       description: "مع نظام حماية البيانات الشخصية السعودي",
     },
     {
-      icon: <Sparkles className="w-6 h-6" />,
-      title: "ذكاء اصطناعي متقدم",
-      description: "تحليل دقيق ومتخصص باستخدام أحدث التقنيات",
+      icon: <ScrollText className="w-6 h-6" />,
+      title: "إشراف قانوني متخصص",
+      description: "خوارزميات فحص مبنية ومراجعة من قبل خبراء قانونيين متخصصين",
     },
     {
       icon: <FileText className="w-6 h-6" />,
