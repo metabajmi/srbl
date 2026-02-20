@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { BackButton } from "@/components/BackButton";
-import { FileText, Shield, Sparkles, CheckCircle2 } from "lucide-react";
+import { Shield, Sparkles, CheckCircle2 } from "lucide-react";
 
 import PrivacyGeneratorTab from "@/components/workspace/PrivacyGeneratorTab";
-import TermsGeneratorTab from "@/components/workspace/TermsGeneratorTab";
+// TermsGeneratorTab import hidden for now
 
 const tabs = [
   {
@@ -13,12 +13,6 @@ const tabs = [
     label: "سياسة الخصوصية",
     icon: Shield,
     description: "إنشاء سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية",
-  },
-  {
-    id: "terms",
-    label: "الشروط والأحكام",
-    icon: FileText,
-    description: "إنشاء شروط وأحكام متوافقة مع الأنظمة السعودية",
   },
 ];
 
@@ -46,7 +40,7 @@ export default function ComplianceWorkspacePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -92,9 +86,7 @@ export default function ComplianceWorkspacePage() {
             <PrivacyGeneratorTab />
           </TabsContent>
 
-          <TabsContent value="terms" className="mt-0">
-            <TermsGeneratorTab />
-          </TabsContent>
+          {/* Terms tab hidden for now */}
         </Tabs>
       </div>
     </div>
