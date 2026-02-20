@@ -178,13 +178,6 @@ export default function ScanResultsPage() {
     retry: false, // Don't retry 401 errors
   });
 
-  const { data: userPolicies = [] } = useQuery<Array<{ id: number; status: string }>>({
-    queryKey: ["/api/user/policies"],
-    enabled: isLoggedIn,
-  });
-
-  const hasPaidPolicy = userPolicies.some((p) => p.status === "completed");
-
   const lastProcessedScanRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -393,7 +386,7 @@ export default function ScanResultsPage() {
               const ppAudit = (scan as any).analysisResult?.privacy_policy_audit || 
                               (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
               return ppAudit && ppAudit.elements && ppAudit.elements.length > 0 ? (
-                <PrivacyPolicyAuditCard audit={ppAudit} hasPaid={hasPaidPolicy} />
+                <PrivacyPolicyAuditCard audit={ppAudit} />
               ) : null;
             })()}
             
@@ -831,10 +824,9 @@ interface PrivacyPolicyAuditProps {
       matchedKeywords: string[];
     }>;
   };
-  hasPaid?: boolean;
 }
 
-function PrivacyPolicyAuditCard({ audit, hasPaid = false }: PrivacyPolicyAuditProps) {
+function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
   const [expanded, setExpanded] = useState(false);
 
   const getStatusIcon = (statusEn: string) => {
@@ -874,11 +866,11 @@ function PrivacyPolicyAuditCard({ audit, hasPaid = false }: PrivacyPolicyAuditPr
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
-            <div className={`text-2xl font-bold text-green-600 ${!hasPaid ? 'blur-md select-none' : ''}`}>{audit.elementsFound}</div>
+            <div className="text-2xl font-bold text-green-600">{audit.elementsFound}</div>
             <div className="text-xs text-green-700 dark:text-green-400">موجود بالكامل</div>
           </div>
           <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
-            <div className={`text-2xl font-bold text-orange-600 ${!hasPaid ? 'blur-md select-none' : ''}`}>{audit.elementsPartial}</div>
+            <div className="text-2xl font-bold text-orange-600">{audit.elementsPartial}</div>
             <div className="text-xs text-orange-700 dark:text-orange-400">ناقص أو غير واضح</div>
           </div>
           <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
@@ -908,19 +900,8 @@ function PrivacyPolicyAuditCard({ audit, hasPaid = false }: PrivacyPolicyAuditPr
           )}
         </Button>
 
-        {/* Detailed Elements - Locked or Full */}
-        {expanded && !hasPaid && (
-          <div className="flex flex-col items-center justify-center py-10 gap-4 border rounded-lg bg-muted/30">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-              <Lock className="w-7 h-7 text-primary" />
-            </div>
-            <p className="text-base font-semibold text-foreground text-center px-4">
-              يمكنك الاطلاع على كامل التفاصيل بعد انشاء سياسة الخصوصية الخاصة بك!
-            </p>
-          </div>
-        )}
-
-        {expanded && hasPaid && (
+        {/* Detailed Elements Table */}
+        {expanded && (
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {audit.elements.map((element) => (
               <div
@@ -988,10 +969,9 @@ interface TermsConditionsAuditProps {
     }>;
     summary: string;
   };
-  hasPaid?: boolean;
 }
 
-function TermsConditionsAuditCard({ audit, hasPaid = false }: TermsConditionsAuditProps) {
+function TermsConditionsAuditCard({ audit }: TermsConditionsAuditProps) {
   const [expanded, setExpanded] = useState(false);
 
   const getStatusIcon = (statusEn: string) => {
@@ -1031,11 +1011,11 @@ function TermsConditionsAuditCard({ audit, hasPaid = false }: TermsConditionsAud
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
-            <div className={`text-2xl font-bold text-green-600 ${!hasPaid ? 'blur-md select-none' : ''}`}>{audit.modulesFound}</div>
+            <div className="text-2xl font-bold text-green-600">{audit.modulesFound}</div>
             <div className="text-xs text-green-700 dark:text-green-400">موجود بالكامل</div>
           </div>
           <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
-            <div className={`text-2xl font-bold text-orange-600 ${!hasPaid ? 'blur-md select-none' : ''}`}>{audit.modulesPartial}</div>
+            <div className="text-2xl font-bold text-orange-600">{audit.modulesPartial}</div>
             <div className="text-xs text-orange-700 dark:text-orange-400">ناقص أو غير واضح</div>
           </div>
           <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
@@ -1065,19 +1045,8 @@ function TermsConditionsAuditCard({ audit, hasPaid = false }: TermsConditionsAud
           )}
         </Button>
 
-        {/* Detailed Modules - Locked or Full */}
-        {expanded && !hasPaid && (
-          <div className="flex flex-col items-center justify-center py-10 gap-4 border rounded-lg bg-muted/30">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-              <Lock className="w-7 h-7 text-primary" />
-            </div>
-            <p className="text-base font-semibold text-foreground text-center px-4">
-              يمكنك الاطلاع على كامل التفاصيل بعد انشاء سياسة الخصوصية الخاصة بك!
-            </p>
-          </div>
-        )}
-
-        {expanded && hasPaid && (
+        {/* Detailed Modules Table */}
+        {expanded && (
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {audit.modules.map((module) => (
               <div
