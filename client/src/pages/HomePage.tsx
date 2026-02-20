@@ -109,15 +109,10 @@ export default function HomePage() {
       {/* Brand Header - extends to top behind navbar */}
       <section className="bg-gradient-to-b from-primary/15 via-primary/8 to-primary/3 backdrop-blur-sm animate-fade-in">
         <div className="container pt-16 pb-12 md:pt-20 md:pb-16">
-          <div className="flex items-center justify-center gap-4 md:gap-5">
-            <div className="flex items-center justify-center animate-scale-in shrink-0">
-              <Shield className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-primary drop-shadow-sm transition-smooth hover:drop-shadow-lg" />
-            </div>
-            <div className="flex flex-col items-center justify-center">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary leading-tight animate-stagger-1" data-testid="text-brand-sirbal">
-                سِرْبَال
-              </h1>
-            </div>
+          <div className="flex items-center justify-center">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary leading-tight animate-stagger-1" data-testid="text-brand-sirbal">
+              سِرْبَال
+            </h1>
           </div>
         </div>
       </section>
@@ -144,12 +139,6 @@ export default function HomePage() {
                 <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3">
                   افحص موقعك للامتثال - مجاناً
                 </CardTitle>
-                <CardDescription className="text-sm sm:text-base mt-2 sm:mt-3 leading-relaxed">
-                  تحليل شامل باستخدام الذكاء الاصطناعي لاكتشاف مخالفات حماية البيانات الشخصية
-                </CardDescription>
-                <Badge variant="secondary" className="mt-3 sm:mt-4 mx-auto">
-                  مجاني بالكامل - بدون تسجيل
-                </Badge>
               </CardHeader>
               <CardContent className="pt-0 px-4 sm:px-6 pb-6 sm:pb-8">
                 <div className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">
