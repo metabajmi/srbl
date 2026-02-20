@@ -8,7 +8,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertComplianceScanSchema } from "@shared/schema";
 import { useLocation, Link } from "wouter";
-import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers, Lock, Users, Clock } from "lucide-react";
+import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers, Lock, Users, Clock, Scale } from "lucide-react";
 import { z } from "zod";
 
 export default function HomePage() {
@@ -93,9 +93,9 @@ export default function HomePage() {
       description: "مع نظام حماية البيانات الشخصية السعودي",
     },
     {
-      icon: <ScrollText className="w-6 h-6" />,
+      icon: <Scale className="w-6 h-6" />,
       title: "إشراف قانوني متخصص",
-      description: "خوارزميات فحص مبنية ومراجعة من قبل خبراء قانونيين متخصصين",
+      description: "خوارزميات فحص مبنية ومراجعة من قبل خبراء متخصصين",
     },
     {
       icon: <FileText className="w-6 h-6" />,
