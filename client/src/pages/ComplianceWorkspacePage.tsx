@@ -19,7 +19,7 @@ export default function ComplianceWorkspacePage() {
                 مُنشئ سياسة الخصوصية
               </h1>
               <p className="text-muted-foreground">
-                أكمل الخطوات التالية لإنشاء سياسة خصوصية تناسب نشاطك لضمان الامتثال وتكسب ثقة عملائك
+                أكمل الخطوات التالية لإنشاء سياسة خصوصية متوافقة ومخصصة لك
               </p>
             </div>
           </div>
