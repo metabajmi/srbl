@@ -333,14 +333,22 @@ export default function PrivacyGeneratorTab() {
       
       if (generateResponse.ok) {
         toast({
-          title: "جاري توليد السياسة",
-          description: "تم الدفع بنجاح! سيتم توليد سياسة الخصوصية خلال لحظات...",
+          title: "جاري تجهيز سياسة الخصوصية الخاصة بك...",
+          description: "تم الدفع بنجاح. سنرسل لك سياسة الخصوصية عبر البريد الإلكتروني خلال لحظات. يرجى مراجعة صندوق الوارد والتحقق من مجلد الرسائل غير المرغوب فيها (Spam).",
         });
         queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
         form.reset();
         setCurrentStep(1);
         setPaymentRequestId(null);
         setPendingFormData(null);
+
+        setTimeout(() => {
+          setIsGenerating(false);
+          if (scanData?.scanId) {
+            setLocation(`/scan/${scanData.scanId}?unlocked=true`);
+          }
+        }, 5000);
+        return;
       } else {
         throw new Error("فشل في بدء توليد السياسة");
       }
@@ -350,7 +358,6 @@ export default function PrivacyGeneratorTab() {
         description: error.message || "حدث خطأ أثناء توليد السياسة بعد الدفع",
         variant: "destructive",
       });
-    } finally {
       setIsGenerating(false);
     }
   };
@@ -626,8 +633,12 @@ ${policy.generatedContent}
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-8 gap-4">
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              <h3 className="text-lg font-bold">جاري توليد سياسة الخصوصية...</h3>
-              <p className="text-muted-foreground text-center">تم الدفع بنجاح. يتم الآن توليد السياسة بالذكاء الاصطناعي</p>
+              <h3 className="text-lg font-bold">جاري تجهيز سياسة الخصوصية الخاصة بك...</h3>
+              <p className="text-muted-foreground text-center leading-relaxed max-w-md">
+                تم الدفع بنجاح.
+                <br /><br />
+                سنرسل لك سياسة الخصوصية الخاصة بك عبر البريد الإلكتروني خلال لحظات. يرجى مراجعة صندوق الوارد، والتحقق من مجلد الرسائل غير المرغوب فيها (Spam) في حال عدم وصولها.
+              </p>
             </div>
           </CardContent>
         </Card>
