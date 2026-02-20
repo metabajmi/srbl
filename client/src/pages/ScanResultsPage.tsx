@@ -369,8 +369,8 @@ export default function ScanResultsPage() {
               );
             })()}
 
-            {/* Quick Status - 2 Elements (Privacy Policy + Terms & Conditions) */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            {/* Quick Status - Privacy Policy Only */}
+            <div className="grid grid-cols-1 gap-3 mb-6">
               <PrivacyPolicyStatusCard 
                 title="سياسة الخصوصية" 
                 found={!!scan.hasPrivacyPolicy} 
@@ -379,30 +379,6 @@ export default function ScanResultsPage() {
                 testId="card-status-privacy"
                 isPreLogin={!isLoggedIn}
               />
-              {/* Pre-login: Show Terms as just "Incomplete" - no numbers */}
-              {!isLoggedIn ? (
-                <Card className="p-3 border-orange-300 bg-orange-50/50 dark:bg-orange-950/20" data-testid="card-status-terms">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">الشروط والأحكام</p>
-                      <p className="text-xs mt-0.5 text-orange-600">غير مكتملة</p>
-                    </div>
-                  </div>
-                </Card>
-              ) : (
-                <TermsConditionsStatusCard 
-                  title="الشروط والأحكام" 
-                  found={!!scan.hasTermsAndConditions} 
-                  url={scan.termsAndConditionsUrl}
-                  audit={(() => {
-                    const tcAudit = (scan as any).analysisResult?.terms_conditions_audit || 
-                                    (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'terms')?.termsConditionsAudit;
-                    return tcAudit;
-                  })()}
-                  testId="card-status-terms"
-                />
-              )}
             </div>
 
             {/* Privacy Policy 12-Element Audit - Only for authenticated users */}
@@ -414,14 +390,7 @@ export default function ScanResultsPage() {
               ) : null;
             })()}
             
-            {/* Terms & Conditions 12-Module Audit - Only for authenticated users */}
-            {isLoggedIn && (() => {
-              const tcAudit = (scan as any).analysisResult?.terms_conditions_audit || 
-                              (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'terms')?.termsConditionsAudit;
-              return tcAudit && tcAudit.modules && tcAudit.modules.length > 0 ? (
-                <TermsConditionsAuditCard audit={tcAudit} />
-              ) : null;
-            })()}
+            {/* Terms & Conditions Audit - Hidden for now */}
 
             {/* Identity Check CTA - Only for non-authenticated users */}
             {/* Post-login: Issues list section is COMPLETELY REMOVED per requirements */}
@@ -480,7 +449,7 @@ export default function ScanResultsPage() {
                   <CardTitle className="text-lg">الخطوات التالية</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-1">
                     <ActionButton 
                       title="سياسة الخصوصية"
                       description={scan.hasPrivacyPolicy ? "تحسين" : "إنشاء"}
@@ -488,14 +457,6 @@ export default function ScanResultsPage() {
                       needed={!scan.hasPrivacyPolicy}
                       onClick={() => navigateToTool("privacy")}
                       testId="button-action-privacy"
-                    />
-                    <ActionButton 
-                      title="الشروط والأحكام"
-                      description={scan.hasTermsAndConditions ? "تحسين" : "إنشاء"}
-                      icon={<ScrollText className="w-5 h-5" />}
-                      needed={!scan.hasTermsAndConditions}
-                      onClick={() => navigateToTool("terms")}
-                      testId="button-action-terms"
                     />
                   </div>
                 </CardContent>
