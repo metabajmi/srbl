@@ -1137,7 +1137,7 @@ function TermsConditionsAuditCard({ audit }: TermsConditionsAuditProps) {
 // Rotating tips messages for engaging loading experience
 const LOADING_TIPS = [
   "جاري الاتصال بالموقع وتحليل البنية البرمجية...",
-  "يقوم الذكاء الاصطناعي الآن بقراءة سياسة الخصوصية...",
+  "يقوم سربال الآن بقراءة سياسة الخصوصية...",
   "هل تعلم؟ نظام حماية البيانات (PDPL) يفرض غرامات تصل لـ 5 ملايين ريال.",
   "نتأكد من وجود آلية واضحة لموافقة الزوار (Cookies)...",
   "جاري مطابقة الموقع مع متطلبات 'سدايا'...",
