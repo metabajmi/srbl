@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Shield, AlertCircle, AlertTriangle, CheckCircle, XCircle, Globe, RefreshCw, FileText, ScrollText, ExternalLink, ClipboardList, ChevronDown, ChevronUp, Lock, Unlock } from "lucide-react";
 import { ComplianceScan, ComplianceIssue } from "@shared/schema";
 import { useState, useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
 import { BackButton } from "@/components/BackButton";
 import { useScanContext, extractScanData } from "@/contexts/ScanContext";
 import { OTPModal } from "@/components/OTPModal";
@@ -110,6 +111,8 @@ export default function ScanResultsPage() {
   const [scanProgress, setScanProgress] = useState(0);
   const scanStartTimeRef = useRef<number | null>(null);
   const SCAN_DURATION_MS = 15000; // ~15 seconds estimated scan time (Privacy-Only mode)
+  
+  const isUnlocked = new URLSearchParams(window.location.search).get('unlocked') === 'true';
   
   // Check authentication state (reactive to storage changes)
   const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated());
@@ -386,7 +389,7 @@ export default function ScanResultsPage() {
               const ppAudit = (scan as any).analysisResult?.privacy_policy_audit || 
                               (scan as any).analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
               return ppAudit && ppAudit.elements && ppAudit.elements.length > 0 ? (
-                <PrivacyPolicyAuditCard audit={ppAudit} />
+                <PrivacyPolicyAuditCard audit={ppAudit} unlocked={isUnlocked} />
               ) : null;
             })()}
             
@@ -804,6 +807,7 @@ function TermsConditionsStatusCard({ title, found, url, audit, testId }: {
 
 // Privacy Policy 12-Element Audit Card
 interface PrivacyPolicyAuditProps {
+  unlocked?: boolean;
   audit: {
     elementsFound: number;
     elementsPartial: number;
@@ -826,7 +830,7 @@ interface PrivacyPolicyAuditProps {
   };
 }
 
-function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
+function PrivacyPolicyAuditCard({ audit, unlocked = false }: PrivacyPolicyAuditProps) {
   const [expanded, setExpanded] = useState(false);
 
   const getStatusIcon = (statusEn: string) => {
@@ -866,11 +870,11 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
-            <div className="text-2xl font-bold text-green-600 blur-sm select-none">{audit.elementsFound}</div>
+            <div className={cn("text-2xl font-bold text-green-600", !unlocked && "blur-sm select-none")}>{audit.elementsFound}</div>
             <div className="text-xs text-green-700 dark:text-green-400">موجود بالكامل</div>
           </div>
           <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
-            <div className="text-2xl font-bold text-orange-600 blur-sm select-none">{audit.elementsPartial}</div>
+            <div className={cn("text-2xl font-bold text-orange-600", !unlocked && "blur-sm select-none")}>{audit.elementsPartial}</div>
             <div className="text-xs text-orange-700 dark:text-orange-400">ناقص أو غير واضح</div>
           </div>
           <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
@@ -900,8 +904,8 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
           )}
         </Button>
 
-        {/* Locked Details Message */}
-        {expanded && (
+        {/* Details - locked or unlocked */}
+        {expanded && !unlocked && (
           <div className="flex flex-col items-center justify-center py-10 px-6 text-center space-y-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30">
             <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
               <Lock className="w-7 h-7 text-primary" />
@@ -909,6 +913,45 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
             <p className="text-base font-semibold text-foreground leading-relaxed max-w-md">
               يمكنك الاطلاع على كامل التفاصيل بعد انشاء سياسة الخصوصية الخاصة بك!
             </p>
+          </div>
+        )}
+        {expanded && unlocked && (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {audit.elements.map((element) => (
+              <div
+                key={element.id}
+                className={`p-3 rounded-lg border ${
+                  element.statusEn === 'FOUND' 
+                    ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' 
+                    : element.statusEn === 'PARTIAL'
+                    ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'
+                    : 'border-red-200 bg-red-50/50 dark:bg-red-950/20'
+                }`}
+                data-testid={`audit-element-${element.number}`}
+              >
+                <div className="flex items-start gap-2">
+                  {getStatusIcon(element.statusEn)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{element.number}. {element.nameAr}</span>
+                      {getStatusBadge(element.status, element.statusEn)}
+                    </div>
+                    
+                    {element.evidence && (
+                      <p className="text-xs text-muted-foreground mt-1 bg-background/50 p-2 rounded border">
+                        <span className="font-medium">الدليل:</span> {element.evidence}
+                      </p>
+                    )}
+                    
+                    {element.notes && element.statusEn !== 'FOUND' && (
+                      <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
+                        {element.notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
