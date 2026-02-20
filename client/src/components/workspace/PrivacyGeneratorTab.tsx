@@ -332,23 +332,15 @@ export default function PrivacyGeneratorTab() {
       const generateResponse = await apiRequest("POST", `/api/policy-requests/${paymentRequestId}/generate`, {});
       
       if (generateResponse.ok) {
+        toast({
+          title: "جاري توليد السياسة",
+          description: "تم الدفع بنجاح! سيتم توليد سياسة الخصوصية خلال لحظات...",
+        });
         queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
         form.reset();
         setCurrentStep(1);
         setPaymentRequestId(null);
         setPendingFormData(null);
-
-        setTimeout(() => {
-          setIsGenerating(false);
-          if (scanData?.scanId) {
-            setLocation(`/scan/${scanData.scanId}`);
-          } else {
-            toast({
-              title: "تم بنجاح",
-              description: "سيتم إرسال سياسة الخصوصية إلى بريدك الإلكتروني خلال لحظات.",
-            });
-          }
-        }, 5000);
       } else {
         throw new Error("فشل في بدء توليد السياسة");
       }
@@ -358,6 +350,7 @@ export default function PrivacyGeneratorTab() {
         description: error.message || "حدث خطأ أثناء توليد السياسة بعد الدفع",
         variant: "destructive",
       });
+    } finally {
       setIsGenerating(false);
     }
   };
@@ -631,18 +624,10 @@ ${policy.generatedContent}
       {isGenerating && (
         <Card className="mb-6">
           <CardContent className="pt-6">
-            <div className="flex flex-col items-center justify-center py-10 gap-5">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Loader2 className="w-10 h-10 animate-spin text-primary" />
-              </div>
-              <h3 className="text-xl font-bold text-center">جاري تجهيز سياسة الخصوصية الخاصة بك...</h3>
-              <div className="text-center space-y-2 max-w-md">
-                <p className="text-base font-semibold text-primary">تم الدفع بنجاح.</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  سنرسل لك سياسة الخصوصية الخاصة بك عبر البريد الإلكتروني خلال لحظات.
-                  يرجى مراجعة صندوق الوارد، والتحقق من مجلد الرسائل غير المرغوب فيها (Spam) في حال عدم وصولها.
-                </p>
-              </div>
+            <div className="flex flex-col items-center justify-center py-8 gap-4">
+              <Loader2 className="w-12 h-12 animate-spin text-primary" />
+              <h3 className="text-lg font-bold">جاري توليد سياسة الخصوصية...</h3>
+              <p className="text-muted-foreground text-center">تم الدفع بنجاح. يتم الآن توليد السياسة بالذكاء الاصطناعي</p>
             </div>
           </CardContent>
         </Card>
