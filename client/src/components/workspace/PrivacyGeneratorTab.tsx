@@ -1574,13 +1574,7 @@ ${policy.generatedContent}
                     />
                   )}
 
-                  <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20">
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                    <AlertDescription className="text-amber-800 dark:text-amber-200">
-                      سيتم التخلص من البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو استعادتها مرة أخرى.
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
+                  </CardContent>
               </Card>
             </div>
           )}
@@ -1871,12 +1865,6 @@ ${policy.generatedContent}
                     )}
                   />
 
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
-                    <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                    <p className="text-sm text-foreground">
-                      <span className="font-bold">سيتم تضمين</span> معلومات {SDAIA_INFO.name} تلقائياً كجهة تنظيمية للشكاوى في حال عدم الرضا عن المعالجة.
-                    </p>
-                  </div>
                 </CardContent>
               </Card>
             </div>
