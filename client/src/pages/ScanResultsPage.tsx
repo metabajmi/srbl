@@ -866,11 +866,11 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
-            <div className="text-2xl font-bold text-green-600">{audit.elementsFound}</div>
+            <div className="text-2xl font-bold text-green-600 blur-sm select-none">{audit.elementsFound}</div>
             <div className="text-xs text-green-700 dark:text-green-400">موجود بالكامل</div>
           </div>
           <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
-            <div className="text-2xl font-bold text-orange-600">{audit.elementsPartial}</div>
+            <div className="text-2xl font-bold text-orange-600 blur-sm select-none">{audit.elementsPartial}</div>
             <div className="text-xs text-orange-700 dark:text-orange-400">ناقص أو غير واضح</div>
           </div>
           <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
@@ -900,44 +900,15 @@ function PrivacyPolicyAuditCard({ audit }: PrivacyPolicyAuditProps) {
           )}
         </Button>
 
-        {/* Detailed Elements Table */}
+        {/* Locked Details Message */}
         {expanded && (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {audit.elements.map((element) => (
-              <div
-                key={element.id}
-                className={`p-3 rounded-lg border ${
-                  element.statusEn === 'FOUND' 
-                    ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' 
-                    : element.statusEn === 'PARTIAL'
-                    ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'
-                    : 'border-red-200 bg-red-50/50 dark:bg-red-950/20'
-                }`}
-                data-testid={`audit-element-${element.number}`}
-              >
-                <div className="flex items-start gap-2">
-                  {getStatusIcon(element.statusEn)}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">{element.number}. {element.nameAr}</span>
-                      {getStatusBadge(element.status, element.statusEn)}
-                    </div>
-                    
-                    {element.evidence && (
-                      <p className="text-xs text-muted-foreground mt-1 bg-background/50 p-2 rounded border">
-                        <span className="font-medium">الدليل:</span> {element.evidence}
-                      </p>
-                    )}
-                    
-                    {element.notes && element.statusEn !== 'FOUND' && (
-                      <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
-                        {element.notes}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col items-center justify-center py-10 px-6 text-center space-y-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+              <Lock className="w-7 h-7 text-primary" />
+            </div>
+            <p className="text-base font-semibold text-foreground leading-relaxed max-w-md">
+              يمكنك الاطلاع على كامل التفاصيل بعد انشاء سياسة الخصوصية الخاصة بك!
+            </p>
           </div>
         )}
 
@@ -1011,11 +982,11 @@ function TermsConditionsAuditCard({ audit }: TermsConditionsAuditProps) {
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
-            <div className="text-2xl font-bold text-green-600">{audit.modulesFound}</div>
+            <div className="text-2xl font-bold text-green-600 blur-sm select-none">{audit.modulesFound}</div>
             <div className="text-xs text-green-700 dark:text-green-400">موجود بالكامل</div>
           </div>
           <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
-            <div className="text-2xl font-bold text-orange-600">{audit.modulesPartial}</div>
+            <div className="text-2xl font-bold text-orange-600 blur-sm select-none">{audit.modulesPartial}</div>
             <div className="text-xs text-orange-700 dark:text-orange-400">ناقص أو غير واضح</div>
           </div>
           <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
@@ -1045,48 +1016,15 @@ function TermsConditionsAuditCard({ audit }: TermsConditionsAuditProps) {
           )}
         </Button>
 
-        {/* Detailed Modules Table */}
+        {/* Locked Details Message */}
         {expanded && (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {audit.modules.map((module) => (
-              <div
-                key={module.moduleId}
-                className={`p-3 rounded-lg border ${
-                  module.statusEn === 'FOUND' 
-                    ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' 
-                    : module.statusEn === 'PARTIAL'
-                    ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'
-                    : 'border-red-200 bg-red-50/50 dark:bg-red-950/20'
-                }`}
-                data-testid={`terms-module-${module.number}`}
-              >
-                <div className="flex items-start gap-2">
-                  {getStatusIcon(module.statusEn)}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">{module.number}. {module.titleAr}</span>
-                      {getStatusBadge(module.status, module.statusEn)}
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {module.requirementAr}
-                    </p>
-                    
-                    {module.evidence && (
-                      <p className="text-xs text-muted-foreground mt-1 bg-background/50 p-2 rounded border">
-                        <span className="font-medium">الدليل:</span> {module.evidence}
-                      </p>
-                    )}
-                    
-                    {module.notes && module.statusEn !== 'FOUND' && (
-                      <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
-                        {module.notes}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="flex flex-col items-center justify-center py-10 px-6 text-center space-y-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+              <Lock className="w-7 h-7 text-primary" />
+            </div>
+            <p className="text-base font-semibold text-foreground leading-relaxed max-w-md">
+              يمكنك الاطلاع على كامل التفاصيل بعد انشاء سياسة الخصوصية الخاصة بك!
+            </p>
           </div>
         )}
 
