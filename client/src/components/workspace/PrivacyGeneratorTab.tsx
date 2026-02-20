@@ -367,32 +367,30 @@ export default function PrivacyGeneratorTab() {
 
   const validateStep = (step: number): boolean => {
     const values = form.getValues();
-    
     switch (step) {
-      case 1:
-        return !!(values.company_name && values.activity_type && values.service_description && 
-                  values.contact_team && values.address && values.phone && values.email && 
-                  values.cr_number && values.policy_last_update);
-      case 2:
-        return values.data_collected.length > 0;
-      case 3:
-        return (values.collection_methods_direct.length > 0 || values.collection_methods_indirect.length > 0) &&
-               values.collection_purposes.length > 0 && values.data_usage_purposes.length > 0;
-      case 4:
-        return values.legal_bases.length > 0 && values.disclosure_parties.length > 0;
-      case 5:
-        return !!(values.storage_location && values.retention_period && values.destruction_method);
-      case 6:
-        return !!(values.rights_exercise_method && values.response_days && 
-                  values.complaint_contact && values.complaint_response_days);
-      default:
-        return false;
+      case 1: return !!(values.company_name && values.activity_type && values.policy_last_update);
+      case 2: return !!(values.service_description);
+      case 3: return !!(values.contact_team && values.address && values.phone && values.email && values.cr_number);
+      case 4: return values.data_collected.length > 0;
+      case 5: return true;
+      case 6: return (values.collection_methods_direct.length > 0 || values.collection_methods_indirect.length > 0);
+      case 7: return values.collection_purposes.length > 0;
+      case 8: return values.data_usage_purposes.length > 0;
+      case 9: return values.legal_bases.length > 0;
+      case 10: return values.disclosure_parties.length > 0;
+      case 11: return !!values.storage_location;
+      case 12: return !!values.retention_period;
+      case 13: return !!values.destruction_method;
+      case 14: return !!(values.rights_exercise_method && values.response_days);
+      case 15: return true;
+      case 16: return !!(values.complaint_contact && values.complaint_response_days);
+      default: return false;
     }
   };
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 6));
+      setCurrentStep(prev => Math.min(prev + 1, TOTAL_SUB_STEPS));
     } else {
       toast({
         title: "أكمل البيانات المطلوبة",
@@ -523,13 +521,25 @@ ${policy.generatedContent}
     });
   };
 
-  const steps = [
-    { number: 1, title: "معلومات الجهة", icon: Building2 },
-    { number: 2, title: "البيانات المجمعة", icon: Database },
-    { number: 3, title: "طرق الجمع والأغراض", icon: ClipboardList },
-    { number: 4, title: "المسوغات والإفصاح", icon: Scale },
-    { number: 5, title: "التخزين والاحتفاظ", icon: HardDrive },
-    { number: 6, title: "الحقوق والشكاوى", icon: MessageSquare },
+  const TOTAL_SUB_STEPS = 16;
+
+  const subStepInfo = [
+    { number: 1, title: "معلومات أساسية", description: "اسم جهتك ونوع نشاطها", icon: Building2 },
+    { number: 2, title: "مقدمة السياسة", description: "نبذة تعريفية عن جهتك وخدماتها", icon: FileText },
+    { number: 3, title: "بيانات التواصل", description: "معلومات الاتصال والسجل التجاري", icon: Building2 },
+    { number: 4, title: "البيانات المجمعة", description: "أنواع البيانات الشخصية التي تجمعها", icon: Database },
+    { number: 5, title: "طرق الجمع المباشرة", description: "البيانات التي تُجمع مباشرة من العميل", icon: ClipboardList },
+    { number: 6, title: "طرق الجمع غير المباشرة", description: "البيانات التي تُجمع بطرق غير مباشرة", icon: ClipboardList },
+    { number: 7, title: "أغراض الجمع", description: "لماذا تجمع هذه البيانات؟", icon: ClipboardList },
+    { number: 8, title: "استخدام البيانات", description: "كيف تستخدم البيانات المجمعة؟", icon: ClipboardList },
+    { number: 9, title: "المسوغات النظامية", description: "الأساس القانوني لمعالجة البيانات", icon: Scale },
+    { number: 10, title: "الإفصاح عن البيانات", description: "الجهات التي قد يُفصح لها عن البيانات", icon: Scale },
+    { number: 11, title: "موقع التخزين", description: "أين يتم تخزين البيانات؟", icon: HardDrive },
+    { number: 12, title: "مدة الاحتفاظ", description: "كم يتم الاحتفاظ بالبيانات؟", icon: HardDrive },
+    { number: 13, title: "إتلاف البيانات", description: "كيف يتم التخلص من البيانات؟", icon: HardDrive },
+    { number: 14, title: "ممارسة الحقوق", description: "كيف يمارس صاحب البيانات حقوقه؟", icon: MessageSquare },
+    { number: 15, title: "مسؤول حماية البيانات", description: "هل لديك مسؤول حماية بيانات معيّن؟", icon: UserCheck },
+    { number: 16, title: "آلية الشكاوى", description: "كيف يتم استقبال الشكاوى والرد عليها؟", icon: MessageSquare },
   ];
 
   return (
@@ -623,205 +633,200 @@ ${policy.generatedContent}
         </Card>
       )}
 
-      <div className={cn("mb-8 overflow-x-auto pb-2", (showPaymentStep || isGenerating) && "hidden")} dir="rtl">
-        <div className="flex items-start justify-between min-w-[600px] relative">
-          {/* Connecting lines - positioned behind icons */}
-          <div className="absolute top-5 left-0 right-0 flex items-center px-[calc(50%/6)] z-0">
-            {steps.slice(0, -1).map((step, index) => (
-              <div 
-                key={`line-${index}`}
-                className={cn(
-                  "flex-1 h-0.5 mx-0",
-                  currentStep > step.number ? "bg-green-500" : "bg-muted"
-                )}
-              />
-            ))}
-          </div>
-          
-          {/* Step items */}
-          {steps.map((step) => (
-            <div 
-              key={step.number} 
-              className="flex flex-col items-center flex-1 min-w-[80px] z-10"
-            >
-              <div 
-                className={cn(
-                  "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all cursor-pointer bg-background",
-                  currentStep === step.number 
-                    ? "bg-primary text-primary-foreground border-primary" 
-                    : currentStep > step.number
-                    ? "bg-green-500 text-white border-green-500"
-                    : "bg-muted text-muted-foreground border-muted-foreground/30"
-                )}
-                onClick={() => step.number < currentStep && setCurrentStep(step.number)}
-                data-testid={`step-indicator-${step.number}`}
-              >
-                {currentStep > step.number ? (
-                  <CheckCircle2 className="w-5 h-5" />
-                ) : (
-                  <step.icon className="w-4 h-4" />
-                )}
-              </div>
-              <span className={cn(
-                "text-xs font-medium mt-2 text-center px-1 leading-tight max-w-[100px]",
-                currentStep === step.number ? "text-primary" : "text-muted-foreground",
-                currentStep !== step.number && "hidden sm:block"
-              )}>
-                {step.title}
-              </span>
-            </div>
-          ))}
+      <div className={cn("mb-8", (showPaymentStep || isGenerating) && "hidden")} dir="rtl">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-muted-foreground">
+            {subStepInfo[currentStep - 1]?.title}
+          </span>
+          <span className="text-sm font-bold text-primary">
+            {Math.round((currentStep / TOTAL_SUB_STEPS) * 100)}%
+          </span>
         </div>
+        <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${(currentStep / TOTAL_SUB_STEPS) * 100}%` }}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          الخطوة {currentStep} من {TOTAL_SUB_STEPS}
+        </p>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className={cn("space-y-6", (showPaymentStep || isGenerating) && "hidden")}>
           {currentStep === 1 && (
-            <Card>
-              <CardHeader dir="rtl">
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  معلومات الجهة
-                </CardTitle>
-                <CardDescription>
-                  معلومات أساسية عن جهتك وبيانات التواصل
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="company_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>اسم الجهة *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          {...field} 
-                          placeholder="الاسم الرسمي للجهة" 
-                          data-testid="input-company-name"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    معلومات أساسية
+                  </CardTitle>
+                  <CardDescription>اسم جهتك ونوع نشاطها</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="activity_type"
+                    name="company_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          نوع النشاط *
-                          {autoFilledFields.activity_type && (
-                            <AutoDetectedBadge onClear={() => clearAutoFill("activity_type")} />
-                          )}
-                        </FormLabel>
-                        <Select 
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            if (autoFilledFields.activity_type) clearAutoFill("activity_type");
-                          }} 
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger 
-                              data-testid="select-activity-type"
-                              className={autoFilledFields.activity_type ? "border-primary/50 bg-primary/5" : ""}
-                            >
-                              <SelectValue placeholder="اختر نوع النشاط" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {ACTIVITY_TYPES.map((type) => (
-                              <SelectItem key={type.id} value={type.id}>
-                                {type.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="policy_last_update"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>تاريخ آخر تحديث للسياسة *</FormLabel>
+                        <FormLabel>اسم الجهة *</FormLabel>
                         <FormControl>
                           <Input 
                             {...field} 
-                            type="date" 
-                            dir="ltr" 
-                            data-testid="input-policy-last-update" 
+                            placeholder="الاسم الرسمي للجهة" 
+                            data-testid="input-company-name"
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
 
-                <FormField
-                  control={form.control}
-                  name="service_description"
-                  render={({ field }) => {
-                    const companyName = form.watch("company_name");
-                    const generateSuggestedDescription = () => {
-                      if (!companyName) {
-                        toast({
-                          title: "أدخل اسم الجهة أولاً",
-                          description: "يرجى إدخال اسم الجهة لتوليد وصف مقترح",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      const suggestedText = `نحن في ${companyName} نقدّر خصوصية عملائنا ونلتزم بحماية بياناتهم الشخصية وفقًا لنظام حماية البيانات الشخصية في المملكة العربية السعودية (PDPL) واللوائح الأخرى ذات الصلة بحماية البيانات. يوضح هذا البيان ممارساتنا المتعلقة بجمع البيانات الشخصية واستخدامها وحمايتها`;
-                      field.onChange(suggestedText);
-                    };
-                    
-                    return (
-                      <FormItem>
-                        <div className="flex items-center justify-between">
-                          <FormLabel>
-                            مقدمة سياسة الخصوصية *
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="activity_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            نوع النشاط *
+                            {autoFilledFields.activity_type && (
+                              <AutoDetectedBadge onClear={() => clearAutoFill("activity_type")} />
+                            )}
                           </FormLabel>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={generateSuggestedDescription}
-                            data-testid="button-generate-description"
-                            className="text-xs"
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              if (autoFilledFields.activity_type) clearAutoFill("activity_type");
+                            }} 
+                            value={field.value}
                           >
-                            <Sparkles className="w-3 h-3 ml-1" />
-                            نص مقترح
-                          </Button>
-                        </div>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="نبذة مختصرة عن مهام واختصاصات الجهة والخدمات المقدمة والفئة المستهدفة"
-                            className="min-h-[100px]"
-                            data-testid="input-service-description" 
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          انقر على "نص مقترح" لإنشاء نص تعريفي تلقائي باسم جهتك
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
+                            <FormControl>
+                              <SelectTrigger 
+                                data-testid="select-activity-type"
+                                className={autoFilledFields.activity_type ? "border-primary/50 bg-primary/5" : ""}
+                              >
+                                <SelectValue placeholder="اختر نوع النشاط" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {ACTIVITY_TYPES.map((type) => (
+                                <SelectItem key={type.id} value={type.id}>
+                                  {type.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <div className="border rounded-lg p-4 space-y-4">
-                  <h4 className="font-semibold text-sm">بيانات التواصل</h4>
-                  
+                    <FormField
+                      control={form.control}
+                      name="policy_last_update"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>تاريخ آخر تحديث للسياسة *</FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              type="date" 
+                              dir="ltr" 
+                              data-testid="input-policy-last-update" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {currentStep === 2 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    مقدمة السياسة
+                  </CardTitle>
+                  <CardDescription>نبذة تعريفية عن جهتك وخدماتها</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="service_description"
+                    render={({ field }) => {
+                      const companyName = form.watch("company_name");
+                      const generateSuggestedDescription = () => {
+                        if (!companyName) {
+                          toast({
+                            title: "أدخل اسم الجهة أولاً",
+                            description: "يرجى إدخال اسم الجهة لتوليد وصف مقترح",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        const suggestedText = `نحن في ${companyName} نقدّر خصوصية عملائنا ونلتزم بحماية بياناتهم الشخصية وفقًا لنظام حماية البيانات الشخصية في المملكة العربية السعودية (PDPL) واللوائح الأخرى ذات الصلة بحماية البيانات. يوضح هذا البيان ممارساتنا المتعلقة بجمع البيانات الشخصية واستخدامها وحمايتها`;
+                        field.onChange(suggestedText);
+                      };
+                      
+                      return (
+                        <FormItem>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>
+                              مقدمة سياسة الخصوصية *
+                            </FormLabel>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={generateSuggestedDescription}
+                              data-testid="button-generate-description"
+                              className="text-xs"
+                            >
+                              <Sparkles className="w-3 h-3 ml-1" />
+                              نص مقترح
+                            </Button>
+                          </div>
+                          <FormControl>
+                            <Textarea 
+                              {...field} 
+                              placeholder="نبذة مختصرة عن مهام واختصاصات الجهة والخدمات المقدمة والفئة المستهدفة"
+                              className="min-h-[100px]"
+                              data-testid="input-service-description" 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            انقر على "نص مقترح" لإنشاء نص تعريفي تلقائي باسم جهتك
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {currentStep === 3 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    بيانات التواصل
+                  </CardTitle>
+                  <CardDescription>معلومات الاتصال والسجل التجاري</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -926,88 +931,85 @@ ${policy.generatedContent}
                       )}
                     />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
-          {currentStep === 2 && (
-            <Card>
-              <CardHeader dir="rtl">
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="w-5 h-5" />
-                  البيانات المجمعة
-                </CardTitle>
-                <CardDescription>
-                  ما هي البيانات الشخصية التي يتم جمعها؟
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="data_collected"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel className="text-base">
-                        أنواع البيانات المجمعة *
-                      </FormLabel>
-                      <FormDescription>
-                        اختر جميع أنواع البيانات الشخصية التي تجمعها
-                      </FormDescription>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                        {DATA_TYPES.map((type) => (
-                          <FormField
-                            key={type.id}
-                            control={form.control}
-                            name="data_collected"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(type.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...field.value, type.id])
-                                        : field.onChange(field.value?.filter((value) => value !== type.id));
-                                    }}
-                                    data-testid={`checkbox-data-${type.id}`}
-                                  />
-                                </FormControl>
-                                <div className="space-y-1 leading-none flex-1">
-                                  <FormLabel className="font-medium cursor-pointer">
-                                    {type.label}
-                                  </FormLabel>
-                                  {type.description && (
-                                    <p className="text-xs text-muted-foreground">{type.description}</p>
-                                  )}
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
+          {currentStep === 4 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="w-5 h-5" />
+                    البيانات المجمعة
+                  </CardTitle>
+                  <CardDescription>أنواع البيانات الشخصية التي تجمعها</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="data_collected"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-base">
+                          أنواع البيانات المجمعة *
+                        </FormLabel>
+                        <FormDescription>
+                          اختر جميع أنواع البيانات الشخصية التي تجمعها
+                        </FormDescription>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                          {DATA_TYPES.map((type) => (
+                            <FormField
+                              key={type.id}
+                              control={form.control}
+                              name="data_collected"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-3 hover-elevate">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(type.id)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...field.value, type.id])
+                                          : field.onChange(field.value?.filter((value) => value !== type.id));
+                                      }}
+                                      data-testid={`checkbox-data-${type.id}`}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none flex-1">
+                                    <FormLabel className="font-medium cursor-pointer">
+                                      {type.label}
+                                    </FormLabel>
+                                    {type.description && (
+                                      <p className="text-xs text-muted-foreground">{type.description}</p>
+                                    )}
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           )}
 
-          {currentStep === 3 && (
-            <Card>
-              <CardHeader dir="rtl">
-                <CardTitle className="flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5" />
-                  طرق الجمع والأغراض
-                </CardTitle>
-                <CardDescription>
-                  كيف يتم جمع بياناتك الشخصية وما هو الغرض من جمعها؟
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h4 className="font-semibold">طرق الجمع المباشرة</h4>
+          {currentStep === 5 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5" />
+                    طرق الجمع المباشرة
+                  </CardTitle>
+                  <CardDescription>البيانات التي تُجمع مباشرة من العميل</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormDescription>
                     البيانات التي يتم جمعها بصورة مباشرة
                   </FormDescription>
@@ -1041,10 +1043,22 @@ ${policy.generatedContent}
                       />
                     ))}
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-                <div className="space-y-4">
-                  <h4 className="font-semibold">طرق الجمع غير المباشرة</h4>
+          {currentStep === 6 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5" />
+                    طرق الجمع غير المباشرة
+                  </CardTitle>
+                  <CardDescription>البيانات التي تُجمع بطرق غير مباشرة</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormDescription>
                     البيانات التي يتم جمعها بصورة غير مباشرة
                   </FormDescription>
@@ -1078,9 +1092,22 @@ ${policy.generatedContent}
                       />
                     ))}
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-                <div className="space-y-4">
+          {currentStep === 7 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5" />
+                    أغراض الجمع
+                  </CardTitle>
+                  <CardDescription>لماذا تجمع هذه البيانات؟</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
                     name="collection_purposes"
@@ -1124,9 +1151,22 @@ ${policy.generatedContent}
                       </FormItem>
                     )}
                   />
-                </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-                <div className="space-y-4">
+          {currentStep === 8 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5" />
+                    استخدام البيانات
+                  </CardTitle>
+                  <CardDescription>كيف تستخدم البيانات المجمعة؟</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
                     name="data_usage_purposes"
@@ -1167,98 +1207,111 @@ ${policy.generatedContent}
                       </FormItem>
                     )}
                   />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
-          {currentStep === 4 && (
-            <Card>
-              <CardHeader dir="rtl">
-                <CardTitle className="flex items-center gap-2">
-                  <Scale className="w-5 h-5" />
-                  المسوغات والإفصاح
-                </CardTitle>
-                <CardDescription>
-                  المسوغات النظامية لجمع ومعالجة بياناتك الشخصية وجهات الإفصاح
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="legal_bases"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel className="text-base">المسوغات النظامية *</FormLabel>
-                      <FormDescription>
-                        وفقاً لنظام حماية البيانات الشخصية، حدد المسوغ النظامي لمعالجة البيانات
-                      </FormDescription>
-                      <div className="space-y-4 mt-4">
-                        {LEGAL_BASES.map((basis) => {
-                          const isSelected = watchLegalBases?.includes(basis.id);
-                          return (
-                            <div key={basis.id} className="space-y-2">
-                              <FormField
-                                control={form.control}
-                                name="legal_bases"
-                                render={({ field }) => (
-                                  <FormItem className={cn(
-                                    "flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-4 hover-elevate",
-                                    isSelected && "border-primary bg-primary/5"
-                                  )}>
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(basis.id)}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) {
-                                            field.onChange([...field.value, basis.id]);
-                                          } else {
-                                            field.onChange(field.value?.filter((value) => value !== basis.id));
-                                            const explanations = form.getValues("legal_bases_explanations");
-                                            const newExplanations = { ...explanations };
-                                            delete newExplanations[basis.id];
-                                            form.setValue("legal_bases_explanations", newExplanations);
-                                          }
-                                        }}
-                                        data-testid={`checkbox-legal-${basis.id}`}
-                                      />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none flex-1">
-                                      <FormLabel className="font-medium cursor-pointer">{basis.label}</FormLabel>
-                                      <p className="text-sm text-muted-foreground">{basis.description}</p>
-                                    </div>
-                                  </FormItem>
-                                )}
-                              />
-                              {isSelected && basis.requiresExplanation && (
+          {currentStep === 9 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <Scale className="w-5 h-5" />
+                    المسوغات النظامية
+                  </CardTitle>
+                  <CardDescription>الأساس القانوني لمعالجة البيانات</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="legal_bases"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-base">المسوغات النظامية *</FormLabel>
+                        <FormDescription>
+                          وفقاً لنظام حماية البيانات الشخصية، حدد المسوغ النظامي لمعالجة البيانات
+                        </FormDescription>
+                        <div className="space-y-4 mt-4">
+                          {LEGAL_BASES.map((basis) => {
+                            const isSelected = watchLegalBases?.includes(basis.id);
+                            return (
+                              <div key={basis.id} className="space-y-2">
                                 <FormField
                                   control={form.control}
-                                  name={`legal_bases_explanations.${basis.id}`}
+                                  name="legal_bases"
                                   render={({ field }) => (
-                                    <FormItem className="mr-8 border-r-2 border-primary/30 pr-4">
-                                      <FormLabel className="text-sm">توضيح {basis.label}</FormLabel>
+                                    <FormItem className={cn(
+                                      "flex flex-row items-start space-x-3 space-x-reverse border rounded-lg p-4 hover-elevate",
+                                      isSelected && "border-primary bg-primary/5"
+                                    )}>
                                       <FormControl>
-                                        <Textarea
-                                          {...field}
-                                          placeholder={basis.explanationPlaceholder}
-                                          className="min-h-[80px]"
-                                          data-testid={`textarea-legal-explanation-${basis.id}`}
+                                        <Checkbox
+                                          checked={field.value?.includes(basis.id)}
+                                          onCheckedChange={(checked) => {
+                                            if (checked) {
+                                              field.onChange([...field.value, basis.id]);
+                                            } else {
+                                              field.onChange(field.value?.filter((value) => value !== basis.id));
+                                              const explanations = form.getValues("legal_bases_explanations");
+                                              const newExplanations = { ...explanations };
+                                              delete newExplanations[basis.id];
+                                              form.setValue("legal_bases_explanations", newExplanations);
+                                            }
+                                          }}
+                                          data-testid={`checkbox-legal-${basis.id}`}
                                         />
                                       </FormControl>
+                                      <div className="space-y-1 leading-none flex-1">
+                                        <FormLabel className="font-medium cursor-pointer">{basis.label}</FormLabel>
+                                        <p className="text-sm text-muted-foreground">{basis.description}</p>
+                                      </div>
                                     </FormItem>
                                   )}
                                 />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                                {isSelected && basis.requiresExplanation && (
+                                  <FormField
+                                    control={form.control}
+                                    name={`legal_bases_explanations.${basis.id}`}
+                                    render={({ field }) => (
+                                      <FormItem className="mr-8 border-r-2 border-primary/30 pr-4">
+                                        <FormLabel className="text-sm">توضيح {basis.label}</FormLabel>
+                                        <FormControl>
+                                          <Textarea
+                                            {...field}
+                                            placeholder={basis.explanationPlaceholder}
+                                            className="min-h-[80px]"
+                                            data-testid={`textarea-legal-explanation-${basis.id}`}
+                                          />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-                <div className="border-t pt-6">
+          {currentStep === 10 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <Scale className="w-5 h-5" />
+                    الإفصاح عن البيانات
+                  </CardTitle>
+                  <CardDescription>الجهات التي قد يُفصح لها عن البيانات</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
                     name="disclosure_parties"
@@ -1307,216 +1360,242 @@ ${policy.generatedContent}
                       </FormItem>
                     )}
                   />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
-          {currentStep === 5 && (
-            <Card>
-              <CardHeader dir="rtl">
-                <CardTitle className="flex items-center gap-2">
-                  <HardDrive className="w-5 h-5" />
-                  التخزين والاحتفاظ
-                </CardTitle>
-                <CardDescription>
-                  كيف نقوم بتخزين بياناتك الشخصية والاحتفاظ بها؟
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="storage_location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base flex items-center gap-2">
-                        موقع تخزين البيانات *
-                        {autoFilledFields.storage_location && (
-                          <AutoDetectedBadge onClear={() => clearAutoFill("storage_location")} />
-                        )}
-                      </FormLabel>
-                      <Select 
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          if (autoFilledFields.storage_location) clearAutoFill("storage_location");
-                        }} 
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger 
-                            data-testid="select-storage-location"
-                            className={autoFilledFields.storage_location ? "border-primary/50 bg-primary/5" : ""}
-                          >
-                            <SelectValue placeholder="اختر موقع التخزين" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {STORAGE_LOCATIONS.map((location) => (
-                            <SelectItem key={location.id} value={location.id}>
-                              {location.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="retention_period"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base">مدة الاحتفاظ بالبيانات *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-retention-period">
-                            <SelectValue placeholder="اختر مدة الاحتفاظ" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {RETENTION_PERIODS.map((period) => (
-                            <SelectItem key={period.id} value={period.id}>
-                              {period.label}
-                              {period.description && ` - ${period.description}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {watchRetentionPeriod === "until_purpose" && (
+          {currentStep === 11 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <HardDrive className="w-5 h-5" />
+                    موقع التخزين
+                  </CardTitle>
+                  <CardDescription>أين يتم تخزين البيانات؟</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="retention_purpose"
+                    name="storage_location"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>ما هو الغرض من الاحتفاظ؟</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field}
-                            placeholder="مثال: تقديم الخدمة، تنفيذ العقد، الامتثال للمتطلبات النظامية"
-                            data-testid="input-retention-purpose" 
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          سيتم الاحتفاظ بالبيانات حتى انتهاء هذا الغرض
-                        </FormDescription>
+                        <FormLabel className="text-base flex items-center gap-2">
+                          موقع تخزين البيانات *
+                          {autoFilledFields.storage_location && (
+                            <AutoDetectedBadge onClear={() => clearAutoFill("storage_location")} />
+                          )}
+                        </FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            if (autoFilledFields.storage_location) clearAutoFill("storage_location");
+                          }} 
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger 
+                              data-testid="select-storage-location"
+                              className={autoFilledFields.storage_location ? "border-primary/50 bg-primary/5" : ""}
+                            >
+                              <SelectValue placeholder="اختر موقع التخزين" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {STORAGE_LOCATIONS.map((location) => (
+                              <SelectItem key={location.id} value={location.id}>
+                                {location.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
-                )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-                {watchRetentionPeriod === "custom" && (
-                  <>
+          {currentStep === 12 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <HardDrive className="w-5 h-5" />
+                    مدة الاحتفاظ
+                  </CardTitle>
+                  <CardDescription>كم يتم الاحتفاظ بالبيانات؟</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="retention_period"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base">مدة الاحتفاظ بالبيانات *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-retention-period">
+                              <SelectValue placeholder="اختر مدة الاحتفاظ" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {RETENTION_PERIODS.map((period) => (
+                              <SelectItem key={period.id} value={period.id}>
+                                {period.label}
+                                {period.description && ` - ${period.description}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {watchRetentionPeriod === "until_purpose" && (
                     <FormField
                       control={form.control}
-                      name="retention_years"
+                      name="retention_purpose"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>حدد المدة (بالسنوات)</FormLabel>
+                          <FormLabel>ما هو الغرض من الاحتفاظ؟</FormLabel>
                           <FormControl>
                             <Input 
-                              type="number" 
-                              min="1" 
-                              max="100" 
-                              placeholder="مثال: 5"
-                              value={field.value || ''}
-                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                              data-testid="input-retention-years" 
+                              {...field}
+                              placeholder="مثال: تقديم الخدمة، تنفيذ العقد، الامتثال للمتطلبات النظامية"
+                              data-testid="input-retention-purpose" 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            سيتم الاحتفاظ بالبيانات حتى انتهاء هذا الغرض
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {watchRetentionPeriod === "custom" && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="retention_years"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>حدد المدة (بالسنوات)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="1" 
+                                max="100" 
+                                placeholder="مثال: 5"
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                data-testid="input-retention-years" 
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg text-sm flex-row-reverse">
+                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Check className="w-3 h-3 text-primary" />
+                        </div>
+                        <span className="text-muted-foreground text-right">
+                          <strong className="text-foreground">سيتم تضمين</strong> ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها.
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {currentStep === 13 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <HardDrive className="w-5 h-5" />
+                    إتلاف البيانات
+                  </CardTitle>
+                  <CardDescription>كيف يتم التخلص من البيانات؟</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="destruction_method"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base">طريقة إتلاف البيانات *</FormLabel>
+                        <FormDescription>
+                          كيف سيتم التخلص من البيانات بطريقة آمنة بعد انتهاء فترة الاحتفاظ؟
+                        </FormDescription>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-destruction-method">
+                              <SelectValue placeholder="اختر طريقة الإتلاف" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {DESTRUCTION_METHODS.map((method) => (
+                              <SelectItem key={method.id} value={method.id}>
+                                {method.label}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="custom">طريقة أخرى</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {watchDestructionMethod === "custom" && (
+                    <FormField
+                      control={form.control}
+                      name="destruction_custom"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>وصف طريقة الإتلاف</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              {...field}
+                              placeholder="صف كيف سيتم إتلاف البيانات بطريقة آمنة"
+                              data-testid="textarea-destruction-custom"
                             />
                           </FormControl>
                         </FormItem>
                       )}
                     />
-                    <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg text-sm flex-row-reverse">
-                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Check className="w-3 h-3 text-primary" />
-                      </div>
-                      <span className="text-muted-foreground text-right">
-                        <strong className="text-foreground">سيتم تضمين</strong> ما لم تحدد الأنظمة واللوائح ذات الصلة والمتطلبات النظامية مدة احتفاظ أكثر من المدة المنصوص عليها.
-                      </span>
-                    </div>
-                  </>
-                )}
-
-                <FormField
-                  control={form.control}
-                  name="destruction_method"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base">طريقة إتلاف البيانات *</FormLabel>
-                      <FormDescription>
-                        كيف سيتم التخلص من البيانات بطريقة آمنة بعد انتهاء فترة الاحتفاظ؟
-                      </FormDescription>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-destruction-method">
-                            <SelectValue placeholder="اختر طريقة الإتلاف" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {DESTRUCTION_METHODS.map((method) => (
-                            <SelectItem key={method.id} value={method.id}>
-                              {method.label}
-                            </SelectItem>
-                          ))}
-                          <SelectItem value="custom">طريقة أخرى</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
                   )}
-                />
 
-                {watchDestructionMethod === "custom" && (
-                  <FormField
-                    control={form.control}
-                    name="destruction_custom"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>وصف طريقة الإتلاف</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field}
-                            placeholder="صف كيف سيتم إتلاف البيانات بطريقة آمنة"
-                            data-testid="textarea-destruction-custom"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20">
-                  <AlertCircle className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-amber-800 dark:text-amber-200">
-                    سيتم التخلص من البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو استعادتها مرة أخرى.
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
+                  <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800 dark:text-amber-200">
+                      سيتم التخلص من البيانات بطريقة آمنة لا يمكن من خلالها الاطلاع عليها أو استعادتها مرة أخرى.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
-          {currentStep === 6 && (
-            <Card>
-              <CardHeader dir="rtl">
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" />
-                  الحقوق والشكاوى
-                </CardTitle>
-                <CardDescription>
-                  حقوق صاحب البيانات وآلية تقديم الشكاوى ومسؤول حماية البيانات
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h4 className="font-semibold">ممارسة الحقوق</h4>
-                  
+          {currentStep === 14 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5" />
+                    ممارسة الحقوق
+                  </CardTitle>
+                  <CardDescription>كيف يمارس صاحب البيانات حقوقه؟</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
                     name="rights_exercise_method"
@@ -1599,9 +1678,22 @@ ${policy.generatedContent}
                       </FormItem>
                     )}
                   />
-                </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-                <div className="border rounded-lg p-4 space-y-4">
+          {currentStep === 15 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCheck className="w-5 h-5" />
+                    مسؤول حماية البيانات
+                  </CardTitle>
+                  <CardDescription>هل لديك مسؤول حماية بيانات معيّن؟</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label className="text-base font-semibold">مسؤول حماية البيانات الشخصية</Label>
@@ -1690,11 +1782,22 @@ ${policy.generatedContent}
                       />
                     </div>
                   )}
-                </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-                <div className="border-t pt-6 space-y-4">
-                  <h4 className="font-semibold">آلية الشكاوى</h4>
-                  
+          {currentStep === 16 && (
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
+              <Card>
+                <CardHeader dir="rtl">
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5" />
+                    آلية الشكاوى
+                  </CardTitle>
+                  <CardDescription>كيف يتم استقبال الشكاوى والرد عليها؟</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <FormField
                     control={form.control}
                     name="complaint_contact"
@@ -1774,9 +1877,9 @@ ${policy.generatedContent}
                       <span className="font-bold">سيتم تضمين</span> معلومات {SDAIA_INFO.name} تلقائياً كجهة تنظيمية للشكاوى في حال عدم الرضا عن المعالجة.
                     </p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           <div className="flex justify-between gap-4">
@@ -1794,7 +1897,7 @@ ${policy.generatedContent}
             
             <div className="flex-1" />
             
-            {currentStep < 6 ? (
+            {currentStep < TOTAL_SUB_STEPS ? (
               <Button
                 type="button"
                 onClick={nextStep}
