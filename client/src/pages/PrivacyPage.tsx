@@ -134,7 +134,7 @@ export default function PrivacyPage() {
             <CardContent className="space-y-4 text-muted-foreground leading-relaxed">
               <p>قد نشارك بياناتك الشخصية مع:</p>
               <ul className="list-disc list-inside space-y-2 mr-4">
-                <li><strong>مزودي الخدمات:</strong> مثل خدمات الذكاء الاصطناعي (OpenAI) لتحليل المحتوى، وخدمات البريد الإلكتروني لإرسال الوثائق</li>
+                <li><strong>مزودي الخدمات:</strong> مثل خدمات الذكاء الاصطناعي لتحليل المحتوى، وخدمات البريد الإلكتروني لإرسال الوثائق</li>
                 <li><strong>الجهات الحكومية:</strong> عند وجود متطلب نظامي للإفصاح</li>
               </ul>
               <p className="mt-4">
