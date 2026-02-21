@@ -214,9 +214,6 @@ export default function HomePage() {
                 <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 text-muted-foreground">
                   مساحة العمل الموحدة للامتثال الداخلي
                 </CardTitle>
-                <CardDescription className="text-sm sm:text-base mt-2 max-w-lg mx-auto leading-relaxed">
-                  إدارة سجل المعالجة (ROPA) وطلبات الوصول (DSAR) وتقييمات التأثير (DPIA) - كلها في مكان واحد
-                </CardDescription>
               </CardHeader>
               <CardContent className="pt-0 pb-6 sm:pb-8 text-center px-4 sm:px-6">
                 <div className="flex flex-wrap justify-center gap-2 mb-6 sm:mb-8 opacity-50">
