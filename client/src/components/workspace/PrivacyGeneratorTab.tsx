@@ -169,7 +169,10 @@ export default function PrivacyGeneratorTab() {
           if (verifyData.success && verifyData.status === "paid") {
             const genRes = await apiRequest("POST", `/api/policy-requests/${returnRequestId}/generate`, {});
             if (genRes.ok) {
-              toast({ title: "جاري توليد السياسة", description: "تم الدفع بنجاح!" });
+              toast({ 
+                title: "جاري تجهيز سياسة الخصوصية الخاصة بك...", 
+                description: "تم الدفع بنجاح. سنرسل لك سياسة الخصوصية عبر البريد الإلكتروني خلال لحظات. يرجى مراجعة صندوق الوارد والتحقق من مجلد الرسائل غير المرغوب فيها (Spam)." 
+              });
               queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
             }
           } else {

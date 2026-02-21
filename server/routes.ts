@@ -1408,52 +1408,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Trigger policy generation after payment verification
-  // Updated to support new 4-step wizard format
-  app.post("/api/policy-requests/:id/generate", requireAuth, async (req, res) => {
+  async function generatePolicyForRequest(requestId: string): Promise<{ success: boolean; policyId?: number | string; emailSent?: boolean; error?: string }> {
+    const request = await storage.getPolicyGenerationRequest(requestId);
+    
+    if (!request) {
+      return { success: false, error: "الطلب غير موجود" };
+    }
+    
+    if (request.paymentStatus !== "paid") {
+      return { success: false, error: "يجب دفع الرسوم أولاً" };
+    }
+    
+    if (request.workflowStatus === "generating" || request.workflowStatus === "delivered" || request.policyDocumentId) {
+      return { success: true, policyId: request.policyDocumentId || undefined, error: "already_generated" };
+    }
+    
+    if (!request.userId) {
+      return { success: false, error: "لا يوجد مستخدم مرتبط بهذا الطلب" };
+    }
+    
+    const user = await storage.getUser(request.userId);
+    if (!user?.email) {
+      console.error(`[PolicyGen] No user or email found for userId: ${request.userId}, requestId: ${requestId}`);
+      return { success: false, error: "لم يتم العثور على البريد الإلكتروني للمستخدم" };
+    }
+    
+    const intakeData = request.intakeData as Record<string, any> | null;
+    const companyName = intakeData?.company_name || intakeData?.companyName;
+    const activityType = intakeData?.activity_type || intakeData?.businessType;
+    
+    if (!companyName || !activityType) {
+      return { success: false, error: "بيانات النموذج غير مكتملة" };
+    }
+    
+    const is6StepFormat = !!intakeData?.legal_bases;
+    const isWizardFormat = !!intakeData?.company_name;
+    
+    await storage.updatePolicyGenerationRequest(requestId, {
+      workflowStatus: "generating",
+    });
+    
     try {
-      const userId = req.session.userId;
-      const request = await storage.getPolicyGenerationRequest(req.params.id);
-      
-      if (!request) {
-        return res.status(404).json({ error: "الطلب غير موجود" });
-      }
-      
-      if (request.userId !== userId) {
-        return res.status(403).json({ error: "غير مصرح بالوصول لهذا الطلب" });
-      }
-      
-      if (request.paymentStatus !== "paid") {
-        return res.status(402).json({ error: "يجب دفع الرسوم أولاً" });
-      }
-      
-      if (request.workflowStatus === "generating" || request.workflowStatus === "delivered") {
-        return res.status(400).json({ error: "السياسة قيد التوليد أو تم توليدها بالفعل" });
-      }
-      
-      const intakeData = request.intakeData as Record<string, any> | null;
-      
-      // Support both old format (companyName) and new wizard format (company_name)
-      const companyName = intakeData?.company_name || intakeData?.companyName;
-      const activityType = intakeData?.activity_type || intakeData?.businessType;
-      
-      if (!companyName || !activityType) {
-        return res.status(400).json({ error: "بيانات النموذج غير مكتملة" });
-      }
-      
-      // Check if this is the new 6-step wizard format or old 4-step format
-      const is6StepFormat = !!intakeData?.legal_bases;
-      const isWizardFormat = !!intakeData?.company_name;
-      
-      // Update workflow status
-      await storage.updatePolicyGenerationRequest(req.params.id, {
-        workflowStatus: "generating",
-      });
-      
       let generatedContent: string;
       
       if (is6StepFormat) {
-        // New 6-step wizard format - use the new policyTextGenerator
         const { generatePolicyHtml } = await import('./services/policyTextGenerator');
         
         const policyData = {
@@ -1493,13 +1491,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           complaint_response_days: intakeData.complaint_response_days || 30,
         };
         
-        // Debug: Log rights and complaints contact details
-        console.log('[Policy Generator] Rights contact details:', intakeData.rights_contact_details);
         console.log('[Policy Generator] Complaints contact details:', intakeData.complaint_contact_details);
         
         generatedContent = generatePolicyHtml(policyData);
       } else if (isWizardFormat) {
-        // Old 4-step wizard format - use template-based generation
         const wizardData: WizardPolicyData = {
           company_name: intakeData.company_name,
           activity_type: intakeData.activity_type,
@@ -1523,7 +1518,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         generatedContent = await generateWizardPrivacyPolicy(wizardData);
       } else {
-        // Legacy format - use AI-based generation
         const policyDoc = await storage.createPolicyDocument({
           companyName: intakeData.companyName,
           businessType: intakeData.businessType,
@@ -1547,22 +1541,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           dpoAddress: intakeData.dpoAddress,
         });
         
-        await storage.updatePolicyGenerationRequest(req.params.id, {
+        await storage.updatePolicyGenerationRequest(requestId, {
           policyDocumentId: policyDoc.id,
         });
         
-        // Get user's registered email for sending policy
-        const user = await storage.getUser(userId!);
-        processPrivacyPolicyGeneration(policyDoc.id, user?.email);
+        processPrivacyPolicyGeneration(policyDoc.id, user.email);
         
-        return res.json({ 
-          success: true, 
-          policyId: policyDoc.id,
-          message: "تم بدء توليد سياسة الخصوصية",
-        });
+        return { success: true, policyId: policyDoc.id };
       }
       
-      // For wizard format - create policy document first, then update with content
       const policyDoc = await storage.createPolicyDocument({
         companyName: companyName,
         businessType: activityType,
@@ -1578,52 +1565,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dpoPhone: intakeData.dpo_phone,
       });
       
-      // Update with generated content
       await storage.updatePolicyDocument(policyDoc.id, {
         generatedContent: generatedContent,
         status: "completed",
       });
       
-      await storage.updatePolicyGenerationRequest(req.params.id, {
+      await storage.updatePolicyGenerationRequest(requestId, {
         workflowStatus: "delivered",
         policyDocumentId: policyDoc.id,
       });
       
-      // Send policy email to user's registered email (OTP email) - AWAIT to ensure delivery
-      const user = await storage.getUser(userId!);
       let emailSent = false;
-      if (user?.email && generatedContent) {
+      if (generatedContent) {
         try {
-          console.log("[Route] Sending policy email to:", user.email);
+          console.log("[PolicyGen] Sending policy email to:", user.email);
           emailSent = await sendPolicyEmail({
             to: user.email,
             companyName: companyName,
             policyContent: generatedContent,
             policyId: policyDoc.id,
           });
-          console.log("[Route] Email sent result:", emailSent);
+          console.log("[PolicyGen] Email sent result:", emailSent);
         } catch (err) {
-          console.error("[Route] Failed to send policy email:", err);
+          console.error("[PolicyGen] Failed to send policy email:", err);
         }
+      }
+      
+      return { success: true, policyId: policyDoc.id, emailSent };
+    } catch (error) {
+      console.error("[PolicyGen] Error generating policy:", error);
+      try {
+        await storage.updatePolicyGenerationRequest(requestId, {
+          workflowStatus: "pending",
+        });
+      } catch (rollbackError) {
+        console.error("[PolicyGen] Error rolling back workflow status:", rollbackError);
+      }
+      return { success: false, error: "فشل في توليد السياسة" };
+    }
+  }
+
+  app.post("/api/policy-requests/:id/generate", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const request = await storage.getPolicyGenerationRequest(req.params.id);
+      
+      if (!request) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      
+      if (request.userId !== userId) {
+        return res.status(403).json({ error: "غير مصرح بالوصول لهذا الطلب" });
+      }
+      
+      const result = await generatePolicyForRequest(req.params.id);
+      
+      if (!result.success) {
+        if (result.error === "يجب دفع الرسوم أولاً") {
+          return res.status(402).json({ error: result.error });
+        }
+        if (result.error === "بيانات النموذج غير مكتملة") {
+          return res.status(400).json({ error: result.error });
+        }
+        return res.status(500).json({ error: result.error || "فشل في توليد السياسة" });
+      }
+      
+      if (result.error === "already_generated") {
+        return res.json({ success: true, policyId: result.policyId, message: "السياسة تم توليدها بالفعل" });
       }
       
       res.json({ 
         success: true, 
-        policyId: policyDoc.id,
-        emailSent: emailSent,
-        message: emailSent ? "تم توليد سياسة الخصوصية وإرسالها بنجاح" : "تم توليد سياسة الخصوصية",
+        policyId: result.policyId,
+        emailSent: result.emailSent,
+        message: result.emailSent ? "تم توليد سياسة الخصوصية وإرسالها بنجاح" : "تم توليد سياسة الخصوصية",
       });
     } catch (error) {
       console.error("Error generating policy from request:", error);
-      // Rollback workflow status to allow retry
-      try {
-        await storage.updatePolicyGenerationRequest(req.params.id, {
-          workflowStatus: "pending",
-        });
-      } catch (rollbackError) {
-        console.error("Error rolling back workflow status:", rollbackError);
-      }
       res.status(500).json({ error: "فشل في توليد السياسة. يمكنك المحاولة مرة أخرى." });
+    }
+  });
+
+  app.post("/api/policy-requests/:id/resend", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const request = await storage.getPolicyGenerationRequest(req.params.id);
+      
+      if (!request) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      if (request.userId !== userId) {
+        return res.status(403).json({ error: "غير مصرح بالوصول لهذا الطلب" });
+      }
+      if (request.paymentStatus !== "paid") {
+        return res.status(402).json({ error: "يجب دفع الرسوم أولاً" });
+      }
+
+      if (request.workflowStatus !== "delivered" || !request.policyDocumentId) {
+        console.log(`[Resend] Policy not yet delivered for ${req.params.id}, triggering generation...`);
+        const result = await generatePolicyForRequest(req.params.id);
+        if (!result.success && result.error !== "already_generated") {
+          return res.status(500).json({ error: result.error || "فشل في توليد السياسة" });
+        }
+        return res.json({ success: true, message: "تم إعادة توليد وإرسال السياسة بنجاح" });
+      }
+
+      const policyDoc = await storage.getPolicyDocument(request.policyDocumentId);
+      if (!policyDoc || !policyDoc.generatedContent) {
+        return res.status(404).json({ error: "لم يتم العثور على محتوى السياسة" });
+      }
+
+      const user = await storage.getUser(userId!);
+      if (!user?.email) {
+        return res.status(400).json({ error: "لم يتم العثور على البريد الإلكتروني" });
+      }
+
+      const emailSent = await sendPolicyEmail({
+        to: user.email,
+        companyName: policyDoc.companyName,
+        policyContent: policyDoc.generatedContent,
+        policyId: policyDoc.id,
+      });
+
+      console.log(`[Resend] Policy email resent to ${user.email}: ${emailSent}`);
+
+      res.json({ 
+        success: true, 
+        emailSent,
+        message: emailSent ? "تم إعادة إرسال السياسة بنجاح" : "فشل في إرسال البريد الإلكتروني",
+      });
+    } catch (error) {
+      console.error("Error resending policy:", error);
+      res.status(500).json({ error: "فشل في إعادة إرسال السياسة" });
     }
   });
 
@@ -2063,6 +2136,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               paymentId: orderId || merchantRefId,
             }).catch(err => console.error("Failed to send payment email:", err));
           }
+
+          console.log(`[Geidea Callback] Auto-triggering policy generation for requestId: ${requestId}`);
+          generatePolicyForRequest(requestId)
+            .then(result => {
+              if (result.success) {
+                console.log(`[Geidea Callback] Policy auto-generated successfully for requestId: ${requestId}, policyId: ${result.policyId}, emailSent: ${result.emailSent}`);
+              } else if (result.error === "already_generated") {
+                console.log(`[Geidea Callback] Policy already generated for requestId: ${requestId}`);
+              } else {
+                console.error(`[Geidea Callback] Policy auto-generation failed for requestId: ${requestId}: ${result.error}`);
+              }
+            })
+            .catch(err => console.error(`[Geidea Callback] Policy auto-generation error for requestId: ${requestId}:`, err));
         }
       } else {
         console.log(`[Geidea Callback] Payment not successful. Status: ${status}`);
