@@ -207,60 +207,6 @@ export default function HomePage() {
 
           {/* ========== COMING SOON SECTIONS - Disabled for MVP ========== */}
           
-          {/* Unified Compliance Workspace - DISABLED */}
-          <div className="max-w-3xl mx-auto mb-10 md:mb-14 animate-stagger-3">
-            <Card 
-              className="relative border-2 border-muted/50 shadow-md bg-gradient-to-br from-muted/20 via-transparent to-muted/10 opacity-60 cursor-not-allowed"
-              data-testid="card-workspace"
-            >
-              {/* Coming Soon Badge - Positioned at top */}
-              <div className="absolute top-4 left-4 z-10">
-                <Badge variant="secondary" className="bg-amber-500/90 text-white border-0 shadow-md">
-                  <Clock className="w-3 h-3 ml-1" />
-                  قريباً
-                </Badge>
-              </div>
-              <CardHeader className="text-center pb-4 sm:pb-6 pt-6 sm:pt-8 px-4 sm:px-6">
-                <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-muted/30 shadow-md">
-                  <Layers className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/50" />
-                </div>
-                <Badge variant="outline" className="mx-auto mb-3 sm:mb-4 opacity-50">
-                  موحّد في مكان واحد
-                </Badge>
-                <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 text-muted-foreground">
-                  مساحة العمل الموحدة للامتثال
-                </CardTitle>
-                <CardDescription className="text-sm sm:text-base mt-2 max-w-lg mx-auto leading-relaxed">
-                  أنشئ سياسة الخصوصية والشروط والأحكام وإدارة الموافقات وإعدادات الخصوصية - كلها في مكان واحد
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0 pb-6 sm:pb-8 text-center px-4 sm:px-6">
-                <div className="flex flex-wrap justify-center gap-2 mb-6 sm:mb-8 opacity-50">
-                  <Badge variant="outline" className="text-xs px-2.5 py-1">
-                    <FileText className="w-3 h-3 ml-1" />
-                    سياسة الخصوصية
-                  </Badge>
-                  <Badge variant="outline" className="text-xs px-2.5 py-1">
-                    <ScrollText className="w-3 h-3 ml-1" />
-                    الشروط والأحكام
-                  </Badge>
-                  <Badge variant="outline" className="text-xs px-2.5 py-1">
-                    <CheckCircle className="w-3 h-3 ml-1" />
-                    إدارة الموافقة
-                  </Badge>
-                  <Badge variant="outline" className="text-xs px-2.5 py-1">
-                    <Shield className="w-3 h-3 ml-1" />
-                    إعدادات الخصوصية
-                  </Badge>
-                </div>
-                <Button size="lg" className="px-8 h-10 sm:h-11 text-sm sm:text-base font-semibold opacity-50" disabled>
-                  <Layers className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  قريباً
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Internal Compliance Workspace - DISABLED */}
           <div className="max-w-3xl mx-auto mb-10 md:mb-14 animate-stagger-4">
             <Card 
