@@ -2057,6 +2057,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing merchantReferenceId" });
       }
 
+      // Verify callback authenticity by cross-checking with Geidea's API
+      if (orderId && status === "Success") {
+        try {
+          const publicKey = process.env.GEIDEA_PUBLIC_KEY;
+          const apiPassword = process.env.GEIDEA_API_PASSWORD;
+          if (publicKey && apiPassword) {
+            const authHeader = Buffer.from(`${publicKey}:${apiPassword}`).toString("base64");
+            const verifyResponse = await fetch(
+              `https://api.merchant.geidea.net/pgw/api/v1/direct/order/${orderId}`,
+              {
+                method: "GET",
+                headers: {
+                  "Authorization": `Basic ${authHeader}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+            if (verifyResponse.ok) {
+              const verifyData = await verifyResponse.json() as any;
+              const verifiedStatus = verifyData?.order?.status || verifyData?.status;
+              if (verifiedStatus !== "Success") {
+                console.error(`[Geidea Callback] Verification failed: API status=${verifiedStatus}, callback status=${status}`);
+                return res.status(403).json({ error: "Payment verification failed" });
+              }
+              console.log(`[Geidea Callback] Payment verified via Geidea API for order: ${orderId}`);
+            } else {
+              console.warn(`[Geidea Callback] Could not verify order via API (status ${verifyResponse.status}), proceeding with callback data`);
+            }
+          }
+        } catch (verifyErr) {
+          console.warn("[Geidea Callback] Verification API call failed, proceeding with callback data:", verifyErr);
+        }
+      }
+
       let requestId: string | null = null;
       if (merchantRefId.startsWith("SRB") && merchantRefId.length >= 35) {
         const hex = merchantRefId.slice(3, 35);
@@ -2111,7 +2145,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Auto-generate policy in callback to ensure delivery even if frontend redirect fails
+          // Set "generating" FIRST to prevent race conditions with concurrent callbacks
           if (policyRequest.workflowStatus !== "generating" && policyRequest.workflowStatus !== "delivered") {
+            await storage.updatePolicyGenerationRequest(requestId, { workflowStatus: "generating" });
             try {
               console.log(`[Geidea Callback] Auto-generating policy for request: ${requestId}`);
               const is6StepFormat = !!intakeData?.legal_bases;
@@ -2182,8 +2218,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
 
               if (generatedContent) {
-                await storage.updatePolicyGenerationRequest(requestId, { workflowStatus: "generating" });
-
                 const activityType = intakeData!.activity_type || intakeData!.businessType || "";
                 const policyDoc = await storage.createPolicyDocument({
                   companyName: companyName,
