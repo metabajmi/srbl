@@ -53,22 +53,6 @@ export default function HomePage() {
   // Coming Soon services - disabled for MVP launch
   const comingSoonServices = [
     {
-      icon: <FileText className="w-10 h-10" />,
-      title: "مُولّد سياسة الخصوصية المتقدم",
-      description: "أنشئ سياسة خصوصية متوافقة مع نظام حماية البيانات الشخصية السعودي بدقائق",
-      color: "text-purple-600/50 dark:text-purple-400/50",
-      bgColor: "bg-purple-500/5",
-      testId: "card-service-privacy"
-    },
-    {
-      icon: <ScrollText className="w-10 h-10" />,
-      title: "مُولّد الشروط والأحكام",
-      description: "أنشئ شروطاً وأحكاماً واضحة ومتوافقة مع الأنظمة السعودية لموقعك أو تطبيقك",
-      color: "text-green-600/50 dark:text-green-400/50",
-      bgColor: "bg-green-500/5",
-      testId: "card-service-terms"
-    },
-    {
       icon: <CheckCircle className="w-10 h-10" />,
       title: "منصة إدارة الموافقة",
       description: "إدارة وتتبع موافقات المستخدمين والكوكيز بشكل متوافق مع اللوائح السعودية",
