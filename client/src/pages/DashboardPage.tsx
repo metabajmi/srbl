@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,26 @@ export default function DashboardPage() {
   // Fetch user's activity log
   const { data: activityLog = [], isLoading: activityLoading } = useQuery<any[]>({
     queryKey: ["/api/user/activity"],
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      const res = await apiRequest("POST", `/api/policy-requests/${requestId}/resend`, {});
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "تم إعادة الإرسال",
+        description: "تم إرسال سياسة الخصوصية إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد ومجلد الرسائل غير المرغوب فيها (Spam).",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "خطأ",
+        description: error.message || "فشل في إعادة إرسال السياسة",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleLogout = async () => {
@@ -352,8 +372,20 @@ ${policy.generatedContent}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {getStatusBadge(policy.status || "completed")}
+                        {(policy as any).requestId && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => resendMutation.mutate((policy as any).requestId)}
+                            disabled={resendMutation.isPending}
+                            data-testid={`button-resend-${policy.id || index}`}
+                          >
+                            <Mail className="h-4 w-4 ml-1" />
+                            {resendMutation.isPending ? "جاري الإرسال..." : "إعادة إرسال"}
+                          </Button>
+                        )}
                         {policy.generatedContent && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
