@@ -1237,6 +1237,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/policy-requests/:id/resend", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const request = await storage.getPolicyGenerationRequest(req.params.id);
+      
+      if (!request) {
+        return res.status(404).json({ error: "الطلب غير موجود" });
+      }
+      if (request.userId !== userId) {
+        return res.status(403).json({ error: "غير مصرح بالوصول لهذا الطلب" });
+      }
+      if (request.paymentStatus !== "paid") {
+        return res.status(402).json({ error: "يجب دفع الرسوم أولاً" });
+      }
+      
+      if (!request.policyDocumentId) {
+        return res.status(400).json({ error: "لم يتم توليد السياسة بعد" });
+      }
+      
+      const policyDoc = await storage.getPolicyDocument(request.policyDocumentId);
+      if (!policyDoc || !policyDoc.generatedContent) {
+        return res.status(400).json({ error: "السياسة غير متاحة لإعادة الإرسال" });
+      }
+      
+      const user = await storage.getUser(userId!);
+      if (!user?.email) {
+        return res.status(400).json({ error: "لم يتم العثور على بريد إلكتروني مسجل" });
+      }
+      
+      const emailSent = await sendPolicyEmail({
+        to: user.email,
+        companyName: policyDoc.companyName || "سياسة الخصوصية",
+        policyContent: policyDoc.generatedContent,
+        policyId: policyDoc.id,
+      });
+      
+      res.json({ success: true, emailSent, message: emailSent ? "تم إعادة إرسال السياسة بنجاح" : "فشل في إرسال البريد الإلكتروني" });
+    } catch (error) {
+      console.error("Error resending policy:", error);
+      res.status(500).json({ error: "فشل في إعادة إرسال السياسة" });
+    }
+  });
+
   // User route: Get user's activity log
   app.get("/api/user/activity", requireAuth, async (req, res) => {
     try {
@@ -1427,8 +1470,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(402).json({ error: "يجب دفع الرسوم أولاً" });
       }
       
-      if (request.workflowStatus === "generating" || request.workflowStatus === "delivered") {
-        return res.status(400).json({ error: "السياسة قيد التوليد أو تم توليدها بالفعل" });
+      if (request.workflowStatus === "delivered") {
+        return res.json({ success: true, alreadyGenerated: true, message: "تم توليد السياسة بالفعل وإرسالها عبر البريد الإلكتروني" });
+      }
+      if (request.workflowStatus === "generating") {
+        return res.json({ success: true, alreadyGenerated: true, message: "السياسة قيد التوليد حالياً" });
       }
       
       const intakeData = request.intakeData as Record<string, any> | null;
@@ -2053,7 +2099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const intakeData = policyRequest.intakeData as Record<string, any> | null;
           const contactEmail = intakeData?.email || "";
-          const companyName = intakeData?.company_name || "طلب جديد";
+          const companyName = intakeData?.company_name || intakeData?.companyName || "طلب جديد";
 
           if (contactEmail) {
             sendPaymentConfirmationEmail({
@@ -2062,6 +2108,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
               amount: amount || 349,
               paymentId: orderId || merchantRefId,
             }).catch(err => console.error("Failed to send payment email:", err));
+          }
+
+          // Auto-generate policy in callback to ensure delivery even if frontend redirect fails
+          if (policyRequest.workflowStatus !== "generating" && policyRequest.workflowStatus !== "delivered") {
+            try {
+              console.log(`[Geidea Callback] Auto-generating policy for request: ${requestId}`);
+              const is6StepFormat = !!intakeData?.legal_bases;
+              const isWizardFormat = !!intakeData?.company_name;
+
+              let generatedContent: string | null = null;
+
+              if (is6StepFormat) {
+                const { generatePolicyHtml } = await import('./services/policyTextGenerator');
+                const policyData = {
+                  company_name: intakeData!.company_name,
+                  activity_type: intakeData!.activity_type,
+                  service_description: intakeData!.service_description || "",
+                  contact_team: intakeData!.contact_team,
+                  address: intakeData!.address || intakeData!.contact_address || "",
+                  phone: intakeData!.phone || intakeData!.contact_phone || "",
+                  email: intakeData!.email || intakeData!.contact_email || "",
+                  cr_number: intakeData!.cr_number || "",
+                  policy_last_update: intakeData!.policy_last_update,
+                  data_collected: intakeData!.data_collected || [],
+                  collection_methods_direct: intakeData!.collection_methods_direct || [],
+                  collection_methods_indirect: intakeData!.collection_methods_indirect || [],
+                  collection_purposes: intakeData!.collection_purposes || [],
+                  data_usage_purposes: intakeData!.data_usage_purposes || [],
+                  legal_bases: intakeData!.legal_bases || [],
+                  legal_bases_explanations: intakeData!.legal_bases_explanations || {},
+                  disclosure_parties: intakeData!.disclosure_parties || [],
+                  storage_location: intakeData!.storage_location || "inside_ksa",
+                  retention_period: intakeData!.retention_period || "until_purpose",
+                  retention_purpose: intakeData!.retention_purpose,
+                  retention_years: intakeData!.retention_years,
+                  destruction_method: intakeData!.destruction_method || "secure_deletion",
+                  destruction_custom: intakeData!.destruction_custom,
+                  rights_exercise_method: intakeData!.rights_exercise_method || "email",
+                  rights_contact_details: intakeData!.rights_contact_details || "",
+                  response_days: intakeData!.response_days || 30,
+                  has_dpo: intakeData!.has_dpo || false,
+                  dpo_name: intakeData!.dpo_name,
+                  dpo_address: intakeData!.dpo_address,
+                  dpo_phone: intakeData!.dpo_phone,
+                  dpo_email: intakeData!.dpo_email,
+                  complaint_contact: intakeData!.complaint_contact || "خدمة العملاء",
+                  complaint_contact_details: intakeData!.complaint_contact_details || "",
+                  complaint_response_days: intakeData!.complaint_response_days || 30,
+                };
+                generatedContent = generatePolicyHtml(policyData);
+              } else if (isWizardFormat) {
+                generatedContent = await generateWizardPrivacyPolicy({
+                  company_name: intakeData!.company_name,
+                  activity_type: intakeData!.activity_type,
+                  service_description: intakeData!.service_description || "",
+                  cr_number: intakeData!.cr_number || "",
+                  contact_address: intakeData!.contact_address || "",
+                  contact_email: intakeData!.contact_email || "",
+                  contact_phone: intakeData!.contact_phone || "",
+                  has_dpo: intakeData!.has_dpo || false,
+                  dpo_name: intakeData!.dpo_name,
+                  dpo_email: intakeData!.dpo_email,
+                  dpo_phone: intakeData!.dpo_phone,
+                  data_collected: intakeData!.data_collected || [],
+                  collection_methods: intakeData!.collection_methods || [],
+                  storage_location: intakeData!.storage_location || "inside_ksa",
+                  retention_period: intakeData!.retention_period || "statutory_period",
+                  retention_period_value: intakeData!.retention_period_value,
+                  data_sharing: intakeData!.data_sharing || "no_sharing",
+                  complaint_dept: intakeData!.complaint_dept || "customer_service",
+                });
+              }
+
+              if (generatedContent) {
+                await storage.updatePolicyGenerationRequest(requestId, { workflowStatus: "generating" });
+
+                const activityType = intakeData!.activity_type || intakeData!.businessType || "";
+                const policyDoc = await storage.createPolicyDocument({
+                  companyName: companyName,
+                  businessType: activityType,
+                  entityType: "private",
+                  contactEmail: intakeData!.contact_email || intakeData!.email || "",
+                  contactPhone: intakeData!.contact_phone || intakeData!.phone,
+                  contactAddress: intakeData!.contact_address || intakeData!.address,
+                  dataCategories: [],
+                  retentionPeriod: intakeData!.retention_period,
+                  usesCookies: intakeData!.collection_methods?.includes?.("automated") ? "yes" : "no",
+                  dpoName: intakeData!.dpo_name,
+                  dpoEmail: intakeData!.dpo_email,
+                  dpoPhone: intakeData!.dpo_phone,
+                });
+
+                await storage.updatePolicyDocument(policyDoc.id, {
+                  generatedContent: generatedContent,
+                  status: "completed",
+                });
+
+                await storage.updatePolicyGenerationRequest(requestId, {
+                  workflowStatus: "delivered",
+                  policyDocumentId: policyDoc.id,
+                });
+
+                // Send policy email to user
+                const user = policyRequest.userId ? await storage.getUser(policyRequest.userId) : null;
+                if (user?.email && generatedContent) {
+                  try {
+                    const emailSent = await sendPolicyEmail({
+                      to: user.email,
+                      companyName: companyName,
+                      policyContent: generatedContent,
+                      policyId: policyDoc.id,
+                    });
+                    console.log(`[Geidea Callback] Policy email sent to ${user.email}: ${emailSent}`);
+                  } catch (err) {
+                    console.error("[Geidea Callback] Failed to send policy email:", err);
+                  }
+                }
+                console.log(`[Geidea Callback] Policy auto-generated and delivered for request: ${requestId}`);
+              }
+            } catch (genErr) {
+              console.error(`[Geidea Callback] Auto-generation failed for request ${requestId}:`, genErr);
+              // Don't fail the callback - payment is still successful
+            }
           }
         }
       } else {
