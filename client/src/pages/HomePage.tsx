@@ -302,7 +302,7 @@ export default function HomePage() {
                 <div className="text-center space-y-2 sm:space-y-3">
                   <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
                   <h3 className="text-lg font-bold text-foreground">تقنيات ذكية</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground">نستخدم الذكاء الاصطناعي لضمان دقة الوثائق وجودتها.</p>
+                  <p className="text-sm sm:text-base text-muted-foreground">نوظف أحدث الحلول التقنية لضمان موثوقية الوثائق ومطابقتها للمعايير</p>
                 </div>
                 <div className="text-center space-y-2 sm:space-y-3">
                   <Clock className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
