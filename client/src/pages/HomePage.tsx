@@ -212,7 +212,7 @@ export default function HomePage() {
                   إدارة شاملة
                 </Badge>
                 <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 text-muted-foreground">
-                  مساحة العمل الموحدة للامتثال الداخلي
+                  مساحة العمل الموحدة للامتثال
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0 pb-6 sm:pb-8 text-center px-4 sm:px-6">
