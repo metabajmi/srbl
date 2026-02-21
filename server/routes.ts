@@ -2135,15 +2135,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const contactEmail = intakeData?.email || "";
           const companyName = intakeData?.company_name || intakeData?.companyName || "طلب جديد";
 
-          if (contactEmail) {
-            sendPaymentConfirmationEmail({
-              to: contactEmail,
-              companyName,
-              amount: amount || 349,
-              paymentId: orderId || merchantRefId,
-            }).catch(err => console.error("Failed to send payment email:", err));
-          }
-
           // Auto-generate policy in callback to ensure delivery even if frontend redirect fails
           // Set "generating" FIRST to prevent race conditions with concurrent callbacks
           if (policyRequest.workflowStatus !== "generating" && policyRequest.workflowStatus !== "delivered") {
