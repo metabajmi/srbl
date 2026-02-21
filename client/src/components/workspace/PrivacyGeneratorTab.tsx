@@ -169,7 +169,6 @@ export default function PrivacyGeneratorTab() {
           if (verifyData.success && verifyData.status === "paid") {
             const genRes = await apiRequest("POST", `/api/policy-requests/${returnRequestId}/generate`, {});
             if (genRes.ok) {
-              toast({ title: "جاري توليد السياسة", description: "تم الدفع بنجاح!" });
               queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
             }
           } else {
@@ -180,6 +179,7 @@ export default function PrivacyGeneratorTab() {
           toast({ title: "خطأ", description: "حدث خطأ أثناء التحقق من الدفع", variant: "destructive" });
         } finally {
           setIsGenerating(false);
+          setIsPaymentComplete(true);
           window.history.replaceState({}, "", window.location.pathname);
         }
       };
@@ -292,6 +292,16 @@ export default function PrivacyGeneratorTab() {
     },
   });
 
+  const { data: scanResultData } = useQuery({
+    queryKey: ["/api/scans", scanData?.scanId],
+    queryFn: async () => {
+      const response = await fetch(`/api/scans/${scanData?.scanId}`);
+      if (!response.ok) throw new Error("Failed to fetch scan");
+      return response.json();
+    },
+    enabled: isPaymentComplete && !!scanData?.scanId,
+  });
+
   const [showPaymentStep, setShowPaymentStep] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<FormValues | null>(null);
 
@@ -332,22 +342,13 @@ export default function PrivacyGeneratorTab() {
       const generateResponse = await apiRequest("POST", `/api/policy-requests/${paymentRequestId}/generate`, {});
       
       if (generateResponse.ok) {
-        toast({
-          title: "جاري تجهيز سياسة الخصوصية الخاصة بك...",
-          description: "تم الدفع بنجاح. سنرسل لك سياسة الخصوصية عبر البريد الإلكتروني خلال لحظات. يرجى مراجعة صندوق الوارد والتحقق من مجلد الرسائل غير المرغوب فيها (Spam).",
-        });
         queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
         form.reset();
         setCurrentStep(1);
-        setPaymentRequestId(null);
         setPendingFormData(null);
 
-        setTimeout(() => {
-          setIsGenerating(false);
-          if (scanData?.scanId) {
-            setLocation(`/scan/${scanData.scanId}?unlocked=true`);
-          }
-        }, 5000);
+        setIsGenerating(false);
+        setIsPaymentComplete(true);
         return;
       } else {
         throw new Error("فشل في بدء توليد السياسة");
@@ -635,16 +636,143 @@ ${policy.generatedContent}
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
               <h3 className="text-lg font-bold">جاري تجهيز سياسة الخصوصية الخاصة بك...</h3>
               <p className="text-muted-foreground text-center leading-relaxed max-w-md">
-                تم الدفع بنجاح.
-                <br /><br />
-                سنرسل لك سياسة الخصوصية الخاصة بك عبر البريد الإلكتروني خلال لحظات. يرجى مراجعة صندوق الوارد، والتحقق من مجلد الرسائل غير المرغوب فيها (Spam) في حال عدم وصولها.
+                يرجى الانتظار...
               </p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className={cn("mb-8", (showPaymentStep || isGenerating) && "hidden")} dir="rtl">
+      {isPaymentComplete && (
+        <div className="space-y-6" dir="rtl">
+          <Card className="border-green-200 dark:border-green-800">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center py-6 gap-4">
+                <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-950/30 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-xl font-bold" data-testid="text-payment-success">تم الدفع بنجاح!</h3>
+                <p className="text-muted-foreground text-center leading-relaxed max-w-md">
+                  جاري تجهيز سياسة الخصوصية الخاصة بك...
+                  <br /><br />
+                  سنرسل لك سياسة الخصوصية عبر البريد الإلكتروني خلال لحظات. يرجى مراجعة صندوق الوارد، والتحقق من مجلد الرسائل غير المرغوب فيها (Spam) في حال عدم وصولها.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {scanResultData && (() => {
+            const ppAudit = scanResultData?.analysisResult?.privacy_policy_audit || 
+                            scanResultData?.analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
+            if (!ppAudit || !ppAudit.elements || ppAudit.elements.length === 0) return null;
+            
+            return (
+              <Card data-testid="card-unlocked-scan-results">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <ClipboardList className="w-5 h-5 text-primary" />
+                      نتائج فحص سياسة الخصوصية
+                    </CardTitle>
+                    <Badge variant="outline" className="border-green-500 text-green-600">
+                      <Unlock className="w-3 h-3 ml-1" />
+                      مفتوحة
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
+                      <div className="text-2xl font-bold text-green-600" data-testid="text-found-count">{ppAudit.elementsFound}</div>
+                      <div className="text-xs text-green-700 dark:text-green-400">موجود بالكامل</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
+                      <div className="text-2xl font-bold text-orange-600" data-testid="text-partial-count">{ppAudit.elementsPartial}</div>
+                      <div className="text-xs text-orange-700 dark:text-orange-400">ناقص أو غير واضح</div>
+                    </div>
+                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
+                      <div className="text-2xl font-bold text-red-600" data-testid="text-missing-count">{ppAudit.elementsMissing}</div>
+                      <div className="text-xs text-red-700 dark:text-red-400">غير موجود</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                    {ppAudit.elements.map((element: any) => (
+                      <div
+                        key={element.id || element.number}
+                        className={`p-3 rounded-lg border ${
+                          element.statusEn === 'FOUND' 
+                            ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' 
+                            : element.statusEn === 'PARTIAL'
+                            ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'
+                            : 'border-red-200 bg-red-50/50 dark:bg-red-950/20'
+                        }`}
+                        data-testid={`audit-element-${element.number}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {element.statusEn === 'FOUND' ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          ) : element.statusEn === 'PARTIAL' ? (
+                            <AlertCircle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm">{element.number}. {element.nameAr}</span>
+                              {element.statusEn === 'FOUND' ? (
+                                <Badge variant="outline" className="border-green-500 text-green-600 text-xs">{element.status}</Badge>
+                              ) : element.statusEn === 'PARTIAL' ? (
+                                <Badge variant="outline" className="border-orange-500 text-orange-600 text-xs">{element.status}</Badge>
+                              ) : (
+                                <Badge variant="destructive" className="text-xs">{element.status}</Badge>
+                              )}
+                            </div>
+                            {element.evidence && (
+                              <p className="text-xs text-muted-foreground mt-1 bg-background/50 p-2 rounded border">
+                                <span className="font-medium">الدليل:</span> {element.evidence}
+                              </p>
+                            )}
+                            {element.notes && element.statusEn !== 'FOUND' && (
+                              <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
+                                {element.notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          <div className="flex justify-center gap-3">
+            {scanData?.scanId && (
+              <Button
+                variant="outline"
+                onClick={() => setLocation(`/scan/${scanData.scanId}?unlocked=true`)}
+                data-testid="button-view-full-results"
+              >
+                <FileText className="w-4 h-4 ml-2" />
+                عرض التقرير الكامل
+              </Button>
+            )}
+            <Button
+              onClick={() => {
+                setIsPaymentComplete(false);
+                setPaymentRequestId(null);
+              }}
+              data-testid="button-create-new-policy"
+            >
+              إنشاء سياسة خصوصية جديدة
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className={cn("mb-8", (showPaymentStep || isGenerating || isPaymentComplete) && "hidden")} dir="rtl">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-muted-foreground">
             {subStepInfo[currentStep - 1]?.title}
@@ -665,7 +793,7 @@ ${policy.generatedContent}
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className={cn("space-y-6", (showPaymentStep || isGenerating) && "hidden")}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className={cn("space-y-6", (showPaymentStep || isGenerating || isPaymentComplete) && "hidden")}>
           {currentStep === 1 && (
             <div className="animate-in fade-in slide-in-from-left-4 duration-300">
               <Card>
