@@ -297,7 +297,7 @@ export default function HomePage() {
                 <div className="text-center space-y-2 sm:space-y-3">
                   <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
                   <h3 className="text-lg font-bold text-foreground">امتثال محلي كامل</h3>
-                  <p className="text-sm sm:text-base text-muted-foreground">محتوى مصمم خصيصاً ليتوافق مع الأنظمة السعودية 100%.</p>
+                  <p className="text-sm sm:text-base text-muted-foreground">محتوى مصمم خصيصاً ليتوافق مع الأنظمة السعودية</p>
                 </div>
                 <div className="text-center space-y-2 sm:space-y-3">
                   <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-primary mx-auto" />
