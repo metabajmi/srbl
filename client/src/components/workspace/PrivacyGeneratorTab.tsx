@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare, Sparkles, X, Scale, ClipboardList, UserCheck, Check, AlertTriangle, XCircle, CheckCircle, ChevronDown, ChevronUp, ExternalLink, Shield } from "lucide-react";
+import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare, Sparkles, X, Scale, ClipboardList, UserCheck, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { type PolicyDocument } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -132,214 +132,6 @@ function AutoDetectedBadge({ onClear }: { onClear?: () => void }) {
   );
 }
 
-function PostPaymentScanResults({ scan, scanData }: { scan: any; scanData: any }) {
-  const [auditExpanded, setAuditExpanded] = useState(false);
-
-  const getComplianceLevelStyle = (score: number) => {
-    if (score >= 70) return 'high';
-    if (score >= 40) return 'medium';
-    return 'low';
-  };
-
-  const getComplianceLevelLabel = (score: number) => {
-    if (score >= 70) return 'مستوى امتثال مرتفع';
-    if (score >= 40) return 'مستوى امتثال متوسط';
-    return 'مستوى امتثال منخفض';
-  };
-
-  const displayScore = scan.overallScore || scanData.overallScore || 0;
-  const displayLevel = getComplianceLevelStyle(displayScore);
-  const complianceLabel = getComplianceLevelLabel(displayScore);
-
-  const ppAudit = scan.analysisResult?.privacy_policy_audit || 
-                  scan.analysisResult?.document_audits?.find((d: any) => d.type === 'privacy')?.privacyPolicyAudit;
-
-  const getStatusIcon = (statusEn: string) => {
-    switch (statusEn) {
-      case 'FOUND': return <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />;
-      case 'PARTIAL': return <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />;
-      default: return <XCircle className="w-4 h-4 text-red-600 flex-shrink-0" />;
-    }
-  };
-
-  const getStatusBadge = (status: string, statusEn: string) => {
-    switch (statusEn) {
-      case 'FOUND': return <Badge variant="outline" className="border-green-500 text-green-600 text-xs">{status}</Badge>;
-      case 'PARTIAL': return <Badge variant="outline" className="border-orange-500 text-orange-600 text-xs">{status}</Badge>;
-      default: return <Badge variant="destructive" className="text-xs">{status}</Badge>;
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-2">
-        <Shield className="w-5 h-5 text-primary" />
-        <h3 className="text-lg font-bold">نتائج فحص الامتثال</h3>
-      </div>
-
-      {/* Compliance Score */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className={`w-24 h-24 rounded-full border-8 flex items-center justify-center flex-shrink-0 ${
-              displayLevel === 'high' ? 'border-green-500 bg-green-50 dark:bg-green-950' :
-              displayLevel === 'medium' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' :
-              'border-red-500 bg-red-50 dark:bg-red-950'
-            }`}>
-              <div className="text-center">
-                <div className={`text-2xl font-bold ${
-                  displayLevel === 'high' ? 'text-green-600' :
-                  displayLevel === 'medium' ? 'text-yellow-600' :
-                  'text-red-600'
-                }`}>
-                  {displayScore}%
-                </div>
-              </div>
-            </div>
-            <div className="flex-1 text-center sm:text-right">
-              <h2 className="text-xl font-bold mb-1">{complianceLabel}</h2>
-              <p className="text-muted-foreground text-sm" dir="ltr">{scanData.websiteUrl}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Privacy Policy Status */}
-      <Card className={`p-3 ${
-        !scanData.hasPrivacyPolicy ? 'border-red-300 bg-red-50/50 dark:bg-red-950/20' :
-        ppAudit && ppAudit.elementsMissing > 0 ? 'border-red-300 bg-red-50/50 dark:bg-red-950/20' :
-        ppAudit && ppAudit.elementsPartial > 0 ? 'border-orange-300 bg-orange-50/50 dark:bg-orange-950/20' :
-        'border-green-300 bg-green-50/50 dark:bg-green-950/20'
-      }`} data-testid="card-status-privacy-post-payment">
-        <div className="flex items-center gap-2">
-          {!scanData.hasPrivacyPolicy ? <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" /> :
-           ppAudit && ppAudit.elementsMissing > 0 ? <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" /> :
-           ppAudit && ppAudit.elementsPartial > 0 ? <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0" /> :
-           <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />}
-          <div className="min-w-0">
-            <p className="font-medium text-sm truncate">سياسة الخصوصية</p>
-            {scanData.hasPrivacyPolicy && scanData.privacyPolicyUrl && (
-              <a href={scanData.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
-                <span className="truncate max-w-[100px]">عرض</span>
-                <ExternalLink className="w-3 h-3 flex-shrink-0" />
-              </a>
-            )}
-            <p className={`text-xs mt-0.5 ${
-              !scanData.hasPrivacyPolicy ? 'text-red-600' :
-              ppAudit && ppAudit.elementsMissing > 0 ? 'text-red-600' :
-              ppAudit && ppAudit.elementsPartial > 0 ? 'text-orange-600' :
-              'text-green-600'
-            }`}>
-              {!scanData.hasPrivacyPolicy ? 'غير موجودة' :
-               ppAudit && ppAudit.elementsMissing > 0 ? 'غير مكتملة' :
-               ppAudit && ppAudit.elementsPartial > 0 ? 'تحتاج تحسين' :
-               'مكتملة'}
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Privacy Policy 12-Element Audit - Unlocked */}
-      {ppAudit && ppAudit.elements && ppAudit.elements.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-primary" />
-                فحص عناصر سياسة الخصوصية
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                {ppAudit.isComplete ? (
-                  <Badge variant="outline" className="border-green-500 text-green-600">مكتملة</Badge>
-                ) : (
-                  <Badge variant="destructive">غير مكتملة</Badge>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
-                <div className="text-2xl font-bold text-green-600">{ppAudit.elementsFound}</div>
-                <div className="text-xs text-green-700 dark:text-green-400">موجود بالكامل</div>
-              </div>
-              <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
-                <div className="text-2xl font-bold text-orange-600">{ppAudit.elementsPartial}</div>
-                <div className="text-xs text-orange-700 dark:text-orange-400">ناقص أو غير واضح</div>
-              </div>
-              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-center">
-                <div className="text-2xl font-bold text-red-600">{ppAudit.elementsMissing}</div>
-                <div className="text-xs text-red-700 dark:text-red-400">غير موجود</div>
-              </div>
-            </div>
-
-            {/* Expand/Collapse */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full mb-3"
-              onClick={() => setAuditExpanded(!auditExpanded)}
-              data-testid="button-expand-audit-post-payment"
-            >
-              {auditExpanded ? (
-                <>
-                  <ChevronUp className="w-4 h-4 ml-2" />
-                  إخفاء التفاصيل
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4 ml-2" />
-                  عرض التفاصيل
-                </>
-              )}
-            </Button>
-
-            {/* Details - fully unlocked */}
-            {auditExpanded && (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {ppAudit.elements.map((element: any) => (
-                  <div
-                    key={element.id}
-                    className={`p-3 rounded-lg border ${
-                      element.statusEn === 'FOUND' 
-                        ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20' 
-                        : element.statusEn === 'PARTIAL'
-                        ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'
-                        : 'border-red-200 bg-red-50/50 dark:bg-red-950/20'
-                    }`}
-                    data-testid={`audit-element-post-payment-${element.number}`}
-                  >
-                    <div className="flex items-start gap-2">
-                      {getStatusIcon(element.statusEn)}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-sm">{element.number}. {element.nameAr}</span>
-                          {getStatusBadge(element.status, element.statusEn)}
-                        </div>
-                        {element.evidence && (
-                          <p className="text-xs text-muted-foreground mt-1 bg-background/50 p-2 rounded border">
-                            <span className="font-medium">الدليل:</span> {element.evidence}
-                          </p>
-                        )}
-                        {element.notes && element.statusEn !== 'FOUND' && (
-                          <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
-                            {element.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
 export default function PrivacyGeneratorTab() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -351,7 +143,6 @@ export default function PrivacyGeneratorTab() {
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<AutoFilledFields>({});
 
   useEffect(() => {
@@ -378,21 +169,17 @@ export default function PrivacyGeneratorTab() {
           if (verifyData.success && verifyData.status === "paid") {
             const genRes = await apiRequest("POST", `/api/policy-requests/${returnRequestId}/generate`, {});
             if (genRes.ok) {
+              toast({ title: "جاري توليد السياسة", description: "تم الدفع بنجاح!" });
               queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
             }
-            setPaymentCompleted(true);
-            setIsGenerating(false);
           } else {
             toast({ title: "تحقق من الدفع", description: "لم يتم تأكيد الدفع بعد. يرجى المحاولة مرة أخرى.", variant: "destructive" });
-            setIsGenerating(false);
-            setPaymentRequestId(null);
           }
         } catch (err) {
           console.error("Return URL payment verify error:", err);
           toast({ title: "خطأ", description: "حدث خطأ أثناء التحقق من الدفع", variant: "destructive" });
-          setIsGenerating(false);
-          setPaymentRequestId(null);
         } finally {
+          setIsGenerating(false);
           window.history.replaceState({}, "", window.location.pathname);
         }
       };
@@ -505,11 +292,6 @@ export default function PrivacyGeneratorTab() {
     },
   });
 
-  const { data: fullScanData } = useQuery<any>({
-    queryKey: ["/api/scans", scanData?.scanId],
-    enabled: paymentCompleted && !!scanData?.scanId,
-  });
-
   const [showPaymentStep, setShowPaymentStep] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<FormValues | null>(null);
 
@@ -550,12 +332,22 @@ export default function PrivacyGeneratorTab() {
       const generateResponse = await apiRequest("POST", `/api/policy-requests/${paymentRequestId}/generate`, {});
       
       if (generateResponse.ok) {
+        toast({
+          title: "جاري تجهيز سياسة الخصوصية الخاصة بك...",
+          description: "تم الدفع بنجاح. سنرسل لك سياسة الخصوصية عبر البريد الإلكتروني خلال لحظات. يرجى مراجعة صندوق الوارد والتحقق من مجلد الرسائل غير المرغوب فيها (Spam).",
+        });
         queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
         form.reset();
         setCurrentStep(1);
+        setPaymentRequestId(null);
         setPendingFormData(null);
-        setPaymentCompleted(true);
-        setIsGenerating(false);
+
+        setTimeout(() => {
+          setIsGenerating(false);
+          if (scanData?.scanId) {
+            setLocation(`/scan/${scanData.scanId}?unlocked=true`);
+          }
+        }, 5000);
         return;
       } else {
         throw new Error("فشل في بدء توليد السياسة");
@@ -836,60 +628,23 @@ ${policy.generatedContent}
         </Card>
       )}
 
-      {paymentCompleted && (
-        <div className="space-y-6 mb-6" dir="rtl">
-          {/* Unlocked Scan Results */}
-          {scanData && fullScanData && (
-            <PostPaymentScanResults scan={fullScanData} scanData={scanData} />
-          )}
-
-          {/* Policy Generation Status */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center justify-center py-8 gap-4">
-                <CheckCircle className="w-12 h-12 text-green-600" />
-                <h3 className="text-lg font-bold">جاري تجهيز سياسة الخصوصية الخاصة بك...</h3>
-                <p className="text-muted-foreground text-center leading-relaxed max-w-md">
-                  تم الدفع بنجاح.
-                  <br /><br />
-                  سنرسل لك سياسة الخصوصية الخاصة بك عبر البريد الإلكتروني خلال لحظات. يرجى مراجعة صندوق الوارد، والتحقق من مجلد الرسائل غير المرغوب فيها (Spam) في حال عدم وصولها.
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => {
-                    setPaymentCompleted(false);
-                    setPaymentRequestId(null);
-                    setIsPaymentComplete(false);
-                    setShowPaymentStep(false);
-                    setPendingFormData(null);
-                    setIsGenerating(false);
-                    form.reset();
-                    setCurrentStep(1);
-                  }}
-                  data-testid="button-new-policy"
-                >
-                  <FileText className="w-4 h-4 ml-2" />
-                  إنشاء سياسة خصوصية جديدة
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {isGenerating && !paymentCompleted && (
+      {isGenerating && (
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-8 gap-4">
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
-              <h3 className="text-lg font-bold">جاري التحقق من الدفع...</h3>
+              <h3 className="text-lg font-bold">جاري تجهيز سياسة الخصوصية الخاصة بك...</h3>
+              <p className="text-muted-foreground text-center leading-relaxed max-w-md">
+                تم الدفع بنجاح.
+                <br /><br />
+                سنرسل لك سياسة الخصوصية الخاصة بك عبر البريد الإلكتروني خلال لحظات. يرجى مراجعة صندوق الوارد، والتحقق من مجلد الرسائل غير المرغوب فيها (Spam) في حال عدم وصولها.
+              </p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className={cn("mb-8", (showPaymentStep || isGenerating || paymentCompleted) && "hidden")} dir="rtl">
+      <div className={cn("mb-8", (showPaymentStep || isGenerating) && "hidden")} dir="rtl">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-muted-foreground">
             {subStepInfo[currentStep - 1]?.title}
@@ -910,7 +665,7 @@ ${policy.generatedContent}
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className={cn("space-y-6", (showPaymentStep || isGenerating || paymentCompleted) && "hidden")}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className={cn("space-y-6", (showPaymentStep || isGenerating) && "hidden")}>
           {currentStep === 1 && (
             <div className="animate-in fade-in slide-in-from-left-4 duration-300">
               <Card>
