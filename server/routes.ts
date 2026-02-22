@@ -1893,14 +1893,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUser(userId);
-      const customerEmail = user?.email || frontendEmail || "";
+      const customerEmail = user?.email || frontendEmail || null;
 
-      console.log(`[Geidea] Email resolution: userId=${userId}, dbEmail=${user?.email || "NONE"}, frontendEmail=${frontendEmail || "NONE"}, resolved=${customerEmail || "EMPTY"}`);
-
-      if (!customerEmail) {
-        console.error("[Geidea] Cannot create session: customer email is empty");
-        return res.status(400).json({ error: "البريد الإلكتروني مطلوب لإتمام عملية الدفع" });
-      }
+      console.log(`[Geidea] Email resolution: userId=${userId}, dbEmail=${user?.email || "NONE"}, frontendEmail=${frontendEmail || "NONE"}, resolved=${customerEmail || "NULL"}`);
 
       const policyRequest = await storage.getPolicyGenerationRequest(requestId);
       if (!policyRequest) {
@@ -1962,10 +1957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         returnUrl,
         paymentOperation: "Pay",
         language: "ar",
-        customerEmail: customerEmail,
-        customer: {
-          email: customerEmail,
-        },
+        ...(customerEmail ? { customerEmail, customer: { email: customerEmail } } : {}),
       };
 
       console.log("[Geidea] Session payload:", JSON.stringify({ ...sessionPayload, signature: "***" }));
