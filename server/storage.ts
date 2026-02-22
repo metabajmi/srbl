@@ -298,6 +298,7 @@ export interface IStorage {
   updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | undefined>;
   getPaymentsByUserId(userId: string): Promise<Payment[]>;
   getPaymentByRequestId(requestId: string): Promise<Payment | undefined>;
+  getPaymentByProviderPaymentId(providerPaymentId: string): Promise<Payment | undefined>;
   
   // Scan Claiming - ربط الفحوصات بالمستخدمين
   claimScan(scanId: string, userId: string): Promise<ComplianceScan | undefined>;
@@ -1801,6 +1802,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(payments)
       .where(eq(payments.requestId, requestId));
+    return payment || undefined;
+  }
+
+  async getPaymentByProviderPaymentId(providerPaymentId: string): Promise<Payment | undefined> {
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.providerPaymentId, providerPaymentId));
     return payment || undefined;
   }
 

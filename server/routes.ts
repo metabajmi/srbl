@@ -1926,8 +1926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[Geidea] Discount code ${dc.code} applied: ${dc.discountValue}${dc.discountType === "percentage" ? "%" : " SAR"} off -> ${paymentAmount} SAR`);
         }
       }
-      const shortTs = Date.now().toString(36).slice(-4);
-      const merchantRefId = `SRB${requestId.replace(/-/g, '')}${shortTs}`;
+      const merchantRefId = `SRB${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
       const timestamp = new Date().toISOString();
 
       const appUrl = process.env.NODE_ENV === "production"
@@ -2084,7 +2083,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let requestId: string | null = null;
-      if (merchantRefId.startsWith("SRB") && merchantRefId.length >= 35) {
+      const paymentByRef = await storage.getPaymentByProviderPaymentId(merchantRefId);
+      if (paymentByRef) {
+        requestId = paymentByRef.requestId;
+      } else if (merchantRefId.startsWith("SRB") && merchantRefId.length >= 35) {
         const hex = merchantRefId.slice(3, 35);
         requestId = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
       } else {
