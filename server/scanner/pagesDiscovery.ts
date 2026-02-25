@@ -32,6 +32,9 @@ const PRIVACY_PATTERNS = {
     'سياسة الخصوصية', 'الخصوصية', 'خصوصية', 'حماية البيانات',
     'سياسه الخصوصيه', 'بيان الخصوصية',
   ],
+  // "السياسات" keywords — treated as low-confidence candidates that need content verification
+  policiesText: ['السياسات', 'سياسات'],
+  policiesUrls: [/السياسات/i, /سياسات/i, /\/policies\/?$/i],
 };
 
 const TERMS_PATTERNS = {
@@ -228,6 +231,20 @@ export function discoverLinksFromDOM(html: string, baseUrl: string): {
         return;
       }
     }
+
+    // Low-confidence: "السياسات" candidate — needs content verification before use
+    for (const pattern of PRIVACY_PATTERNS.policiesUrls) {
+      if (pattern.test(href)) {
+        privacyLinks.push({ url: normalized, text, confidence: 0.65 });
+        return;
+      }
+    }
+    for (const keyword of PRIVACY_PATTERNS.policiesText) {
+      if (text.includes(keyword)) {
+        privacyLinks.push({ url: normalized, text, confidence: 0.65 });
+        return;
+      }
+    }
   });
   
   // Log discovered links
@@ -393,13 +410,33 @@ export function discoverLegalPages(html: string, baseUrl: string): PageDiscovery
       const { type, confidence } = classifyPage(href, text);
       if (type !== 'other' && confidence >= 0.8) {
         addPage(href, text, 'link_text', 0);
+      } else {
+        // Low-confidence "السياسات" candidate — add directly with 0.65
+        const normalizedHref = href.toLowerCase();
+        const isPoliciasText = PRIVACY_PATTERNS.policiesText.some(k => text.includes(k));
+        const isPoliciesUrl = PRIVACY_PATTERNS.policiesUrls.some(p => p.test(href));
+        if (isPoliciasText || isPoliciesUrl) {
+          const normalized = normalizeUrl(href, baseUrl);
+          if (normalized && isSameDomain(normalized, baseUrl) && !seenUrls.has(normalized)) {
+            seenUrls.add(normalized);
+            discovered.push({
+              url: normalized,
+              type: 'privacy',
+              foundBy: 'link_text',
+              linkText: text.trim().substring(0, 100),
+              confidence: 0.65,
+              depth: 0,
+            });
+            console.log(`[Discovery] Found "السياسات" candidate (low-confidence): ${normalized}`);
+          }
+        }
       }
     }
   });
   
   const legalKeywords = [
     'legal', 'policy', 'policies', 'terms', 'privacy', 'cookie', 'sitemap',
-    'قانوني', 'سياسة', 'سياسات', 'شروط', 'خصوصية', 'كوكيز',
+    'قانوني', 'سياسة', 'سياسات', 'شروط', 'خصوصية', 'كوكيز', 'السياسات',
   ];
   
   $('a').each((_, el) => {

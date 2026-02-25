@@ -255,8 +255,9 @@ export async function runComprehensiveScan(
   if (fullConfig.fetch_policy_content) {
     // PERFORMANCE MODE: Only fetch PRIVACY POLICY (terms temporarily bypassed for speed)
     // TODO V2: Re-enable terms fetching by uncommenting termsPage below
+    // Include low-confidence "السياسات" candidates (confidence >= 0.6) — they get verified after fetch
     const privacyPage = discoveredPages.pages
-      .filter(p => p.type === 'privacy' && p.confidence >= 0.7)
+      .filter(p => p.type === 'privacy' && p.confidence >= 0.6)
       .sort((a, b) => b.confidence - a.confidence)[0];
     
     // TEMPORARILY BYPASSED: Terms page fetching (saves ~2-5 seconds)
@@ -290,6 +291,26 @@ export async function runComprehensiveScan(
         
         const parsed = parsePolicy(html, page.url, page.type);
         const completeness = analyzePolicyCompleteness(parsed);
+
+        // Content verification for low-confidence "السياسات" candidates
+        // If page was discovered with low confidence (< 0.7), verify it actually has privacy content
+        if (page.confidence < 0.7) {
+          const d = parsed.detectedElements;
+          const privacyIndicatorCount = [
+            d.hasDataSubjectRights,
+            d.hasLawfulBasis,
+            d.hasRetentionPeriod,
+            d.hasSecurityMeasures,
+            d.hasContactInfo,
+            d.hasThirdPartySharing,
+          ].filter(Boolean).length;
+
+          if (privacyIndicatorCount < 2 || parsed.wordCount < 80) {
+            console.log(`[Scanner] ✗ Rejected low-confidence page "${parsed.title}" — only ${privacyIndicatorCount} privacy indicators, ${parsed.wordCount} words. Not a real privacy policy.`);
+            return { success: false, page, error: 'Low-confidence page failed content verification' };
+          }
+          console.log(`[Scanner] ✓ Low-confidence "السياسات" page VERIFIED — ${privacyIndicatorCount} privacy indicators, ${parsed.wordCount} words.`);
+        }
         
         return {
           success: true,
