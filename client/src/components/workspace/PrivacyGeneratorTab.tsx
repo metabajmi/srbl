@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare, Sparkles, X, Scale, ClipboardList, UserCheck, Check } from "lucide-react";
+import { FileText, Loader2, Download, AlertCircle, CheckCircle2, Lock, CreditCard, Unlock, ChevronLeft, ChevronRight, Building2, Database, HardDrive, MessageSquare, Sparkles, X, Scale, ClipboardList, UserCheck, Check, XCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { type PolicyDocument } from "@shared/schema";
 import { useForm } from "react-hook-form";
@@ -141,6 +141,7 @@ export default function PrivacyGeneratorTab() {
   const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated());
   const [paymentRequestId, setPaymentRequestId] = useState<string | null>(null);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
+  const [paymentFailed, setPaymentFailed] = useState(false);
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<AutoFilledFields>({});
@@ -171,15 +172,15 @@ export default function PrivacyGeneratorTab() {
             if (genRes.ok) {
               queryClient.invalidateQueries({ queryKey: ["/api/user/policies"] });
             }
+            setIsPaymentComplete(true);
           } else {
-            toast({ title: "تحقق من الدفع", description: "لم يتم تأكيد الدفع بعد. يرجى المحاولة مرة أخرى.", variant: "destructive" });
+            setPaymentFailed(true);
           }
         } catch (err) {
           console.error("Return URL payment verify error:", err);
-          toast({ title: "خطأ", description: "حدث خطأ أثناء التحقق من الدفع", variant: "destructive" });
+          setPaymentFailed(true);
         } finally {
           setIsGenerating(false);
-          setIsPaymentComplete(true);
           window.history.replaceState({}, "", window.location.pathname);
         }
       };
@@ -643,6 +644,32 @@ ${policy.generatedContent}
         </Card>
       )}
 
+      {paymentFailed && (
+        <Card className="border-destructive/40 mb-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-8 gap-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                <XCircle className="w-8 h-8 text-destructive" />
+              </div>
+              <h3 className="text-xl font-bold text-destructive" data-testid="text-payment-failed">
+                تعذر إتمام عملية الدفع
+              </h3>
+              <p className="text-muted-foreground">يرجى المحاولة مرة أخرى</p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPaymentFailed(false);
+                  setShowPaymentStep(false);
+                }}
+                data-testid="button-retry-after-failure"
+              >
+                العودة والمحاولة مرة أخرى
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {isPaymentComplete && (
         <div className="space-y-6" dir="rtl">
           <Card className="border-green-200 dark:border-green-800">
@@ -772,7 +799,7 @@ ${policy.generatedContent}
         </div>
       )}
 
-      <div className={cn("mb-8", (showPaymentStep || isGenerating || isPaymentComplete) && "hidden")} dir="rtl">
+      <div className={cn("mb-8", (showPaymentStep || isGenerating || isPaymentComplete || paymentFailed) && "hidden")} dir="rtl">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-muted-foreground">
             {subStepInfo[currentStep - 1]?.title}
@@ -793,7 +820,7 @@ ${policy.generatedContent}
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className={cn("space-y-6", (showPaymentStep || isGenerating || isPaymentComplete) && "hidden")}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className={cn("space-y-6", (showPaymentStep || isGenerating || isPaymentComplete || paymentFailed) && "hidden")}>
           {currentStep === 1 && (
             <div className="animate-in fade-in slide-in-from-left-4 duration-300">
               <Card>
