@@ -1,4 +1,4 @@
-import HTMLtoDOCX from "html-to-docx";
+import { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer, SectionType } from "docx";
 import { getBrowser } from "../scanner/browser";
 
 interface PolicyDocument {
@@ -69,19 +69,66 @@ export async function generatePDF(policy: PolicyDocument): Promise<Buffer> {
 }
 
 export async function generateDOCX(policy: PolicyDocument): Promise<Buffer> {
-  const htmlTemplate = wrapWithDocxTemplate(policy.content, policy.companyName);
-  
-  const docxBuffer = await HTMLtoDOCX(htmlTemplate, null, {
-    table: { row: { cantSplit: true } },
-    margins: {
-      top: 1440,
-      right: 1440,
-      bottom: 1440,
-      left: 1440,
-    },
+  const plainText = stripHtmlForDocx(policy.content);
+  const lines = plainText.split('\n');
+
+  const children: Paragraph[] = [];
+
+  children.push(
+    new Paragraph({
+      children: [new TextRun({ text: 'سياسة الخصوصية', bold: true, size: 36, rightToLeft: true })],
+      heading: HeadingLevel.HEADING_1,
+      alignment: AlignmentType.RIGHT,
+      bidirectional: true,
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: policy.companyName, bold: true, size: 28, rightToLeft: true })],
+      heading: HeadingLevel.HEADING_2,
+      alignment: AlignmentType.RIGHT,
+      bidirectional: true,
+    }),
+    new Paragraph({ text: '', bidirectional: true })
+  );
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      children.push(new Paragraph({ text: '', bidirectional: true }));
+      continue;
+    }
+    if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: trimmed.replace(/\*\*/g, ''), bold: true, size: 24, rightToLeft: true })],
+          alignment: AlignmentType.RIGHT,
+          bidirectional: true,
+        })
+      );
+    } else {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: trimmed, size: 22, rightToLeft: true })],
+          alignment: AlignmentType.RIGHT,
+          bidirectional: true,
+        })
+      );
+    }
+  }
+
+  children.push(
+    new Paragraph({ text: '', bidirectional: true }),
+    new Paragraph({
+      children: [new TextRun({ text: 'تم إنشاء سياسة الخصوصية هذه بواسطة منصة سربال https://sirbal.co/', size: 18, color: '888888', rightToLeft: true })],
+      alignment: AlignmentType.RIGHT,
+      bidirectional: true,
+    })
+  );
+
+  const doc = new Document({
+    sections: [{ properties: { type: SectionType.CONTINUOUS }, children }],
   });
-  
-  return Buffer.from(docxBuffer as ArrayBuffer);
+
+  return Packer.toBuffer(doc);
 }
 
 function wrapWithPDFTemplate(content: string, companyName: string): string {
@@ -220,36 +267,3 @@ function stripHtmlForDocx(html: string): string {
     .trim();
 }
 
-function wrapWithDocxTemplate(content: string, companyName: string): string {
-  const plainLines = stripHtmlForDocx(content)
-    .split('\n')
-    .map(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return '';
-      if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
-        return `<h2>${trimmed.replace(/\*\*/g, '')}</h2>`;
-      }
-      if (trimmed.startsWith('- ')) {
-        return `<p>${trimmed}</p>`;
-      }
-      return `<p>${trimmed}</p>`;
-    })
-    .filter(Boolean)
-    .join('\n');
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>سياسة الخصوصية - ${companyName}</title>
-</head>
-<body>
-    <h1>سياسة الخصوصية</h1>
-    <h2>${companyName}</h2>
-    <hr>
-    ${plainLines}
-    <hr>
-    <p>تم إنشاء سياسة الخصوصية هذه بواسطة منصة سربال https://sirbal.co/</p>
-</body>
-</html>`;
-}
