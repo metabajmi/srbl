@@ -472,7 +472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send OTP code
   app.post("/api/auth/otp/send", async (req, res) => {
     try {
-      const { email, name } = req.body;
+      const { email, name, phone } = req.body;
       
       if (!email || typeof email !== 'string') {
         return res.status(400).json({ error: "يجب إدخال البريد الإلكتروني" });
@@ -508,9 +508,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send OTP email
       await sendOtpEmail({ to: email, code });
       
-      // Store optional name for later user creation
+      // Store optional name and phone for later user creation
       if (name) {
         req.session.pendingUserName = name;
+      }
+      if (phone) {
+        (req.session as any).pendingUserPhone = phone;
       }
       
       res.json({ 
@@ -564,8 +567,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get or create user
       const pendingName = (req.session as any).pendingUserName;
-      const user = await storage.createOrGetUserByEmail(email, pendingName);
+      const pendingPhone = (req.session as any).pendingUserPhone;
+      const user = await storage.createOrGetUserByEmail(email, pendingName, pendingPhone);
       delete (req.session as any).pendingUserName;
+      delete (req.session as any).pendingUserPhone;
       
       // Save pending scan ID
       const pendingClaimScanId = req.session.pendingClaimScanId;

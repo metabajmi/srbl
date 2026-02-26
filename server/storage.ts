@@ -233,7 +233,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
-  createOrGetUserByEmail(email: string, name?: string): Promise<User>;
+  createOrGetUserByEmail(email: string, name?: string, phone?: string): Promise<User>;
   
   // OTP Tokens - رموز التحقق
   createOtpToken(email: string, codeHash: string, expiresAt: Date): Promise<OtpToken>;
@@ -1414,14 +1414,19 @@ export class DatabaseStorage implements IStorage {
     await db.delete(users).where(eq(users.id, id));
   }
 
-  async createOrGetUserByEmail(email: string, name?: string): Promise<User> {
+  async createOrGetUserByEmail(email: string, name?: string, phone?: string): Promise<User> {
     const existing = await this.getUserByEmail(email);
     if (existing) {
+      if (phone && !existing.phone) {
+        const [updated] = await db.update(users).set({ phone }).where(eq(users.email, email)).returning();
+        return updated;
+      }
       return existing;
     }
     const [created] = await db.insert(users).values({ 
       email, 
       name: name || null,
+      phone: phone || null,
       isEmailVerified: true 
     }).returning();
     return created;
