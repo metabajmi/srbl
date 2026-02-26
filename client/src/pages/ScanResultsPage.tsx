@@ -425,12 +425,6 @@ export default function ScanResultsPage() {
                       <Lock className="w-8 h-8 text-primary" />
                     </div>
                     <h3 className="text-xl font-bold mb-2">تحقّق من هويتك للاطّلاع على التفاصيل</h3>
-                    <p className="text-muted-foreground mb-1">
-                      تم رصد بعض أوجه النقص
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-6">
-                      أدخل بريدك الإلكتروني فقط — دون كلمة مرور
-                    </p>
                     <Button 
                       onClick={() => setShowOTPModal(true)} 
                       size="lg" 
