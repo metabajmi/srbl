@@ -1230,6 +1230,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password"), // nullable for OTP-only users
   name: text("name"), // optional for OTP flow
+  phone: text("phone"), // optional phone number
   isEmailVerified: boolean("is_email_verified").default(false),
   emailVerificationToken: text("email_verification_token"),
   resetPasswordToken: text("reset_password_token"),

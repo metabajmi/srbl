@@ -54,7 +54,7 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
   // Send OTP mutation
   const sendOtpMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/auth/otp/send", { email, name: name || undefined });
+      const response = await apiRequest("POST", "/api/auth/otp/send", { email, name: name || undefined, phone: phone || undefined });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || "فشل في إرسال رمز التحقق");
