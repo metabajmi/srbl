@@ -168,6 +168,7 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
                   placeholder="05xxxxxxxx"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  required
                   data-testid="input-otp-phone"
                   dir="ltr"
                   className="text-left"
@@ -224,7 +225,7 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={!name.trim() || !email || !agreedToTerms || sendOtpMutation.isPending}
+                disabled={!name.trim() || !phone.trim() || !email || !agreedToTerms || sendOtpMutation.isPending}
                 data-testid="button-send-otp"
               >
                 {sendOtpMutation.isPending ? (
