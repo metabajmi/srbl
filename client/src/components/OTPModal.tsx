@@ -23,6 +23,7 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [countdown, setCountdown] = useState(0);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -34,6 +35,7 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
         setStep("email");
         setEmail("");
         setName("");
+        setPhone("");
         setOtp("");
         setCountdown(0);
         setAgreedToTerms(false);
@@ -158,6 +160,20 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
                 />
               </div>
               
+              <div className="space-y-2">
+                <Label htmlFor="phone">رقم الجوال</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="05xxxxxxxx"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  data-testid="input-otp-phone"
+                  dir="ltr"
+                  className="text-left"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">البريد الإلكتروني *</Label>
                 <Input
