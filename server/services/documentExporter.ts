@@ -198,8 +198,7 @@ function wrapWithPDFTemplate(content: string, companyName: string): string {
     </div>
     <div class="content">${content}</div>
     <div class="footer">
-        <p>تم توليدها وفقاً لنظام حماية البيانات الشخصية السعودي (PDPL)</p>
-        <p>www.sirbal.co</p>
+        <p>تم إنشاء سياسة الخصوصية هذه بواسطة منصة سربال https://sirbal.co/</p>
     </div>
 </body>
 </html>`;
@@ -222,8 +221,7 @@ function wrapWithDocxTemplate(content: string, companyName: string): string {
     
     <hr style="margin: 30px 0; border: 1px solid #e5e7eb;">
     <p style="text-align: center; color: #6b7280; font-size: 10pt;">
-        تم إنشاء هذه السياسة بواسطة منصة سِرْبَال للامتثال لنظام حماية البيانات الشخصية<br>
-        www.sirbal.co
+        تم إنشاء سياسة الخصوصية هذه بواسطة منصة سربال https://sirbal.co/
     </p>
 </body>
 </html>
