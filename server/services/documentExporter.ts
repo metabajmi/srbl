@@ -76,13 +76,13 @@ export async function generateDOCX(policy: PolicyDocument): Promise<Buffer> {
 
   children.push(
     new Paragraph({
-      children: [new TextRun({ text: 'سياسة الخصوصية', bold: true, size: 36, rightToLeft: true })],
+      children: [new TextRun({ text: 'سياسة الخصوصية', bold: true, size: 36, color: '16A34A', rightToLeft: true })],
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.RIGHT,
       bidirectional: true,
     }),
     new Paragraph({
-      children: [new TextRun({ text: policy.companyName, bold: true, size: 28, rightToLeft: true })],
+      children: [new TextRun({ text: policy.companyName, bold: true, size: 28, color: '16A34A', rightToLeft: true })],
       heading: HeadingLevel.HEADING_2,
       alignment: AlignmentType.RIGHT,
       bidirectional: true,
