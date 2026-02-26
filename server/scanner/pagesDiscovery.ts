@@ -527,6 +527,9 @@ export const KNOWN_DOMAIN_POLICIES: Record<string, {
   hasCookieBanner?: boolean;
   cookieBannerType?: 'full' | 'basic';
 }> = {
+  'sirbal.co': {
+    privacy: 'https://sirbal.co/privacy',
+  },
   'salla.com': {
     privacy: 'https://salla.com/privacy/',
     terms: 'https://salla.com/terms/',
