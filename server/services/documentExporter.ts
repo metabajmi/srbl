@@ -201,10 +201,44 @@ function wrapWithPDFTemplate(content: string, companyName: string): string {
 </html>`;
 }
 
+function stripHtmlForDocx(html: string): string {
+  return html
+    .replace(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/gi, '\n\n**$1**\n\n')
+    .replace(/<li[^>]*>(.*?)<\/li>/gi, '\n- $1')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '$1')
+    .replace(/<b[^>]*>(.*?)<\/b>/gi, '$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function wrapWithDocxTemplate(content: string, companyName: string): string {
-  return `
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+  const plainLines = stripHtmlForDocx(content)
+    .split('\n')
+    .map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return '';
+      if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+        return `<h2>${trimmed.replace(/\*\*/g, '')}</h2>`;
+      }
+      if (trimmed.startsWith('- ')) {
+        return `<p>${trimmed}</p>`;
+      }
+      return `<p>${trimmed}</p>`;
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  return `<!DOCTYPE html>
+<html>
 <head>
     <meta charset="UTF-8">
     <title>سياسة الخصوصية - ${companyName}</title>
@@ -213,12 +247,9 @@ function wrapWithDocxTemplate(content: string, companyName: string): string {
     <h1>سياسة الخصوصية</h1>
     <h2>${companyName}</h2>
     <hr>
-    
-    ${content}
-    
+    ${plainLines}
     <hr>
     <p>تم إنشاء سياسة الخصوصية هذه بواسطة منصة سربال https://sirbal.co/</p>
 </body>
-</html>
-  `;
+</html>`;
 }
