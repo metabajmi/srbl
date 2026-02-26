@@ -73,9 +73,6 @@ export async function generateDOCX(policy: PolicyDocument): Promise<Buffer> {
   
   const docxBuffer = await HTMLtoDOCX(htmlTemplate, null, {
     table: { row: { cantSplit: true } },
-    footer: true,
-    pageNumber: true,
-    font: 'Cairo',
     margins: {
       top: 1440,
       right: 1440,
@@ -212,17 +209,15 @@ function wrapWithDocxTemplate(content: string, companyName: string): string {
     <meta charset="UTF-8">
     <title>سياسة الخصوصية - ${companyName}</title>
 </head>
-<body style="font-family: Cairo, Arial, sans-serif; direction: rtl; text-align: right; line-height: 1.8;">
-    <h1 style="text-align: center; color: #059669;">سياسة الخصوصية</h1>
-    <h2 style="text-align: center; color: #374151;">${companyName}</h2>
-    <hr style="margin: 20px 0; border: 1px solid #e5e7eb;">
+<body>
+    <h1>سياسة الخصوصية</h1>
+    <h2>${companyName}</h2>
+    <hr>
     
     ${content}
     
-    <hr style="margin: 30px 0; border: 1px solid #e5e7eb;">
-    <p style="text-align: center; color: #6b7280; font-size: 10pt;">
-        تم إنشاء سياسة الخصوصية هذه بواسطة منصة سربال https://sirbal.co/
-    </p>
+    <hr>
+    <p>تم إنشاء سياسة الخصوصية هذه بواسطة منصة سربال https://sirbal.co/</p>
 </body>
 </html>
   `;
