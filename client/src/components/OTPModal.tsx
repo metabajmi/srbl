@@ -161,7 +161,7 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="phone">رقم الجوال</Label>
+                <Label htmlFor="phone">رقم الجوال *</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -225,7 +225,7 @@ export function OTPModal({ open, onOpenChange, onSuccess }: OTPModalProps) {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={!name.trim() || !phone.trim() || !email || !agreedToTerms || sendOtpMutation.isPending}
+                disabled={!name.trim() || phone.trim().length !== 10 || !email || !agreedToTerms || sendOtpMutation.isPending}
                 data-testid="button-send-otp"
               >
                 {sendOtpMutation.isPending ? (
