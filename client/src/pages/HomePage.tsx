@@ -8,7 +8,8 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertComplianceScanSchema } from "@shared/schema";
 import { useLocation, Link } from "wouter";
-import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers, Lock, Users, Clock, Scale } from "lucide-react";
+import { Shield, FileText, ScrollText, CheckCircle, Sparkles, FileSearch, Globe, Layers, Lock, Users, Clock, Scale, Mail } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
 import { z } from "zod";
 
 export default function HomePage() {
@@ -328,6 +329,27 @@ export default function HomePage() {
               هذه المنصة مصممة للمساعدة في تحقيق الامتثال لنظام حماية البيانات الشخصية السعودي
               ولا تغني عن الاستشارة القانونية المتخصصة
             </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">تواصل معنا:</p>
+              <a
+                href="https://wa.me/message/GBQWQIS5UIH6I1"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="link-whatsapp"
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary hover-elevate"
+                title="واتساب"
+              >
+                <SiWhatsapp className="w-4 h-4" />
+              </a>
+              <a
+                href="mailto:support@sirbal.co"
+                data-testid="link-email"
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary hover-elevate"
+                title="support@sirbal.co"
+              >
+                <Mail className="w-4 h-4" />
+              </a>
+            </div>
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               <Link href="/privacy">
                 <Button 
