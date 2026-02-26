@@ -1,4 +1,4 @@
-import { scanWithBrowser, BrowserScanResult, NetworkRequest } from './browser';
+import { scanWithBrowser, getBrowser, BrowserScanResult, NetworkRequest } from './browser';
 import { discoverLegalPages, DiscoveredPage, fetchAndDiscoverSitemap, discoverLinksFromDOM, discoverFallbackPolicyUrls } from './pagesDiscovery';
 import { parsePolicy, ParsedPolicy, analyzePolicyCompleteness } from './policyParser';
 import { evaluatePDPLCompliance, createEvaluationContext, PDPLCheck, PDPLEvaluationResult } from './pdplEvaluator';
@@ -286,9 +286,36 @@ export async function runComprehensiveScan(
           signal: AbortSignal.timeout(10000), // 10 second timeout
         });
         
-        const html = await response.text();
+        let html = await response.text();
         console.log(`[Scanner]   ✓ HTTP Loaded ${page.type}: ${html.length} bytes`);
-        
+
+        // Detect SPA shell — if page has barely any text, try Puppeteer to get rendered content
+        const isSpaShell = (
+          html.includes('id="root"') ||
+          html.includes("id='root'") ||
+          html.includes('id="app"') ||
+          html.includes("id='app'") ||
+          html.includes('<script type="module"')
+        );
+        const quickParse = parsePolicy(html, page.url, page.type);
+        if (isSpaShell && quickParse.wordCount < 100) {
+          console.log(`[Scanner] SPA detected (${quickParse.wordCount} words) — falling back to Puppeteer for: ${page.url}`);
+          try {
+            const browser = await getBrowser();
+            const puppeteerPage = await browser.newPage();
+            try {
+              await puppeteerPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+              await puppeteerPage.goto(page.url, { waitUntil: 'networkidle2', timeout: 20000 });
+              html = await puppeteerPage.content();
+              console.log(`[Scanner]   ✓ Puppeteer loaded SPA content: ${html.length} bytes`);
+            } finally {
+              await puppeteerPage.close();
+            }
+          } catch (spaErr) {
+            console.warn(`[Scanner]   ✗ Puppeteer SPA fallback failed: ${spaErr instanceof Error ? spaErr.message : spaErr}. Using HTTP content.`);
+          }
+        }
+
         const parsed = parsePolicy(html, page.url, page.type);
         const completeness = analyzePolicyCompleteness(parsed);
 
