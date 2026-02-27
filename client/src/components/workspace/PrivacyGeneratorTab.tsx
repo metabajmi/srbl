@@ -69,6 +69,7 @@ const ACTIVITY_TYPES = [
 const formSchema = z.object({
   company_name: z.string().min(2, "يجب إدخال اسم الجهة"),
   activity_type: z.string().min(1, "يجب اختيار نوع النشاط"),
+  other_activity_type: z.string().optional(),
   service_description: z.string().min(10, "يجب وصف الخدمة بشكل مختصر"),
   contact_team: z.string().min(2, "يجب إدخال القسم/الفريق المختص"),
   address: z.string().min(5, "يجب إدخال العنوان"),
@@ -201,6 +202,7 @@ export default function PrivacyGeneratorTab() {
     defaultValues: {
       company_name: "",
       activity_type: "",
+      other_activity_type: "",
       service_description: "",
       contact_team: "",
       address: "",
@@ -308,9 +310,13 @@ export default function PrivacyGeneratorTab() {
 
   const createPolicyRequestMutation = useMutation({
     mutationFn: async (data: FormValues) => {
+      const intakeData = { ...data };
+      if (intakeData.activity_type === 'other' && intakeData.other_activity_type?.trim()) {
+        intakeData.activity_type = intakeData.other_activity_type.trim();
+      }
       const response = await apiRequest("POST", "/api/policy-requests", {
         scanId: scanData?.scanId || null,
-        intakeData: data,
+        intakeData,
       });
       return await response.json();
     },
@@ -377,7 +383,7 @@ export default function PrivacyGeneratorTab() {
   const validateStep = (step: number): boolean => {
     const values = form.getValues();
     switch (step) {
-      case 1: return !!(values.company_name && values.activity_type && values.policy_last_update);
+      case 1: return !!(values.company_name && values.activity_type && values.policy_last_update && (values.activity_type !== 'other' || values.other_activity_type?.trim()));
       case 2: return !!(values.service_description);
       case 3: return !!(values.contact_team && values.address && values.phone && values.email && values.cr_number);
       case 4: return values.data_collected.length > 0;
@@ -889,6 +895,26 @@ ${policy.generatedContent}
                         </FormItem>
                       )}
                     />
+
+                    {form.watch("activity_type") === "other" && (
+                      <FormField
+                        control={form.control}
+                        name="other_activity_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>حدد نوع النشاط *</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="مثال: خدمات لوجستية، استشارات، تصنيع..."
+                                data-testid="input-other-activity-type"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
 
                     <FormField
                       control={form.control}
