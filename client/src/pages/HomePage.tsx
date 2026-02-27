@@ -319,79 +319,92 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t bg-muted/30">
-        <div className="container py-8 sm:py-10">
-          <div className="flex flex-col items-center gap-4 sm:gap-5 text-center">
-            <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
-              سربال هي منصة تقنية صُممت لتختصر عليك الجهد؛ حيث تقدم حلولاً وأدوات ذكية لمساعدة الجهات على تلبية متطلبات نظام حماية البيانات الشخصية بخطوات بسيطة، وهي منصة مرخصة بموجب سجل تجاري رقم 7052884975
-            </p>
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-muted-foreground">تواصل معنا:</p>
-              <a
-                href="https://wa.me/message/GBQWQIS5UIH6I1"
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-whatsapp"
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary hover-elevate"
-                title="واتساب"
-              >
-                <SiWhatsapp className="w-4 h-4" />
-              </a>
-              <a
-                href="mailto:support@sirbal.co"
-                data-testid="link-email"
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary hover-elevate"
-                title="support@sirbal.co"
-              >
-                <Mail className="w-4 h-4" />
-              </a>
-            </div>
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary shrink-0" />
-              <p className="text-sm font-medium">منصة سربال</p>
-            </div>
-            <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
-              هذه المنصة مصممة للمساعدة في تحقيق الامتثال لنظام حماية البيانات الشخصية السعودي
-              ولا تغني عن الاستشارة القانونية المتخصصة
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-              <Link href="/privacy">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  data-testid="link-privacy-policy"
-                >
-                  سياسة الخصوصية
-                </Button>
-              </Link>
-              <span className="text-muted-foreground/50">|</span>
-              <Link href="/terms">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  data-testid="link-terms"
-                >
-                  الشروط والأحكام
-                </Button>
-              </Link>
-              <span className="text-muted-foreground/50">|</span>
-              <p className="text-xs text-muted-foreground">
-                © 2026 منصة سربال - جميع الحقوق محفوظة
+        <div className="container py-12 sm:py-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-right">
+            {/* العمود الأول — عن سربال */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 justify-end">
+                <p className="text-base font-semibold">سربال</p>
+                <Shield className="w-5 h-5 text-primary shrink-0" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                سربال هي منصة تقنية صُممت لتختصر عليك الجهد؛ حيث تقدم حلولاً وأدوات ذكية لمساعدة الجهات على تلبية متطلبات نظام حماية البيانات الشخصية بخطوات بسيطة.
               </p>
-              <span className="text-muted-foreground/50">|</span>
-              <Link href="/admin/login">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  data-testid="link-admin-login"
-                >
-                  <Shield className="w-3 h-3 ml-1" />
-                  لوحة التحكم
-                </Button>
-              </Link>
+              <p className="text-xs text-muted-foreground/70">
+                سجل تجاري: 7052884975
+              </p>
             </div>
+
+            {/* العمود الثاني — تواصل معنا */}
+            <div className="flex flex-col gap-3 items-center text-center">
+              <p className="text-base font-semibold">تواصل معنا</p>
+              <div className="flex items-center gap-3">
+                <a
+                  href="https://wa.me/message/GBQWQIS5UIH6I1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="link-whatsapp"
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary hover-elevate"
+                  title="واتساب"
+                >
+                  <SiWhatsapp className="w-5 h-5" />
+                </a>
+                <a
+                  href="mailto:support@sirbal.co"
+                  data-testid="link-email"
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary hover-elevate"
+                  title="support@sirbal.co"
+                >
+                  <Mail className="w-5 h-5" />
+                </a>
+              </div>
+              <p className="text-sm text-muted-foreground">support@sirbal.co</p>
+            </div>
+
+            {/* العمود الثالث — روابط سريعة */}
+            <div className="flex flex-col gap-3 items-start">
+              <p className="text-base font-semibold">روابط سريعة</p>
+              <div className="flex flex-col gap-1">
+                <Link href="/privacy">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-sm text-muted-foreground hover:text-foreground px-0 justify-start"
+                    data-testid="link-privacy-policy"
+                  >
+                    سياسة الخصوصية
+                  </Button>
+                </Link>
+                <Link href="/terms">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-sm text-muted-foreground hover:text-foreground px-0 justify-start"
+                    data-testid="link-terms"
+                  >
+                    الشروط والأحكام
+                  </Button>
+                </Link>
+                <Link href="/admin/login">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground/60 hover:text-foreground px-0 justify-start"
+                    data-testid="link-admin-login"
+                  >
+                    <Shield className="w-3 h-3 ml-1" />
+                    لوحة التحكم
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* شريط الحقوق */}
+          <div className="border-t border-border/40 mt-10 pt-6 text-center">
+            <p className="text-xs text-muted-foreground">
+              © 2026 منصة سربال - جميع الحقوق محفوظة
+            </p>
           </div>
         </div>
       </footer>
