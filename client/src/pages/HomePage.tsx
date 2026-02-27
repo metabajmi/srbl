@@ -323,10 +323,6 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-right">
             {/* العمود الأول — عن سربال */}
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2 justify-end">
-                <p className="text-base font-semibold">سربال</p>
-                <Shield className="w-5 h-5 text-primary shrink-0" />
-              </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 سربال هي منصة تقنية صُممت لتختصر عليك الجهد؛ حيث تقدم حلولاً وأدوات ذكية لمساعدة الجهات على تلبية متطلبات نظام حماية البيانات الشخصية بخطوات بسيطة.
               </p>
