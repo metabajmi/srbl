@@ -326,7 +326,7 @@ export default function HomePage() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 <span className="text-primary font-bold text-base">سربال</span> هي منصة تقنية صُممت لتختصر عليك الجهد؛ حيث تقدم حلولاً وأدوات ذكية لمساعدة الجهات على تلبية متطلبات نظام حماية البيانات الشخصية بخطوات بسيطة.
               </p>
-              <p className="text-xs text-muted-foreground/70">
+              <p className="text-sm font-bold text-foreground">
                 سجل تجاري: 7052884975
               </p>
             </div>
