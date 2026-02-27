@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function PrivacyPage() {
-  const lastUpdated = "7 يناير 2026";
+  const lastUpdated = "27 فبراير 2026";
   
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -92,6 +92,7 @@ export default function PrivacyPage() {
                   <li>عنوان IP (للأمان ومنع الاستخدام المسيء)</li>
                   <li>معلومات المتصفح ونوع الجهاز</li>
                   <li>ملفات تعريف الارتباط الضرورية لتشغيل الخدمة</li>
+                  <li>بيانات الاستخدام والتصفح التي يجمعها Google Analytics (مثل الصفحات المزارة، المدة، نوع الجهاز، والموقع الجغرافي التقريبي)</li>
                 </ul>
               </div>
             </CardContent>
@@ -136,6 +137,7 @@ export default function PrivacyPage() {
               <p>قد نشارك بياناتك الشخصية مع:</p>
               <ul className="list-disc list-inside space-y-2 mr-4">
                 <li><strong>مزودي الخدمات:</strong> مثل خدمات الذكاء الاصطناعي لتحليل المحتوى، وخدمات البريد الإلكتروني لإرسال الوثائق</li>
+                <li><strong>Google Analytics:</strong> نستخدمه لتحليل أنماط استخدام المنصة وتحسين تجربة المستخدم. تخضع بيانات التحليل لسياسة خصوصية Google المتاحة على privacy.google.com</li>
                 <li><strong>الجهات الحكومية:</strong> عند وجود متطلب نظامي للإفصاح</li>
               </ul>
               <p className="mt-4">
@@ -183,14 +185,13 @@ export default function PrivacyPage() {
               <CardTitle className="text-xl text-primary">ملفات تعريف الارتباط (الكوكيز)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-muted-foreground leading-relaxed">
-              <p>نستخدم ملفات تعريف الارتباط الضرورية فقط لـ:</p>
+              <p>نستخدم نوعين من ملفات تعريف الارتباط:</p>
               <ul className="list-disc list-inside space-y-2 mr-4">
-                <li>إدارة جلسة تسجيل الدخول</li>
-                <li>تذكر تفضيلات العرض (مثل الوضع الليلي)</li>
-                <li>ضمان أمان الخدمة</li>
+                <li><strong>ضرورية:</strong> إدارة جلسة تسجيل الدخول، تذكر تفضيلات العرض، وضمان أمان الخدمة</li>
+                <li><strong>تحليلية (Google Analytics):</strong> لقياس أداء المنصة وفهم سلوك المستخدمين بهدف تحسين الخدمة</li>
               </ul>
               <p className="mt-4">
-                لا نستخدم ملفات تعريف الارتباط للتتبع أو الإعلانات.
+                لا نستخدم ملفات تعريف الارتباط للإعلانات أو بيعها لأطراف ثالثة.
               </p>
             </CardContent>
           </Card>
