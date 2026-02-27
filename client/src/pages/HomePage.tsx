@@ -321,13 +321,8 @@ export default function HomePage() {
       <footer className="border-t bg-muted/30">
         <div className="container py-8 sm:py-10">
           <div className="flex flex-col items-center gap-4 sm:gap-5 text-center">
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-primary shrink-0" />
-              <p className="text-sm font-medium">منصة سربال</p>
-            </div>
             <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
-              هذه المنصة مصممة للمساعدة في تحقيق الامتثال لنظام حماية البيانات الشخصية السعودي
-              ولا تغني عن الاستشارة القانونية المتخصصة
+              سربال هي منصة تقنية صُممت لتختصر عليك الجهد؛ حيث تقدم حلولاً وأدوات ذكية لمساعدة الجهات على تلبية متطلبات نظام حماية البيانات الشخصية بخطوات بسيطة، وهي منصة مرخصة بموجب سجل تجاري رقم 7052884975
             </p>
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">تواصل معنا:</p>
@@ -350,6 +345,14 @@ export default function HomePage() {
                 <Mail className="w-4 h-4" />
               </a>
             </div>
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary shrink-0" />
+              <p className="text-sm font-medium">منصة سربال</p>
+            </div>
+            <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
+              هذه المنصة مصممة للمساعدة في تحقيق الامتثال لنظام حماية البيانات الشخصية السعودي
+              ولا تغني عن الاستشارة القانونية المتخصصة
+            </p>
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               <Link href="/privacy">
                 <Button 
