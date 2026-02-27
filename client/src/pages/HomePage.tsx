@@ -324,7 +324,7 @@ export default function HomePage() {
             {/* العمود الأول — عن سربال */}
             <div className="flex flex-col gap-3">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                سربال هي منصة تقنية صُممت لتختصر عليك الجهد؛ حيث تقدم حلولاً وأدوات ذكية لمساعدة الجهات على تلبية متطلبات نظام حماية البيانات الشخصية بخطوات بسيطة.
+                <span className="text-primary font-bold text-base">سربال</span> هي منصة تقنية صُممت لتختصر عليك الجهد؛ حيث تقدم حلولاً وأدوات ذكية لمساعدة الجهات على تلبية متطلبات نظام حماية البيانات الشخصية بخطوات بسيطة.
               </p>
               <p className="text-xs text-muted-foreground/70">
                 سجل تجاري: 7052884975
