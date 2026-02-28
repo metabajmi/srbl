@@ -226,13 +226,9 @@ export async function runComprehensiveScan(
   }
   */
   
-  // TODO: Re-enable fallback URL probing in V2 expansion plan
-  // BYPASSED: Fallback URL probing (consumes 3-10 seconds with multiple HTTP requests)
-  console.log(`[ComprehensiveScan] PERFORMANCE MODE: Fallback URL probing SKIPPED`);
-  /*
   const hasPrivacyPage = discoveredPages.pages.some(p => p.type === 'privacy');
   const hasTermsPage = discoveredPages.pages.some(p => p.type === 'terms');
-  
+
   if (!hasPrivacyPage || !hasTermsPage) {
     console.log(`\n[Scanner] STEP 2.5: No policy links found on page, trying fallback URL probing...`);
     try {
@@ -247,7 +243,6 @@ export async function runComprehensiveScan(
       console.log(`[Scanner] Fallback discovery failed, continuing...`);
     }
   }
-  */
   
   const parsedPolicies: ParsedPolicy[] = [];
   const legalPageAnalyses: LegalPageAnalysis[] = [];
@@ -298,8 +293,8 @@ export async function runComprehensiveScan(
           html.includes('<script type="module"')
         );
         const quickParse = parsePolicy(html, page.url, page.type);
-        if (isSpaShell && quickParse.wordCount < 100) {
-          console.log(`[Scanner] SPA detected (${quickParse.wordCount} words) — falling back to Puppeteer for: ${page.url}`);
+        if (quickParse.wordCount < 50) {
+          console.log(`[Scanner] Low content detected (${quickParse.wordCount} words, isSPA=${isSpaShell}) — falling back to Puppeteer for: ${page.url}`);
           try {
             const browser = await getBrowser();
             const puppeteerPage = await browser.newPage();
