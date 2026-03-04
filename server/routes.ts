@@ -1931,6 +1931,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[Geidea] Discount code ${dc.code} applied: ${dc.discountValue}${dc.discountType === "percentage" ? "%" : " SAR"} off -> ${paymentAmount} SAR`);
         }
       }
+      // ── BYPASS: كود خصم 100% → تجاوز Geidea وإنشاء السياسة مباشرة ──
+      if (paymentAmount === 0) {
+        const bypassMerchantRef = `SRB${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+        const bypassAppUrl = process.env.NODE_ENV === "production"
+          ? "https://sirbal.co"
+          : (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : "https://sirbal.co");
+
+        await storage.createPayment({
+          requestId,
+          userId,
+          amount: 0,
+          currency,
+          provider: "discount",
+          providerPaymentId: bypassMerchantRef,
+          rawPayload: { discountCodeId: appliedDiscountCodeId, discountCode: appliedDiscountCodeStr, bypass: true },
+        });
+
+        await storage.updatePolicyGenerationRequest(requestId, {
+          workflowStatus: "paid",
+          paymentStatus: "paid",
+        });
+
+        if (appliedDiscountCodeId) {
+          try {
+            await storage.incrementDiscountCodeUsage(appliedDiscountCodeId);
+          } catch (e) {
+            console.error("[Bypass] Failed to increment discount usage:", e);
+          }
+        }
+
+        console.log(`[Bypass] 100% discount applied — skipping Geidea for requestId=${requestId}`);
+        return res.json({
+          bypass: true,
+          requestId,
+          returnUrl: `${bypassAppUrl}/workspace?tab=privacy&payment=success&requestId=${requestId}`,
+        });
+      }
+      // ── نهاية الـ bypass ──
+
       const merchantRefId = `SRB${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
       const timestamp = new Date().toISOString();
 
