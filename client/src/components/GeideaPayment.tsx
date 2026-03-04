@@ -93,7 +93,15 @@ export default function GeideaPayment({
         throw new Error(errData.error || "فشل في إنشاء جلسة الدفع");
       }
 
-      const { sessionId, checkoutUrl } = await response.json();
+      const data = await response.json();
+
+      // كود خصم 100% — تجاوز الدفع والتوجه لصفحة النجاح مباشرة
+      if (data.bypass && data.returnUrl) {
+        window.location.href = data.returnUrl;
+        return;
+      }
+
+      const { sessionId, checkoutUrl } = data;
 
       if (!sessionId || !checkoutUrl) {
         throw new Error("بيانات جلسة الدفع غير مكتملة");
