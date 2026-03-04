@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import { Browser, Page, Cookie } from 'puppeteer';
+import { Browser, Page, Cookie, executablePath as puppeteerExecutablePath } from 'puppeteer';
+import fs from 'fs';
 
 // Add stealth plugin to evade bot detection
 puppeteer.use(StealthPlugin());
@@ -67,9 +68,23 @@ function randomDelay(min: number, max: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
+function getChromiumPath(): string {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  try {
+    const downloaded = puppeteerExecutablePath();
+    if (fs.existsSync(downloaded)) {
+      return downloaded;
+    }
+  } catch (_) {}
+  // Fallback to Nix path (Replit environment)
+  return '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
+}
+
 const BROWSER_OPTIONS = {
   headless: true,
-  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
+  executablePath: getChromiumPath(),
   args: [
     '--no-sandbox',
     '--disable-setuid-sandbox',
